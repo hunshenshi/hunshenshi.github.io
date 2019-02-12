@@ -1,0 +1,1365 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="0hClWroWscvQbyOyRPhAZWjOZJ6g3SFCdO47yYakvdk">
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="27E5EbutCm">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="BigData,Flume,事务,kafkachannel,">
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0">
+
+
+
+
+
+
+<meta name="description" content="在flume中事务是一个重要的概念，事务保证了数据的可用性。这里的事务有别于数据库中的事务，比事务在回滚时，可能会造成数据重复，所以flume保证的是每条数据最少发送一次，以此来保证数据不丢失。 此篇从具体的数据流中分析事务，配置的数据流是taildir+kafkachannel，然后kafkachannel+hdfsSink。 kafkachannel中维护了两个事务，分别是put事务和take">
+<meta name="keywords" content="BigData,Flume,事务,kafkachannel">
+<meta property="og:type" content="article">
+<meta property="og:title" content="flume事务解析">
+<meta property="og:url" content="http://bigdatadecode.club/flume事务解析.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="在flume中事务是一个重要的概念，事务保证了数据的可用性。这里的事务有别于数据库中的事务，比事务在回滚时，可能会造成数据重复，所以flume保证的是每条数据最少发送一次，以此来保证数据不丢失。 此篇从具体的数据流中分析事务，配置的数据流是taildir+kafkachannel，然后kafkachannel+hdfsSink。 kafkachannel中维护了两个事务，分别是put事务和take">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-02-12T09:23:37.659Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="flume事务解析">
+<meta name="twitter:description" content="在flume中事务是一个重要的概念，事务保证了数据的可用性。这里的事务有别于数据库中的事务，比事务在回滚时，可能会造成数据重复，所以flume保证的是每条数据最少发送一次，以此来保证数据不丢失。 此篇从具体的数据流中分析事务，配置的数据流是taildir+kafkachannel，然后kafkachannel+hdfsSink。 kafkachannel中维护了两个事务，分别是put事务和take">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    sidebar: {"position":"right","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://bigdatadecode.club/flume事务解析.html">
+
+
+
+
+
+  <title> flume事务解析 | big data decode club </title>
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-80813521-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+
+
+
+
+
+
+  <div style="display: none;">
+    <script src="//s95.cnzz.com/z_stat.php?id=1260961002&web_id=1260961002" language="JavaScript"></script>
+  </div>
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">big data decode club</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">hunhun -- Any answers you can find in source code.</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/flume事务解析.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="混绅士">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="big data decode club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                flume事务解析
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-06-01T19:30:16+08:00">
+                2017-06-01
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-02-12T17:23:37+08:00">
+                2019-02-12
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/Flume/" itemprop="url" rel="index">
+                    <span itemprop="name">Flume</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/flume事务解析.html" class="leancloud_visitors" data-flag-title="flume事务解析">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>在flume中<em>事务</em>是一个重要的概念，事务保证了数据的可用性。这里的事务有别于数据库中的事务，比事务在回滚时，可能会造成数据重复，<em>所以flume保证的是每条数据最少发送一次，以此来保证数据不丢失</em>。</p>
+<p>此篇从具体的数据流中分析事务，配置的数据流是<em>taildir+kafkachannel</em>，然后<em>kafkachannel+hdfsSink</em>。</p>
+<p>kafkachannel中维护了两个事务，分别是put事务和take事务。</p>
+<a id="more"></a>
+<h2 id="put事务"><a href="#put事务" class="headerlink" title="put事务"></a>put事务</h2><p>kafkachannel的put事务是由taildir触发的，我们从代码中跟下put事务的流程。</p>
+<p>taildir的入口是TaildirSource.process，代码如下:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> Status <span class="title">process</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  Status status = Status.READY;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    existingInodes.clear();</span><br><span class="line">    existingInodes.addAll(reader.updateTailFiles());</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">long</span> inode : existingInodes) &#123;</span><br><span class="line">      TailFile tf = reader.getTailFiles().get(inode);</span><br><span class="line">      <span class="comment">// 判断是否需要tail</span></span><br><span class="line">      <span class="comment">// 判断规则，修改时间是否大于上次记录的tial时间，记录的postition是否大于该文件的length</span></span><br><span class="line">      <span class="keyword">if</span> (tf.needTail()) &#123;</span><br><span class="line">        tailFileProcess(tf, <span class="keyword">true</span>);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    closeTailFiles();</span><br><span class="line">    ...</span><br><span class="line">  &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">    ...</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> status;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>当file的修改时间大于记录的上次tail时间或者记录的postition大于file的length时(从0处tail)，需要tail该file。<br>文件的tail逻辑在<code>tailFileProcess</code>代码中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">tailFileProcess</span><span class="params">(TailFile tf, <span class="keyword">boolean</span> backoffWithoutNL)</span></span></span><br><span class="line"><span class="function">    <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">  <span class="keyword">while</span> (<span class="keyword">true</span>) &#123;</span><br><span class="line">    reader.setCurrentFile(tf);</span><br><span class="line">    <span class="comment">// 从文件中读取batchSize条数据</span></span><br><span class="line">    List&lt;Event&gt; events = reader.readEvents(batchSize, backoffWithoutNL);</span><br><span class="line">    <span class="keyword">if</span> (events.isEmpty()) &#123;</span><br><span class="line">      <span class="keyword">break</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    sourceCounter.addToEventReceivedCount(events.size());</span><br><span class="line">    sourceCounter.incrementAppendBatchReceivedCount();</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="comment">// 事务的实现</span></span><br><span class="line">      getChannelProcessor().processEventBatch(events);</span><br><span class="line">      reader.commit();</span><br><span class="line">    &#125; <span class="keyword">catch</span> (ChannelException ex) &#123;</span><br><span class="line">      logger.warn(<span class="string">"The channel is full or unexpected failure. "</span> +</span><br><span class="line">          <span class="string">"The source will try again after "</span> + retryInterval + <span class="string">" ms"</span>);</span><br><span class="line">      TimeUnit.MILLISECONDS.sleep(retryInterval);</span><br><span class="line">      retryInterval = retryInterval &lt;&lt; <span class="number">1</span>;</span><br><span class="line">      retryInterval = Math.min(retryInterval, maxRetryInterval);</span><br><span class="line">      <span class="keyword">continue</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    retryInterval = <span class="number">1000</span>;</span><br><span class="line">    sourceCounter.addToEventAcceptedCount(events.size());</span><br><span class="line">    sourceCounter.incrementAppendBatchAcceptedCount();</span><br><span class="line">    <span class="comment">// 追上写入的速度之后才会退出当前file？是否存在其它文件无法得到tail的机会？？</span></span><br><span class="line">    <span class="comment">// 这应该是个bug</span></span><br><span class="line">    <span class="keyword">if</span> (events.size() &lt; batchSize) &#123;</span><br><span class="line">      <span class="keyword">break</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>上面的bug是当一个fileGroup中有多个正在写入的文件时，如果某个文件的写入量大，致使每次都能从中读取batchSize条数据，则其它文件将没有机会被读取。<br>这个bug我已提交到社区<a href="https://issues.apache.org/jira/browse/FLUME-3101" target="_blank" rel="noopener">FLUME-3101</a></p>
+</blockquote>
+<p>下面看下事务具体是怎么实现的，<br><code>getChannelProcessor().processEventBatch(events)</code> -&gt; <code>ChannelProcesser.processEventBatch</code>，看下processEventBatch的代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">processEventBatch</span><span class="params">(List&lt;Event&gt; events)</span> </span>&#123;</span><br><span class="line">  ...</span><br><span class="line">  <span class="comment">// 将event与channel组成map</span></span><br><span class="line">  <span class="keyword">for</span> (Event event : events) &#123;</span><br><span class="line">    ...</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// Process required channels</span></span><br><span class="line">  <span class="keyword">for</span> (Channel reqChannel : reqChannelQueue.keySet()) &#123;</span><br><span class="line">  	<span class="comment">// 得到channel对应的事务</span></span><br><span class="line">    Transaction tx = reqChannel.getTransaction();</span><br><span class="line">    Preconditions.checkNotNull(tx, <span class="string">"Transaction object must not be null"</span>);</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="comment">// 开始事务</span></span><br><span class="line">      tx.begin();</span><br><span class="line">      <span class="comment">// 处理事务，这里是先将event写入内存，然后由commit批量将events写入kafka</span></span><br><span class="line">      List&lt;Event&gt; batch = reqChannelQueue.get(reqChannel);</span><br><span class="line"></span><br><span class="line">      <span class="keyword">for</span> (Event event : batch) &#123;</span><br><span class="line">        reqChannel.put(event);</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">// 提交事务，也是一个事务的结束</span></span><br><span class="line">      tx.commit();</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">      <span class="comment">// 发生议程，进行事务回滚</span></span><br><span class="line">      tx.rollback();</span><br><span class="line">      <span class="keyword">if</span> (t <span class="keyword">instanceof</span> Error) &#123;</span><br><span class="line">        LOG.error(<span class="string">"Error while writing to required channel: "</span> + reqChannel, t);</span><br><span class="line">        <span class="keyword">throw</span> (Error) t;</span><br><span class="line">      &#125; <span class="keyword">else</span> <span class="keyword">if</span> (t <span class="keyword">instanceof</span> ChannelException) &#123;</span><br><span class="line">        <span class="keyword">throw</span> (ChannelException) t;</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> ChannelException(<span class="string">"Unable to put batch on required "</span> +</span><br><span class="line">            <span class="string">"channel: "</span> + reqChannel, t);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">      <span class="keyword">if</span> (tx != <span class="keyword">null</span>) &#123;</span><br><span class="line">        tx.close();</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// Process optional channels</span></span><br><span class="line">  <span class="keyword">for</span> (Channel optChannel : optChannelQueue.keySet()) &#123;</span><br><span class="line">    ...</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>首先从该source中绑定的channel中拿到对应的<code>Transaction</code>，然后调用<code>begin</code>方法开始事务，等数据处理结束之后，调用<code>commit</code>提交事务，如果处理数据的过程中发生错误，则在catch中捕获，调用<code>rollback</code>进行事务回滚。</p>
+<p>先看下数据处理的逻辑，通过<code>reqChannel.put(event)</code>将数据将入channel的内存中。看似调用的是channel的方法，其实channel的put只是对Transaction的put进行了下封装，而<code>Transaction.put</code>的具体实现是在channel中的Transaction.doPut里实现的。<br><code>reqChannel.put(event)</code> -&gt; <code>BasicChannelSemantics.put</code> -&gt; <code>BasicTransactionSemantics.put</code> -&gt; <code>BasicTransactionSemantics.duPut</code><br>其中<code>doPut</code>是一个抽象方法，其具体实现放在各个channel的Transaction中。这里使用的kafkaChannel，其实现如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">doPut</span><span class="params">(Event event)</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">  <span class="comment">// 事务类型 PUT or TAKE</span></span><br><span class="line">  type = TransactionType.PUT;</span><br><span class="line">  ...</span><br><span class="line">  Integer partitionId = <span class="keyword">null</span>;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (staticPartitionId != <span class="keyword">null</span>) &#123;</span><br><span class="line">      partitionId = staticPartitionId;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//Allow a specified header to override a static ID</span></span><br><span class="line">    <span class="keyword">if</span> (partitionHeader != <span class="keyword">null</span>) &#123;</span><br><span class="line">      String headerVal = event.getHeaders().get(partitionHeader);</span><br><span class="line">      <span class="keyword">if</span> (headerVal != <span class="keyword">null</span>) &#123;</span><br><span class="line">        partitionId = Integer.parseInt(headerVal);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 将event构建一个ProducerRecord对象放入producerRecords中，</span></span><br><span class="line">    <span class="comment">// 等待commit时写入kafka</span></span><br><span class="line">    <span class="keyword">if</span> (partitionId != <span class="keyword">null</span>) &#123;</span><br><span class="line">      producerRecords.get().add(</span><br><span class="line">          <span class="keyword">new</span> ProducerRecord&lt;String, <span class="keyword">byte</span>[]&gt;(topic.get(), partitionId, key,</span><br><span class="line">                                             serializeValue(event, parseAsFlumeEvent)));</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      producerRecords.get().add(</span><br><span class="line">          <span class="keyword">new</span> ProducerRecord&lt;String, <span class="keyword">byte</span>[]&gt;(topic.get(), key,</span><br><span class="line">                                             serializeValue(event, parseAsFlumeEvent)));</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">catch</span> (NumberFormatException e) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> ChannelException(<span class="string">"Non integer partition id specified"</span>, e);</span><br><span class="line">  &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> ChannelException(<span class="string">"Error while serializing event"</span>, e);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>doPut首先给事务的类型赋值，然后将event放入内存中，如果此过程中没有发生错误，则会调用<code>commit</code>对内存中的event提交到kafka中。</p>
+<p>下面看下<code>commit</code>的代码，commit的调用逻辑和put类似，具体实现是在KafkaChannel.KafkaTransaction的duCommit中，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">doCommit</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (type.equals(TransactionType.NONE)) &#123;</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// 判断需要commit的事务类型</span></span><br><span class="line">  <span class="comment">// 此处先分析PUT的commit</span></span><br><span class="line">  <span class="keyword">if</span> (type.equals(TransactionType.PUT)) &#123;</span><br><span class="line">    <span class="keyword">if</span> (!kafkaFutures.isPresent()) &#123;</span><br><span class="line">      kafkaFutures = Optional.of(<span class="keyword">new</span> LinkedList&lt;Future&lt;RecordMetadata&gt;&gt;());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="keyword">long</span> batchSize = producerRecords.get().size();</span><br><span class="line">      <span class="keyword">long</span> startTime = System.nanoTime();</span><br><span class="line">      <span class="keyword">int</span> index = <span class="number">0</span>;</span><br><span class="line">      <span class="keyword">for</span> (ProducerRecord&lt;String, <span class="keyword">byte</span>[]&gt; record : producerRecords.get()) &#123;</span><br><span class="line">        index++;</span><br><span class="line">        <span class="comment">// 多线程之间共享一个producer实例(官方推荐，但也可以根据自己的情况而定)</span></span><br><span class="line">        <span class="comment">// The producer is thread safe and sharing a single producer instance </span></span><br><span class="line">        <span class="comment">// across threads will generally be faster than having multiple instances.</span></span><br><span class="line">        kafkaFutures.get().add(producer.send(record, <span class="keyword">new</span> ChannelCallback(index, startTime)));</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">//prevents linger.ms from being a problem</span></span><br><span class="line">      <span class="comment">// 强制发送累加队列RecordAccumulator中的数据</span></span><br><span class="line">      producer.flush();</span><br><span class="line">      <span class="comment">// 等待各线程将数据发送至kafka</span></span><br><span class="line">      <span class="keyword">for</span> (Future&lt;RecordMetadata&gt; future : kafkaFutures.get()) &#123;</span><br><span class="line">        future.get();</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">long</span> endTime = System.nanoTime();</span><br><span class="line">      counter.addToKafkaEventSendTimer((endTime - startTime) / (<span class="number">1000</span> * <span class="number">1000</span>));</span><br><span class="line">      counter.addToEventPutSuccessCount(batchSize);</span><br><span class="line">      producerRecords.get().clear();</span><br><span class="line">      kafkaFutures.get().clear();</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">      logger.warn(<span class="string">"Sending events to Kafka failed"</span>, ex);</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> ChannelException(<span class="string">"Commit failed as send to Kafka failed"</span>,</span><br><span class="line">              ex);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    ...</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>PUT类型的事务和TAKE类型的事务都是在doCommit中提交，这里调用的都是kafka的Java Api，需要注意的是各个线程之间共享一个producer实例，event发送到kafka可以认为是同步发送，因为调用了<code>future.get</code>等待各个线程的结束。<br>这里还调用了<code>producer.flush()</code>，这是为了防止配置了<code>linger.ms</code>对record进行合并发送，flush强制将队列中的数据发送到kafka。</p>
+<p>无论是在doPut还是在doCommit中发生错误，都会对事务进行回滚。回滚是在doRollback中，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">doRollback</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (type.equals(TransactionType.NONE)) &#123;</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">if</span> (type.equals(TransactionType.PUT)) &#123;</span><br><span class="line">  	<span class="comment">// PUT时发生错误，则把内存中的数据清空</span></span><br><span class="line">  	<span class="comment">// 但没有对回滚的次数进行统计</span></span><br><span class="line">    producerRecords.get().clear();</span><br><span class="line">    kafkaFutures.get().clear();</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    ...</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><em>由上面的分析可知，kafkachannel是将event通过doPut写入内存，然后通过doCommit将内存中的数据发送到kafka，这个事务是将event写入到kafka时才结束。<br>而memorychannel则是将event通过doPut写入内存(putList)中，然后通过doCommit将putList中的数据写入queue中，写入queue成功则事务结束。可见如果使用kafkachannel向kafka中写数据时会比memorychannel要高效，更重要的是能保证数据的事务性</em>。</p>
+<p>下面看下take事务</p>
+<h2 id="take事务"><a href="#take事务" class="headerlink" title="take事务"></a>take事务</h2><p>kafkachannel中的take事务是由sink触发的，这里是指hdfsSink，下面看下take的事务代码。</p>
+<p>此处的sink用的是HDFSEventSink，其process代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 非线程安全</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> Status <span class="title">process</span><span class="params">()</span> <span class="keyword">throws</span> EventDeliveryException </span>&#123;</span><br><span class="line">  <span class="comment">// 拿到sink关联的channel</span></span><br><span class="line">  Channel channel = getChannel();</span><br><span class="line">  <span class="comment">// 从channel中得到Transaction</span></span><br><span class="line">  Transaction transaction = channel.getTransaction();</span><br><span class="line">  List&lt;BucketWriter&gt; writers = Lists.newArrayList();</span><br><span class="line">  <span class="comment">// 开始事务</span></span><br><span class="line">  transaction.begin();</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="keyword">int</span> txnEventCount = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span> (txnEventCount = <span class="number">0</span>; txnEventCount &lt; batchSize; txnEventCount++) &#123;</span><br><span class="line">      <span class="comment">// 从channel中取出一条数据</span></span><br><span class="line">      Event event = channel.take();</span><br><span class="line">      <span class="keyword">if</span> (event == <span class="keyword">null</span>) &#123;</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">      &#125;</span><br><span class="line">      ...</span><br><span class="line">      <span class="keyword">synchronized</span> (sfWritersLock) &#123;</span><br><span class="line">        bucketWriter = sfWriters.get(lookupPath);</span><br><span class="line">        <span class="comment">// we haven't seen this file yet, so open it and cache the handle</span></span><br><span class="line">        <span class="comment">// 没有文件的句柄，则新建一个</span></span><br><span class="line">        <span class="keyword">if</span> (bucketWriter == <span class="keyword">null</span>) &#123;</span><br><span class="line">          hdfsWriter = writerFactory.getWriter(fileType);</span><br><span class="line">          bucketWriter = initializeBucketWriter(realPath, realName,</span><br><span class="line">            lookupPath, hdfsWriter, closeCallback);</span><br><span class="line">          sfWriters.put(lookupPath, bucketWriter);</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">// track the buckets getting written in this transaction</span></span><br><span class="line">      <span class="comment">// 一次事务中，take的event可能来自不同topic的parition，则需要同时打开多个文件句柄</span></span><br><span class="line">      <span class="keyword">if</span> (!writers.contains(bucketWriter)) &#123;</span><br><span class="line">        writers.add(bucketWriter);</span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line">      <span class="comment">// Write the data to HDFS</span></span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">        bucketWriter.append(event);</span><br><span class="line">      &#125; <span class="keyword">catch</span> (BucketClosedException ex) &#123;</span><br><span class="line">        ...</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">// flush all pending buckets before committing the transaction</span></span><br><span class="line">    <span class="keyword">for</span> (BucketWriter bucketWriter : writers) &#123;</span><br><span class="line">      bucketWriter.flush();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 事务提交</span></span><br><span class="line">    transaction.commit();</span><br><span class="line">    ...</span><br><span class="line">  &#125; <span class="keyword">catch</span> (IOException eIO) &#123;</span><br><span class="line">  	<span class="comment">// 发生异常进行事务回滚</span></span><br><span class="line">    transaction.rollback();</span><br><span class="line">    LOG.warn(<span class="string">"HDFS IO error"</span>, eIO);</span><br><span class="line">    <span class="keyword">return</span> Status.BACKOFF;</span><br><span class="line">  &#125; <span class="keyword">catch</span> (Throwable th) &#123;</span><br><span class="line">    transaction.rollback();</span><br><span class="line">    LOG.error(<span class="string">"process failed"</span>, th);</span><br><span class="line">    <span class="keyword">if</span> (th <span class="keyword">instanceof</span> Error) &#123;</span><br><span class="line">      <span class="keyword">throw</span> (Error) th;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> EventDeliveryException(th);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    transaction.close();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>sink的process中先从对应的channel中得到Transaction，然后调用<code>begin</code>开始执行事务，然后开始处理数据。<br>处理数据时，调用<code>channel.take</code>从channel中take一条event，<code>take</code>最终调用的是<code>KafkaTransaction.doTake</code>，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> Event <span class="title">doTake</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">  <span class="comment">// 事务类型</span></span><br><span class="line">  type = TransactionType.TAKE;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">  	<span class="comment">// channelUUID是final类型的，那一个kafkachannel实例只有一个consumer？</span></span><br><span class="line">    <span class="keyword">if</span> (!(consumerAndRecords.get().uuid.equals(channelUUID))) &#123;</span><br><span class="line">      logger.info(<span class="string">"UUID mismatch, creating new consumer"</span>);</span><br><span class="line">      decommissionConsumerAndRecords(consumerAndRecords.get());</span><br><span class="line">      consumerAndRecords.remove();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">    logger.warn(<span class="string">"Error while shutting down consumer"</span>, ex);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">if</span> (!events.isPresent()) &#123;</span><br><span class="line">    events = Optional.of(<span class="keyword">new</span> LinkedList&lt;Event&gt;());</span><br><span class="line">  &#125;</span><br><span class="line">  Event e;</span><br><span class="line">  <span class="comment">// Give the channel a chance to commit if there has been a rebalance</span></span><br><span class="line">  <span class="keyword">if</span> (rebalanceFlag.get()) &#123;</span><br><span class="line">    logger.debug(<span class="string">"Returning null event after Consumer rebalance."</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">if</span> (!consumerAndRecords.get().failedEvents.isEmpty()) &#123;</span><br><span class="line">    e = consumerAndRecords.get().failedEvents.removeFirst();</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> ( logger.isTraceEnabled() ) &#123;</span><br><span class="line">      logger.trace(<span class="string">"Assignment during take: &#123;&#125;"</span>,</span><br><span class="line">          consumerAndRecords.get().consumer.assignment().toString());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="keyword">long</span> startTime = System.nanoTime();</span><br><span class="line">      <span class="keyword">if</span> (!consumerAndRecords.get().recordIterator.hasNext()) &#123;</span><br><span class="line">        consumerAndRecords.get().poll();</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">if</span> (consumerAndRecords.get().recordIterator.hasNext()) &#123;</span><br><span class="line">        ConsumerRecord&lt;String, <span class="keyword">byte</span>[]&gt; record = consumerAndRecords.get().recordIterator.next();</span><br><span class="line">        e = deserializeValue(record.value(), parseAsFlumeEvent);</span><br><span class="line">        TopicPartition tp = <span class="keyword">new</span> TopicPartition(record.topic(), record.partition());</span><br><span class="line">        OffsetAndMetadata oam = <span class="keyword">new</span> OffsetAndMetadata(record.offset() + <span class="number">1</span>, batchUUID);</span><br><span class="line">        consumerAndRecords.get().saveOffsets(tp,oam);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//Add the key to the header</span></span><br><span class="line">        <span class="keyword">if</span> (record.key() != <span class="keyword">null</span>) &#123;</span><br><span class="line">          e.getHeaders().put(KEY_HEADER, record.key());</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">long</span> endTime = System.nanoTime();</span><br><span class="line">        counter.addToKafkaEventGetTimer((endTime - startTime) / (<span class="number">1000</span> * <span class="number">1000</span>));</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (logger.isDebugEnabled()) &#123;</span><br><span class="line">          logger.debug(<span class="string">"&#123;&#125; processed output from partition &#123;&#125; offset &#123;&#125;"</span>,</span><br><span class="line">              <span class="keyword">new</span> Object[] &#123;getName(), record.partition(), record.offset()&#125;);</span><br><span class="line">        &#125;</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">      logger.warn(<span class="string">"Error while getting events from Kafka. This is usually caused by "</span> +</span><br><span class="line">                  <span class="string">"trying to read a non-flume event. Ensure the setting for "</span> +</span><br><span class="line">                  <span class="string">"parseAsFlumeEvent is correct"</span>, ex);</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> ChannelException(<span class="string">"Error while getting events from Kafka"</span>, ex);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  eventTaken = <span class="keyword">true</span>;</span><br><span class="line">  events.get().add(e);</span><br><span class="line">  <span class="keyword">return</span> e;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>doTake其实就是使用consumer消费kafka。<em>理想情况下应该让一个consumer消费多个topic的一个partition</em>，<strong>但这里consumer是和channelUUID对应的，而channelUUID又是final类型的，那是不是说kafkachannel实例中只有一个consumer</strong>？<br>这里的消费逻辑是consumer通过poll将数据拉到本地内存中，然后在sink中一条一条的取，每取一条offset就加1，内存取完之后再调用一次poll。<br>sink拿到event之后，根据event的信息放入相应的<code>bucketWriter</code>中，取出batchSize大小之后将所有的bucketWriter进行一次<code>flush</code>。flush成功之后进行<em>事务的commit</em>。</p>
+<p>commit调用的是doCommit，下面看下代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">doCommit</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">  logger.trace(<span class="string">"Starting commit"</span>);</span><br><span class="line">  <span class="keyword">if</span> (type.equals(TransactionType.NONE)) &#123;</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">if</span> (type.equals(TransactionType.PUT)) &#123;</span><br><span class="line">    ...</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="comment">// event taken ensures that we have collected events in this transaction</span></span><br><span class="line">    <span class="comment">// before committing</span></span><br><span class="line">    <span class="comment">// commit之前要保证当前事务中的event都被采集了</span></span><br><span class="line">    <span class="keyword">if</span> (consumerAndRecords.get().failedEvents.isEmpty() &amp;&amp; eventTaken) &#123;</span><br><span class="line">      logger.trace(<span class="string">"About to commit batch"</span>);</span><br><span class="line">      <span class="keyword">long</span> startTime = System.nanoTime();</span><br><span class="line">      <span class="comment">// 提交offset</span></span><br><span class="line">      consumerAndRecords.get().commitOffsets();</span><br><span class="line">      <span class="keyword">long</span> endTime = System.nanoTime();</span><br><span class="line">      counter.addToKafkaCommitTimer((endTime - startTime) / (<span class="number">1000</span> * <span class="number">1000</span>));</span><br><span class="line">      <span class="keyword">if</span> (logger.isDebugEnabled()) &#123;</span><br><span class="line">        logger.debug(consumerAndRecords.get().getCommittedOffsetsString());</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">int</span> takes = events.get().size();</span><br><span class="line">    <span class="keyword">if</span> (takes &gt; <span class="number">0</span>) &#123;</span><br><span class="line">      counter.addToEventTakeSuccessCount(takes);</span><br><span class="line">      events.get().clear();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里offset是手动触发的，调用的是kafka consumer的api<code>consumer.commitSync(offsets)</code>。<br>如果在commit或者flush的过程中发生异常，则进行事务回滚，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">doRollback</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (type.equals(TransactionType.NONE)) &#123;</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">if</span> (type.equals(TransactionType.PUT)) &#123;</span><br><span class="line">    ...</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">  	<span class="comment">// 回滚次数统计</span></span><br><span class="line">    counter.addToRollbackCounter(events.get().size());</span><br><span class="line">    <span class="comment">// 将内存中的event放入failedEvents中</span></span><br><span class="line">    consumerAndRecords.get().failedEvents.addAll(events.get());</span><br><span class="line">    events.get().clear();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>flume的事务保证了数据不会丢失，是flume中一个重要的概念。</p>
+<h2 id="疑虑"><a href="#疑虑" class="headerlink" title="疑虑"></a>疑虑</h2><p>HdfsSink 和 kafkachannel consumer都是单线程吗？<br>一个kafkachannel实例一个consumer，sink从consumer中取数，然后分给不同的bucketWriter，可以认为consumer是单线程，处理数据是多线程？</p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的肯定，是我装逼的最大的动力！</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/path/to/wechat-reward-image/wechatpay.png" alt="混绅士 WeChat Pay">
+          <p>微信打赏</p>
+        </div>
+      
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>本文作者：</strong>
+      混绅士
+    </li>
+    
+    <!--add wordcount and min2 read by szw-->
+    <li class="post-copyright-author">
+      <strong>本文字数：</strong>
+      8,427
+    </li>
+    <li class="post-copyright-author">
+      <strong>阅读时长：</strong>
+      48
+    </li>
+
+    <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="http://bigdatadecode.club/flume事务解析.html" title="flume事务解析">http://bigdatadecode.club/flume事务解析.html</a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>版权声明： </strong>
+      本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0</a> 许可协议。转载请注明出处！
+    </li>
+  </ul>
+
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/BigData/" rel="tag"># BigData</a>
+          
+            <a href="/tags/Flume/" rel="tag"># Flume</a>
+          
+            <a href="/tags/事务/" rel="tag"># 事务</a>
+          
+            <a href="/tags/kafkachannel/" rel="tag"># kafkachannel</a>
+          
+        </div>
+      
+
+       
+        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/利用zookeeper监控flume进程报警.html">利用zookeeper监控flume进程报警</a></li><li><a href="/Flume简介及初次使用.html">Flume简介及初次使用</a></li><li><a href="/MapReduce应用实例--二次排序之全局有序.html">MapReduce应用实例--二次排序之全局有序</a></li><li><a href="/HDFS-little-file-action.html">HDFS小文件合并实战</a></li><li><a href="/HDFSCannotObtainBlockLengthForLocatedBlock.html">HDFS之Cannot obtain block length for LocatedBlock异常</a></li><li><a href="/HDFS中atime和mtime.html">HDFS中atime与mtime解析</a></li><li><a href="/HDFS权限.html">HDFS权限</a></li><li><a href="/Hadoop_get_NullPointerException.html">Hadoop get命令返回NullPointerException</a></li><li><a href="/MysqlToHDFSWithCanal.html">利用canal同步mysql到HDFS</a></li><li><a href="/Spark编译与部署.html">Spark编译与部署</a></li></ul> 
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/kafka channel写入kafka报RecordTooLargeException异常.html" rel="next" title="kafka channel写入kafka报RecordTooLargeException异常">
+                <i class="fa fa-chevron-left"></i> kafka channel写入kafka报RecordTooLargeException异常
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/Intellij idea中依赖模块间的test代码.html" rel="prev" title="Intellij idea中依赖模块间的test代码">
+                Intellij idea中依赖模块间的test代码 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+  <div class="bdsharebuttonbox">
+    <a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+    <a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>  
+    <a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>      
+    <a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+    <a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+    <a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a>
+    <a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a>
+    <a href="#" class="bds_more" data-cmd="more"></a>
+    <a class="bds_count" data-cmd="count"></a>
+  </div>
+  <script>
+    window._bd_share_config = {
+      "common": {
+        "bdText": "",
+        "bdMini": "1",
+        "bdMiniList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "bdPic": ""
+      },
+      "image": {
+        "viewList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "viewText": "分享到：",
+        "viewSize": "16"
+      },
+      "slide": {
+        "bdImg": "5",
+        "bdPos": "left",
+        "bdTop": "100"
+      }
+    }
+  </script>
+
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>       
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/uploads/avatar.png" alt="混绅士">
+          <p class="site-author-name" itemprop="name">混绅士</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">97</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">157</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <!-- <i class="fa  fa-fw fa-globe"></i> -->
+              <!-- modify icon to fire by szw -->
+              <i class="fa fa-fire fa-" aria-hidden="true"></i>
+              热文推荐
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                </li>
+              
+            </ul>
+          </div>
+
+
+        
+
+        
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <!-- modify icon to fire by szw -->
+                <i class="fa fa-history fa-" aria-hidden="true"></i>
+                近期文章
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                
+                  <li>
+                    <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                  </li>
+                
+                  <li>
+                    <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+ 
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#put事务"><span class="nav-number">1.</span> <span class="nav-text">put事务</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#take事务"><span class="nav-number">2.</span> <span class="nav-text">take事务</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#疑虑"><span class="nav-number">4.</span> <span class="nav-text">疑虑</span></a></li></ol></div>
+            
+
+          </div>
+
+          <div class="post-toc-wrap sidebar-panel sidebar-panel-active" style="margin: 0 2px; text-align: left;">
+            
+              <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+                <div class="links-of-blogroll-title">
+                  <!-- <i class="fa  fa-fw fa-globe"></i> -->
+                  <!-- modify icon to fire by szw -->
+                  <i class="fa fa-fire fa-" aria-hidden="true"></i>
+                  热文推荐
+                </div>
+                <ul class="links-of-blogroll-list">
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                    </li>
+                  
+                </ul>
+              </div>
+            
+  
+            
+                <div class="links-of-blogroll motion-element links-of-blogroll-block">
+                  <div class="links-of-blogroll-title">
+                    <!-- modify icon to fire by szw -->
+                    <i class="fa fa-history fa-" aria-hidden="true"></i>
+                    近期文章
+                  </div>
+                  <ul class="links-of-blogroll-list">
+                    
+                    
+                      <li>
+                        <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
+                      </li>
+                    
+                  </ul>
+                </div>
+              
+          </div>
+
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+
+  </aside>
+
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">混绅士</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+<!--add total count by szw-->
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共617.7k字</span>
+</div>
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user">本站访客数</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      人次
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye">本站总访问量</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      次
+    </span>
+  
+</div>
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.0"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("nP29Qpe35cHgQTQIFL94dGoW-gzGzoHsz", "eVPY9SfyVH11gSsbPBEcAQM0");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+</body>
+</html>

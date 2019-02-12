@@ -1,0 +1,1257 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="0hClWroWscvQbyOyRPhAZWjOZJ6g3SFCdO47yYakvdk">
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="27E5EbutCm">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="Hadoop,BigData,YARN,AsyncDispatcher,">
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0">
+
+
+
+
+
+
+<meta name="description" content="YARN采用了事件驱动机制，其核心服务实际上都是一个异步调度器，包括Resourcemanager、Nodemanager、MRAppMaster等。本篇以MRAppMaster为例，其内部包含一个异步调度器AsyncDispatcher，AsyncDispatcher在yarn中的主要作用是对发生的一系列事件找到各个事件对应的handle进行处理，从其功能上可以看出其内部应该有一个队列，队列主要">
+<meta name="keywords" content="Hadoop,BigData,YARN,AsyncDispatcher">
+<meta property="og:type" content="article">
+<meta property="og:title" content="YARN源码分析之AsyncDispatcher事件调度器">
+<meta property="og:url" content="http://bigdatadecode.club/YARN源码分析之AsyncDispatcher事件调度器.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="YARN采用了事件驱动机制，其核心服务实际上都是一个异步调度器，包括Resourcemanager、Nodemanager、MRAppMaster等。本篇以MRAppMaster为例，其内部包含一个异步调度器AsyncDispatcher，AsyncDispatcher在yarn中的主要作用是对发生的一系列事件找到各个事件对应的handle进行处理，从其功能上可以看出其内部应该有一个队列，队列主要">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-02-12T09:23:37.665Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="YARN源码分析之AsyncDispatcher事件调度器">
+<meta name="twitter:description" content="YARN采用了事件驱动机制，其核心服务实际上都是一个异步调度器，包括Resourcemanager、Nodemanager、MRAppMaster等。本篇以MRAppMaster为例，其内部包含一个异步调度器AsyncDispatcher，AsyncDispatcher在yarn中的主要作用是对发生的一系列事件找到各个事件对应的handle进行处理，从其功能上可以看出其内部应该有一个队列，队列主要">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    sidebar: {"position":"right","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://bigdatadecode.club/YARN源码分析之AsyncDispatcher事件调度器.html">
+
+
+
+
+
+  <title> YARN源码分析之AsyncDispatcher事件调度器 | big data decode club </title>
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-80813521-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+
+
+
+
+
+
+  <div style="display: none;">
+    <script src="//s95.cnzz.com/z_stat.php?id=1260961002&web_id=1260961002" language="JavaScript"></script>
+  </div>
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">big data decode club</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">hunhun -- Any answers you can find in source code.</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/YARN源码分析之AsyncDispatcher事件调度器.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="混绅士">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="big data decode club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                YARN源码分析之AsyncDispatcher事件调度器
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-08-08T11:23:14+08:00">
+                2016-08-08
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-02-12T17:23:37+08:00">
+                2019-02-12
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/YARN源码分析之AsyncDispatcher事件调度器.html" class="leancloud_visitors" data-flag-title="YARN源码分析之AsyncDispatcher事件调度器">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>YARN采用了事件驱动机制，其核心服务实际上都是一个异步调度器，包括Resourcemanager、Nodemanager、MRAppMaster等。本篇以MRAppMaster为例，其内部包含一个异步调度器AsyncDispatcher，AsyncDispatcher在yarn中的主要作用是对发生的一系列事件找到各个事件对应的handle进行处理，从其功能上可以看出其内部应该有一个队列，队列主要用来存放等待调度的事件，还应该有一个事件与handle的映射表，用来处理各个事件。</p>
+<p>通过查看代码首先可以发现AsyncDispatcher是一个服务，继承了AbstractService，其次是通过<em>阻塞队列</em>存放事件，然后单独起一个线程从阻塞队列中消费事件，通过事先定义好的事件和处理器的映射表找到各自的处理器进行处理。</p>
+<a id="more"></a>
+<p>下面看下代码内容，首先看下属性：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 阻塞队列，用于存放发生的事件</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> BlockingQueue&lt;Event&gt; eventQueue;</span><br><span class="line"><span class="comment">// AsyncDispatcher event handler线程是否停止的标识</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">volatile</span> <span class="keyword">boolean</span> stopped = <span class="keyword">false</span>;</span><br><span class="line"><span class="comment">// Configuration flag for enabling/disabling draining dispatcher's events on</span></span><br><span class="line"><span class="comment">// stop functionality.</span></span><br><span class="line"><span class="comment">// 当停止AsyncDispatcher服务时，是否等待eventQueue中的事件被处理完</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">volatile</span> <span class="keyword">boolean</span> drainEventsOnStop = <span class="keyword">false</span>;</span><br><span class="line"><span class="comment">// Indicates all the remaining dispatcher's events on stop have been drained</span></span><br><span class="line"><span class="comment">// and processed.</span></span><br><span class="line"><span class="comment">// 在停止AsyncDispatcher服务时，标识所有剩余的事件被处理完</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">volatile</span> <span class="keyword">boolean</span> drained = <span class="keyword">true</span>;</span><br><span class="line"><span class="comment">// 对象锁</span></span><br><span class="line"><span class="keyword">private</span> Object waitForDrained = <span class="keyword">new</span> Object();</span><br><span class="line"><span class="comment">// For drainEventsOnStop enabled only, block newly coming events into the</span></span><br><span class="line"><span class="comment">// queue while stopping.</span></span><br><span class="line"><span class="comment">// 在停止AsyncDispatcher服务时，</span></span><br><span class="line"><span class="comment">// 如果drainEventsOnStop为true，则阻塞新的事件进入queue</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">volatile</span> <span class="keyword">boolean</span> blockNewEvents = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">private</span> EventHandler handlerInstance = <span class="keyword">null</span>;</span><br><span class="line"><span class="comment">// 消费queue中事件的线程</span></span><br><span class="line"><span class="keyword">private</span> Thread eventHandlingThread;</span><br><span class="line"><span class="comment">// 存放事件和事件处理器的映射</span></span><br><span class="line"><span class="keyword">protected</span> <span class="keyword">final</span> Map&lt;Class&lt;? extends Enum&gt;, EventHandler&gt; eventDispatchers;</span><br><span class="line"><span class="comment">// 当调度器发生异常时，rm是否退出</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">boolean</span> exitOnDispatchException;</span><br></pre></td></tr></table></figure>
+<p>类在使用之前需要进行实例化，一般都是通过构造函数进行实例化，下面就看下该类的构造函数：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">AsyncDispatcher</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">this</span>(<span class="keyword">new</span> LinkedBlockingQueue&lt;Event&gt;());</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">AsyncDispatcher</span><span class="params">(BlockingQueue&lt;Event&gt; eventQueue)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">super</span>(<span class="string">"Dispatcher"</span>);</span><br><span class="line">  <span class="keyword">this</span>.eventQueue = eventQueue;</span><br><span class="line">  <span class="keyword">this</span>.eventDispatchers = <span class="keyword">new</span> HashMap&lt;Class&lt;? extends Enum&gt;, EventHandler&gt;();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>该类有两个构造函数，一个是默认的构造函数，一个是带一个BlockingQueue参数的构造函数，而默认的构造函数在其内部又调用了带BlockingQueue参数的构造函数。</p>
+<p>构造函数中对其关键属性<code>eventQueue</code>和<code>eventDispatchers</code>进行了赋值，其中如果eventQueue不指定的话就实例化一个LinkedBlockingQueue对象。</p>
+<p>AsyncDispatcher是在Resourcemanager中被当做一个服务而启动的，看下代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> Dispatcher <span class="title">createDispatcher</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">new</span> AsyncDispatcher();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">rmDispatcher = setupDispatcher();</span><br><span class="line">addIfService(rmDispatcher);</span><br></pre></td></tr></table></figure>
+<p>将AsyncDispatcher实例赋值给rmDispatcher，然后将rmDispatcher作为一个服务启动。服务启动时都会先进行init然后start，init和start代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">serviceInit</span><span class="params">(Configuration conf)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">  <span class="keyword">this</span>.exitOnDispatchException =</span><br><span class="line">      conf.getBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY,</span><br><span class="line">        Dispatcher.DEFAULT_DISPATCHER_EXIT_ON_ERROR);</span><br><span class="line">  <span class="keyword">super</span>.serviceInit(conf);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">serviceStart</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">  <span class="comment">//start all the components</span></span><br><span class="line">  <span class="keyword">super</span>.serviceStart();</span><br><span class="line">  eventHandlingThread = <span class="keyword">new</span> Thread(createThread());</span><br><span class="line">  eventHandlingThread.setName(<span class="string">"AsyncDispatcher event handler"</span>);</span><br><span class="line">  eventHandlingThread.start();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>服务启动时，在serviceStart方法中起一个<em>AsyncDispatcher event handler</em>线程，从<em>eventQueue</em>中取出event进行调度。<br>看下eventHandlingThread线程的run方法：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">Runnable <span class="title">createThread</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">      <span class="keyword">while</span> (!stopped &amp;&amp; !Thread.currentThread().isInterrupted()) &#123;</span><br><span class="line">      	<span class="comment">// 标识eventQueue是否为空</span></span><br><span class="line">        drained = eventQueue.isEmpty();</span><br><span class="line">        <span class="comment">// blockNewEvents is only set when dispatcher is draining to stop,</span></span><br><span class="line">        <span class="comment">// adding this check is to avoid the overhead of acquiring the lock</span></span><br><span class="line">        <span class="comment">// and calling notify every time in the normal run of the loop.</span></span><br><span class="line">        <span class="keyword">if</span> (blockNewEvents) &#123;</span><br><span class="line">          <span class="keyword">synchronized</span> (waitForDrained) &#123;</span><br><span class="line">            <span class="keyword">if</span> (drained) &#123;</span><br><span class="line">              waitForDrained.notify();</span><br><span class="line">            &#125;</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        Event event;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">          <span class="comment">// 从eventQueue中移除第一个event</span></span><br><span class="line">          event = eventQueue.take();</span><br><span class="line">        &#125; <span class="keyword">catch</span>(InterruptedException ie) &#123;</span><br><span class="line">          <span class="keyword">if</span> (!stopped) &#123;</span><br><span class="line">            LOG.warn(<span class="string">"AsyncDispatcher thread interrupted"</span>, ie);</span><br><span class="line">          &#125;</span><br><span class="line">          <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// event不为null则调度事件，让事件处理器处理</span></span><br><span class="line">        <span class="keyword">if</span> (event != <span class="keyword">null</span>) &#123;</span><br><span class="line">          dispatch(event);</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在run中，首先判断该服务是否处于正在stop过程中，如果正在stop并且<code>drainEventsOnStop</code>为true，则进入<code>if (blockNewEvents)</code>语句中(<em>blockNewEvents在serviceStop中，当drainEventsOnStop为true时，blockNewEvents被赋值为true</em>)，通过<code>drained</code>判断eventQueue中是否还有剩余的event，如果没有剩余event则通知在<code>serviceStop</code>中阻塞的线程继续进行stop操作。如果有剩余则和正常逻辑(正常逻辑指在没有进行stop操作时的逻辑)一样，从eventQueue中取出一个event，通过<code>dispatch</code>进行调度。dispatch代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">dispatch</span><span class="params">(Event event)</span> </span>&#123;</span><br><span class="line">  <span class="comment">//all events go thru this loop</span></span><br><span class="line">  ...</span><br><span class="line">  <span class="comment">// 得到event的class名</span></span><br><span class="line">  Class&lt;? extends Enum&gt; type = event.getType().getDeclaringClass();</span><br><span class="line">  <span class="keyword">try</span>&#123;</span><br><span class="line">  	<span class="comment">// 从map集合eventDispatchers中得到该事件注册的处理器</span></span><br><span class="line">    EventHandler handler = eventDispatchers.get(type);</span><br><span class="line">    <span class="keyword">if</span>(handler != <span class="keyword">null</span>) &#123;</span><br><span class="line">      <span class="comment">// 事件处理器的handle方法进行处理event</span></span><br><span class="line">      handler.handle(event);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> Exception(<span class="string">"No handler for registered for "</span> + type);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">    <span class="comment">//TODO Maybe log the state of the queue</span></span><br><span class="line">    LOG.fatal(<span class="string">"Error in dispatcher thread"</span>, t);</span><br><span class="line">    <span class="comment">// If serviceStop is called, we should exit this thread gracefully.</span></span><br><span class="line">    <span class="keyword">if</span> (exitOnDispatchException</span><br><span class="line">        &amp;&amp; (ShutdownHookManager.get().isShutdownInProgress()) == <span class="keyword">false</span></span><br><span class="line">        &amp;&amp; stopped == <span class="keyword">false</span>) &#123;</span><br><span class="line">      LOG.info(<span class="string">"Exiting, bbye.."</span>);</span><br><span class="line">      System.exit(-<span class="number">1</span>);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里涉及到一个属性<code>eventDispatchers</code>，这个map中存放的是事件类型和对应的事件处理器，通过key事件类型得到事件处理器之后，用该事件处理器的<code>handle</code>方法进行处理。</p>
+<p>这里只是从<code>eventDispatchers</code>中取出key对应的value，那么<code>eventDispatchers</code>中的key和value是怎么put进去的呢？在<code>ResourceManager.java</code>中不难发现eventDispatchers中的值是通过<code>register</code>方法注册进去的，下面看下代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">register</span><span class="params">(Class&lt;? extends Enum&gt; eventType,</span></span></span><br><span class="line"><span class="function"><span class="params">    EventHandler handler)</span> </span>&#123;</span><br><span class="line">  <span class="comment">/* check to see if we have a listener registered */</span></span><br><span class="line">  <span class="comment">// 检查是否已经注册了该事件类型的处理器</span></span><br><span class="line">  EventHandler&lt;Event&gt; registeredHandler = (EventHandler&lt;Event&gt;)</span><br><span class="line">  	eventDispatchers.get(eventType);</span><br><span class="line">  LOG.info(<span class="string">"Registering "</span> + eventType + <span class="string">" for "</span> + handler.getClass());</span><br><span class="line">  <span class="comment">// 如果没有则直接put</span></span><br><span class="line">  <span class="keyword">if</span> (registeredHandler == <span class="keyword">null</span>) &#123;</span><br><span class="line">    eventDispatchers.put(eventType, handler);</span><br><span class="line">  &#125; <span class="keyword">else</span> <span class="keyword">if</span> (!(registeredHandler <span class="keyword">instanceof</span> MultiListenerHandler))&#123;</span><br><span class="line">    <span class="comment">/* for multiple listeners of an event add the multiple listener handler */</span></span><br><span class="line">    <span class="comment">// 如果已经注册了该事件类型的处理器，</span></span><br><span class="line">    <span class="comment">// 并且registeredHandler不是MultiListenerHandler类型</span></span><br><span class="line">    <span class="comment">// 则将已存在的registeredHandler和新来的handler都add到MultiListenerHandler中</span></span><br><span class="line">    MultiListenerHandler multiHandler = <span class="keyword">new</span> MultiListenerHandler();</span><br><span class="line">    multiHandler.addHandler(registeredHandler);</span><br><span class="line">    multiHandler.addHandler(handler);</span><br><span class="line">    eventDispatchers.put(eventType, multiHandler);</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="comment">/* already a multilistener, just add to it */</span></span><br><span class="line">    <span class="comment">// 如果registeredHandler已经是MultiListenerHandler类型</span></span><br><span class="line">    <span class="comment">// 则直接加入MultiListenerHandler中</span></span><br><span class="line">    MultiListenerHandler multiHandler</span><br><span class="line">    = (MultiListenerHandler) registeredHandler;</span><br><span class="line">    multiHandler.addHandler(handler);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>从register方法中可以得出可以对同一个事件类型注册多个事件处理器，多个事件处理器用<code>MultiListenerHandler</code>存储。</p>
+<p>对某一个事件注册事件处理器时，先判断eventDispatchers是否存在该事件的处理器，没有则直接注册，如果存在并且不是<code>MultiListenerHandler</code>类型，则构建一个<code>MultiListenerHandler</code>的实例，将已经存在的处理器和新添加的处理器都添加到<code>MultiListenerHandler</code>中，如果存在并且是<code>MultiListenerHandler</code>类型，则直接向其追加处理器handler。下面看下<code>MultiListenerHandler</code>是个什么鬼</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">MultiListenerHandler</span> <span class="keyword">implements</span> <span class="title">EventHandler</span>&lt;<span class="title">Event</span>&gt; </span>&#123;</span><br><span class="line">  List&lt;EventHandler&lt;Event&gt;&gt; listofHandlers;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">MultiListenerHandler</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    listofHandlers = <span class="keyword">new</span> ArrayList&lt;EventHandler&lt;Event&gt;&gt;();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">handle</span><span class="params">(Event event)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (EventHandler&lt;Event&gt; handler: listofHandlers) &#123;</span><br><span class="line">      handler.handle(event);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">void</span> <span class="title">addHandler</span><span class="params">(EventHandler&lt;Event&gt; handler)</span> </span>&#123;</span><br><span class="line">    listofHandlers.add(handler);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>MultiListenerHandler是AsyncDispatcher的一个内部静态类，有一个list属性<code>listofHandlers</code>来存放多个事件处理器。该类也实现了<code>EventHandler</code>接口，通过调用<code>handle</code>方法，将事件依次通过列表中的事件处理器handler来处理。</p>
+<p>细心的朋友可能已经在想eventQueue中的event是在哪put进去的呢？</p>
+<p>在AsyncDispatcher中查看eventQueue的put方法都在哪里调用了。其实在AsyncDispatcher中只有一处调用了<code>eventQueue.put</code>方法，那就是在<code>GenericEventHandler</code>类的handle中。GenericEventHandler是AsyncDispatcher的一个内部类，在<code>AsyncDispatcher.getEventHandler()</code>方法中实例化，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> EventHandler <span class="title">getEventHandler</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (handlerInstance == <span class="keyword">null</span>) &#123;</span><br><span class="line">    handlerInstance = <span class="keyword">new</span> GenericEventHandler();</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> handlerInstance;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看出一个调度器里实例化一个GenericEventHandler对象，下次获取就可以直接返回handlerInstance了。</p>
+<p>向eventQueue中put数据时，先通过<code>AsyncDispatcher.getEventHandler()</code>方法，得到GenericEventHandler实例handlerInstance，然后调用<code>GenericEventHandler.handle(Event)</code>方法put进去的，下面看下GenericEventHandler.handle方法</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">handle</span><span class="params">(Event event)</span> </span>&#123;</span><br><span class="line">  <span class="comment">// 当drainEventsOnStop为true并且当前调度器正在stop时，</span></span><br><span class="line">  <span class="comment">// 禁止新添加event，直接return</span></span><br><span class="line">  <span class="keyword">if</span> (blockNewEvents) &#123;</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  drained = <span class="keyword">false</span>;</span><br><span class="line">  <span class="comment">/* all this method does is enqueue all the events onto the queue */</span></span><br><span class="line">  <span class="keyword">int</span> qSize = eventQueue.size();</span><br><span class="line">  <span class="comment">// eventQueue size不为0且是1000的整数倍则打印一条log</span></span><br><span class="line">  <span class="keyword">if</span> (qSize !=<span class="number">0</span> &amp;&amp; qSize %<span class="number">1000</span> == <span class="number">0</span>) &#123;</span><br><span class="line">    LOG.info(<span class="string">"Size of event-queue is "</span> + qSize);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// 得到剩余的空间</span></span><br><span class="line">  <span class="keyword">int</span> remCapacity = eventQueue.remainingCapacity();</span><br><span class="line">  <span class="comment">// 剩余的空间小于1000时打印一个warn log</span></span><br><span class="line">  <span class="keyword">if</span> (remCapacity &lt; <span class="number">1000</span>) &#123;</span><br><span class="line">    LOG.warn(<span class="string">"Very low remaining capacity in the event-queue: "</span></span><br><span class="line">        + remCapacity);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">  	<span class="comment">// put进eventQueue中</span></span><br><span class="line">    eventQueue.put(event);</span><br><span class="line">  &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">    <span class="keyword">if</span> (!stopped) &#123;</span><br><span class="line">      LOG.warn(<span class="string">"AsyncDispatcher thread interrupted"</span>, e);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> YarnRuntimeException(e);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>向eventQueue中put数据时，先统计下当前eventQueue是的使用情况，如果剩余空间小于1000，则打印一条warn日志。eventQueue是LinkedBlockingQueue类型的对象，<em>调用LinkedBlockingQueue默认构造函数在实例化时会将Integer.MAX_VALUE作为空间大小。</em></p>
+<p>至此AsyncDispatcher类从start、put、take都已介绍完，最后介绍下AsyncDispatcher的stop。看下<code>serviceStop</code>方法：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">serviceStop</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">  <span class="comment">// 这里首先校验drainEventsOnStop，默认为false</span></span><br><span class="line">  <span class="comment">// 如果为true则等待eventQueue中的event处理完之后再stop调度器</span></span><br><span class="line">  <span class="keyword">if</span> (drainEventsOnStop) &#123;</span><br><span class="line">  	<span class="comment">// blockNewEvents在此设为true，在eventHandlingThread线程中检查是否已处理完</span></span><br><span class="line">    blockNewEvents = <span class="keyword">true</span>;</span><br><span class="line">    LOG.info(<span class="string">"AsyncDispatcher is draining to stop, igonring any new events."</span>);</span><br><span class="line">    <span class="comment">// 等待eventHandlingThread线程的notify</span></span><br><span class="line">    <span class="keyword">synchronized</span> (waitForDrained) &#123;</span><br><span class="line">      <span class="keyword">while</span> (!drained &amp;&amp; eventHandlingThread.isAlive()) &#123;</span><br><span class="line">        waitForDrained.wait(<span class="number">1000</span>);</span><br><span class="line">        LOG.info(<span class="string">"Waiting for AsyncDispatcher to drain."</span>);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  stopped = <span class="keyword">true</span>;</span><br><span class="line">  <span class="keyword">if</span> (eventHandlingThread != <span class="keyword">null</span>) &#123;</span><br><span class="line">    eventHandlingThread.interrupt();</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      eventHandlingThread.join();</span><br><span class="line">    &#125; <span class="keyword">catch</span> (InterruptedException ie) &#123;</span><br><span class="line">      LOG.warn(<span class="string">"Interrupted Exception while stopping"</span>, ie);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// stop all the components</span></span><br><span class="line">  <span class="keyword">super</span>.serviceStop();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>调度器stop时，主要是校验下drainEventsOnStop的值，为false则直接stop掉调度器，为true则阻塞新eventput进eventQueue，等待eventQueue中的event被处理完再stop。</p>
+<p><strong>事件驱动设计思想的引入，使得YARN具有低耦合，高内聚的特点，各个模块只需完成各自的功能，而模块之间则采用事件联系起来，系统设计简单且维护方便。</strong></p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的肯定，是我装逼的最大的动力！</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/path/to/wechat-reward-image/wechatpay.png" alt="混绅士 WeChat Pay">
+          <p>微信打赏</p>
+        </div>
+      
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>本文作者：</strong>
+      混绅士
+    </li>
+    
+    <!--add wordcount and min2 read by szw-->
+    <li class="post-copyright-author">
+      <strong>本文字数：</strong>
+      6,242
+    </li>
+    <li class="post-copyright-author">
+      <strong>阅读时长：</strong>
+      35
+    </li>
+
+    <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="http://bigdatadecode.club/YARN源码分析之AsyncDispatcher事件调度器.html" title="YARN源码分析之AsyncDispatcher事件调度器">http://bigdatadecode.club/YARN源码分析之AsyncDispatcher事件调度器.html</a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>版权声明： </strong>
+      本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0</a> 许可协议。转载请注明出处！
+    </li>
+  </ul>
+
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
+          
+            <a href="/tags/BigData/" rel="tag"># BigData</a>
+          
+            <a href="/tags/YARN/" rel="tag"># YARN</a>
+          
+            <a href="/tags/AsyncDispatcher/" rel="tag"># AsyncDispatcher</a>
+          
+        </div>
+      
+
+       
+        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/YARN源码分析之Fair Scheduler part1.html">YARN源码分析之Fair Scheduler part1</a></li><li><a href="/Application-fail-RM-change.html">Application运行失败导致RM主备切换</a></li><li><a href="/YARN-Lost-Node显示异常.html">YARN Lost Node显示异常</a></li><li><a href="/YARNSrcMRAppMasterStart.html">YARN源码分析之MRAppMaster启动</a></li><li><a href="/YARNSrcRMContainerAllocator.html">YARN源码分析之RMContainerAllocator</a></li><li><a href="/YARNSrcApplicationMasterArch.html">YARN源码分析之ApplicationMaster架构</a></li><li><a href="/YARN源码分析之StateMachineFactory状态机.html">YARN源码分析之StateMachineFactory状态机</a></li><li><a href="/YarnSrcMRCreateContainerRequest.html">YARN源码分析之MR创建container请求</a></li><li><a href="/YARNSrcAMAssignPolicy.html">YARN源码分析之ApplicationMaster分配策略</a></li><li><a href="/YARNSrcApplicationMasterStart.html">YARN源码分析之ApplicationMaster启动流程</a></li></ul> 
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/Hadoop RPC 解析.html" rel="next" title="Hadoop RPC 解析">
+                <i class="fa fa-chevron-left"></i> Hadoop RPC 解析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/YARN源码分析之StateMachineFactory状态机.html" rel="prev" title="YARN源码分析之StateMachineFactory状态机">
+                YARN源码分析之StateMachineFactory状态机 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+  <div class="bdsharebuttonbox">
+    <a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+    <a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>  
+    <a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>      
+    <a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+    <a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+    <a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a>
+    <a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a>
+    <a href="#" class="bds_more" data-cmd="more"></a>
+    <a class="bds_count" data-cmd="count"></a>
+  </div>
+  <script>
+    window._bd_share_config = {
+      "common": {
+        "bdText": "",
+        "bdMini": "1",
+        "bdMiniList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "bdPic": ""
+      },
+      "image": {
+        "viewList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "viewText": "分享到：",
+        "viewSize": "16"
+      },
+      "slide": {
+        "bdImg": "5",
+        "bdPos": "left",
+        "bdTop": "100"
+      }
+    }
+  </script>
+
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+
+      <section class="site-overview sidebar-panel sidebar-panel-active">
+        <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/uploads/avatar.png" alt="混绅士">
+          <p class="site-author-name" itemprop="name">混绅士</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">97</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">157</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <!-- <i class="fa  fa-fw fa-globe"></i> -->
+              <!-- modify icon to fire by szw -->
+              <i class="fa fa-fire fa-" aria-hidden="true"></i>
+              热文推荐
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                </li>
+              
+            </ul>
+          </div>
+
+
+        
+
+        
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <!-- modify icon to fire by szw -->
+                <i class="fa fa-history fa-" aria-hidden="true"></i>
+                近期文章
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                
+                  <li>
+                    <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                  </li>
+                
+                  <li>
+                    <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+ 
+
+        
+
+
+      </section>
+
+      
+
+      
+
+    </div>
+
+  </aside>
+
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">混绅士</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+<!--add total count by szw-->
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共617.7k字</span>
+</div>
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user">本站访客数</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      人次
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye">本站总访问量</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      次
+    </span>
+  
+</div>
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.0"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("nP29Qpe35cHgQTQIFL94dGoW-gzGzoHsz", "eVPY9SfyVH11gSsbPBEcAQM0");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+</body>
+</html>

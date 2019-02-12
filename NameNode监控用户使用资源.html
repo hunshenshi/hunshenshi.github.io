@@ -1,0 +1,1386 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="0hClWroWscvQbyOyRPhAZWjOZJ6g3SFCdO47yYakvdk">
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="27E5EbutCm">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="Hadoop,BigData,HDFS,nntop,使用资源,">
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0">
+
+
+
+
+
+
+<meta name="description" content="HDFS是Hadoop的基石，对其的使用情况进行监控显的尤为重要。那么怎么来衡量一个用户对hdfs的使用情况呢，用什么来衡量呢？众所周知HDFS是由NameNode和DataNode组成，而NameNode又是HDFS的核心，NameNode中最重要的就是记录整个集群状态的元数据。了解集群的使用情况也就是目前的状态，这些状态记录在元数据中，而元数据中是通过记录各个用户对HDFS的操作来描绘集群的状">
+<meta name="keywords" content="Hadoop,BigData,HDFS,nntop,使用资源">
+<meta property="og:type" content="article">
+<meta property="og:title" content="NameNode监控用户使用资源">
+<meta property="og:url" content="http://bigdatadecode.club/NameNode监控用户使用资源.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="HDFS是Hadoop的基石，对其的使用情况进行监控显的尤为重要。那么怎么来衡量一个用户对hdfs的使用情况呢，用什么来衡量呢？众所周知HDFS是由NameNode和DataNode组成，而NameNode又是HDFS的核心，NameNode中最重要的就是记录整个集群状态的元数据。了解集群的使用情况也就是目前的状态，这些状态记录在元数据中，而元数据中是通过记录各个用户对HDFS的操作来描绘集群的状">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://bigdatadecode.club/blogimgs/nntop/nntop-architecture.png">
+<meta property="og:image" content="http://bigdatadecode.club/blogimgs/nntop/统计流程图.png">
+<meta property="og:updated_time" content="2016-10-03T11:15:00.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="NameNode监控用户使用资源">
+<meta name="twitter:description" content="HDFS是Hadoop的基石，对其的使用情况进行监控显的尤为重要。那么怎么来衡量一个用户对hdfs的使用情况呢，用什么来衡量呢？众所周知HDFS是由NameNode和DataNode组成，而NameNode又是HDFS的核心，NameNode中最重要的就是记录整个集群状态的元数据。了解集群的使用情况也就是目前的状态，这些状态记录在元数据中，而元数据中是通过记录各个用户对HDFS的操作来描绘集群的状">
+<meta name="twitter:image" content="http://bigdatadecode.club/blogimgs/nntop/nntop-architecture.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    sidebar: {"position":"right","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://bigdatadecode.club/NameNode监控用户使用资源.html">
+
+
+
+
+
+  <title> NameNode监控用户使用资源 | big data decode club </title>
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-80813521-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+
+
+
+
+
+
+  <div style="display: none;">
+    <script src="//s95.cnzz.com/z_stat.php?id=1260961002&web_id=1260961002" language="JavaScript"></script>
+  </div>
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">big data decode club</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">hunhun -- Any answers you can find in source code.</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/NameNode监控用户使用资源.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="混绅士">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="big data decode club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                NameNode监控用户使用资源
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-10-03T19:15:00+08:00">
+                2016-10-03
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2016-10-03T19:15:00+08:00">
+                2016-10-03
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/NameNode监控用户使用资源.html" class="leancloud_visitors" data-flag-title="NameNode监控用户使用资源">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>HDFS是Hadoop的基石，对其的使用情况进行监控显的尤为重要。那么怎么来衡量一个用户对hdfs的使用情况呢，用什么来衡量呢？众所周知HDFS是由NameNode和DataNode组成，而NameNode又是HDFS的核心，NameNode中最重要的就是记录整个集群状态的元数据。了解集群的使用情况也就是目前的状态，这些状态记录在元数据中，而元数据中是通过记录各个用户对HDFS的操作来描绘集群的状态，那么是不是可以通过统计各个用户在某个时间段对HDFS的操作数来衡量他们使用HDFS的资源。答案是肯定是，而且此功能已经merge到2.7版本中，下面就来了解下这个<a href="https://issues.apache.org/jira/browse/HDFS-6982" target="_blank" rel="noopener">patch</a>。</p>
+<a id="more"></a>
+<h2 id="架构"><a href="#架构" class="headerlink" title="架构"></a>架构</h2><p>nntop的架构图如下：<br><img src="/blogimgs/nntop/nntop-architecture.png" alt="nntop架构图" title="nntop架构图"><br>nntop是在NN中的audit loggers中进行拦截，audit log从NN中接收所有user的操作。在audit log中进行拦截能够很好的扩展到其余的NN中。<br>HDFS默认的审计日志是DefaultAuditLogger，nntop是在HDFS中添加了一个新的审计日志类TopAuditLogger，由TopAuditLogger解析审计事件并传送给TopMetrics。TopMetrics中记录每个操作的top user list，TopMetrics也向Hadoop metrics system注册此metrics，实现了getMetrics方法，以便得到当前时间段的top user list。<br>TopMetrics能得到多个时间区间的top users，默认是1m，5m和25m，这是为了弥补没有画图接口。</p>
+<h2 id="细节设计"><a href="#细节设计" class="headerlink" title="细节设计"></a>细节设计</h2><p>此功能的主要就是统计每个user的操作数，但是怎么统计呢？这是个问题。</p>
+<p>提交patch的这位大神采用的<em>滑动窗口</em>的思想，并把<em>当前窗口分为n个bucket</em>(默认是10)，分别在每个bucket中进行计数，然后对其窗口内的bucket进行求和得到总和。每个bucket有一个时间标识updatetime，当updatetime与now的差值超过了窗口的长度，则将此bucket置0，更新updatetime，窗口也就右移了一个bucket。</p>
+<p>这样设计很巧妙没毛病，但是HDFS中的操作类型和用户都很多，统计应该怎样逐级统计呢？又<em>为了弥补此功能没有友好的画图接口，此patch支持对多个时间间隔进行统计</em>，则大神将统计的流程设计为树形结构，统计的入口是TopMetrics，然后TopMetrics会根据设置的需要统计的时间区间个数初始化对应的RollingWindowManager(一个区间一个RollingWindowManager)，RollingWindowManager中又有一个metricsMap，用来记录metrics与RollingWindowMap的映射，RollingWindowMap中又是user和RollingWindow的映射，RollingWindow就是所谓的滑动窗口，里面由n个bucket进行统计。树形图如下：<br><img src="/blogimgs/nntop/统计流程图.png" alt="统计流程" title="统计流程"></p>
+<h2 id="代码跟读"><a href="#代码跟读" class="headerlink" title="代码跟读"></a>代码跟读</h2><p>从上图的nntop架构图中可以看出是在写入auditlog之前进行了拦截，也就是在<code>FSNamesystem.logAuditEvent()</code>中进行判断的，logAuditEvent是将该操作在注册的各个auditsLoggers中都记录一边，auditsLoggers是通过<code>initAuditLoggers</code>向nn注册的，看下代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> List&lt;AuditLogger&gt; <span class="title">initAuditLoggers</span><span class="params">(Configuration conf)</span> </span>&#123;</span><br><span class="line">  <span class="comment">// Initialize the custom access loggers if configured.</span></span><br><span class="line">  Collection&lt;String&gt; alClasses = conf.getStringCollection(DFS_NAMENODE_AUDIT_LOGGERS_KEY);</span><br><span class="line">  List&lt;AuditLogger&gt; auditLoggers = Lists.newArrayList();</span><br><span class="line">  ...</span><br><span class="line">  <span class="comment">// Make sure there is at least one logger installed.</span></span><br><span class="line">  <span class="keyword">if</span> (auditLoggers.isEmpty()) &#123;</span><br><span class="line">    auditLoggers.add(<span class="keyword">new</span> DefaultAuditLogger());</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// 开启nntop功能时，向auditsLoggers里注册TopAuditLogger</span></span><br><span class="line">  <span class="comment">// 开启的开关由dfs.namenode.top.enabled控制</span></span><br><span class="line">  <span class="comment">// Add audit logger to calculate top users</span></span><br><span class="line">  <span class="keyword">if</span> (topConf.isEnabled) &#123;</span><br><span class="line">    topMetrics = <span class="keyword">new</span> TopMetrics(conf, topConf.nntopReportingPeriodsMs);</span><br><span class="line">    auditLoggers.add(<span class="keyword">new</span> TopAuditLogger(topMetrics));</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> Collections.unmodifiableList(auditLoggers);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>由代码可以看出<code>DefaultAuditLogger</code>和<code>TopAuditLogger</code>都向auditsLoggers中注册，则这两个auditLogger的功能应该类似，DefaultAuditLogger只是将操作相关的信息记录在audit-log中，而TopAuditLogger是在记录之前进行了一次metrics的report，此时的metrics是TopMetrics的对象，在构造TopAuditLogger对象时被传入。</p>
+<p>TopAuditLogger初始化并向auditsLoggers中注册之后，当有hdfs操作时，会调用<code>FSNamesystem.logAuditEvent()</code>方法对操作进行记录，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">logAuditEvent</span><span class="params">(<span class="keyword">boolean</span> succeeded,</span></span></span><br><span class="line"><span class="function"><span class="params">    UserGroupInformation ugi, InetAddress addr, String cmd, String src,</span></span></span><br><span class="line"><span class="function"><span class="params">    String dst, HdfsFileStatus stat)</span> </span>&#123;</span><br><span class="line">  FileStatus status = <span class="keyword">null</span>;</span><br><span class="line">  ...</span><br><span class="line">  <span class="keyword">for</span> (AuditLogger logger : auditLoggers) &#123;</span><br><span class="line">  	<span class="comment">// DefaultAuditLogger extends HdfsAuditLogger</span></span><br><span class="line">  	<span class="comment">// HdfsAuditLogger implements AuditLogger</span></span><br><span class="line">    <span class="keyword">if</span> (logger <span class="keyword">instanceof</span> HdfsAuditLogger) &#123;</span><br><span class="line">      HdfsAuditLogger hdfsLogger = (HdfsAuditLogger) logger;</span><br><span class="line">      hdfsLogger.logAuditEvent(succeeded, ugi.toString(), addr, cmd, src, dst,</span><br><span class="line">          status, ugi, dtSecretManager);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="comment">// TopAuditLogger implements AuditLogger </span></span><br><span class="line">      <span class="comment">// 则此处调用TopAuditLogger的logAuditEvent方法</span></span><br><span class="line">      logger.logAuditEvent(succeeded, ugi.toString(), addr,</span><br><span class="line">          cmd, src, dst, status);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>FSNamesystem.logAuditEvent()</code>中会对auditsLoggers进行遍历，将操作记录在所有的auditsLogger中，通过调用auditsLogger的<code>logAuditEvent</code>方法，看下<code>TopAuditLogger.logAuditEvent</code>方法：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">logAuditEvent</span><span class="params">(<span class="keyword">boolean</span> succeeded, String userName,</span></span></span><br><span class="line"><span class="function"><span class="params">    InetAddress addr, String cmd, String src, String dst, FileStatus status)</span> </span>&#123;</span><br><span class="line">  <span class="comment">// 核心代码</span></span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    topMetrics.report(succeeded, userName, addr, cmd, src, dst, status);</span><br><span class="line">  &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">    LOG.error(<span class="string">"An error occurred while reflecting the event in top service, "</span></span><br><span class="line">        + <span class="string">"event: (cmd=&#123;&#125;,userName=&#123;&#125;)"</span>, cmd, userName);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// 与DefaultAuditLogger中的logAuditEvent类似</span></span><br><span class="line">  <span class="keyword">if</span> (LOG.isDebugEnabled()) &#123;</span><br><span class="line">    <span class="keyword">final</span> StringBuilder sb = <span class="keyword">new</span> StringBuilder();</span><br><span class="line">    sb.append(<span class="string">"allowed="</span>).append(succeeded).append(<span class="string">"\t"</span>);</span><br><span class="line">    sb.append(<span class="string">"ugi="</span>).append(userName).append(<span class="string">"\t"</span>);</span><br><span class="line">    sb.append(<span class="string">"ip="</span>).append(addr).append(<span class="string">"\t"</span>);</span><br><span class="line">    sb.append(<span class="string">"cmd="</span>).append(cmd).append(<span class="string">"\t"</span>);</span><br><span class="line">    sb.append(<span class="string">"src="</span>).append(src).append(<span class="string">"\t"</span>);</span><br><span class="line">    sb.append(<span class="string">"dst="</span>).append(dst).append(<span class="string">"\t"</span>);</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">null</span> == status) &#123;</span><br><span class="line">      sb.append(<span class="string">"perm=null"</span>);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      sb.append(<span class="string">"perm="</span>);</span><br><span class="line">      sb.append(status.getOwner()).append(<span class="string">":"</span>);</span><br><span class="line">      sb.append(status.getGroup()).append(<span class="string">":"</span>);</span><br><span class="line">      sb.append(status.getPermission());</span><br><span class="line">    &#125;</span><br><span class="line">    LOG.debug(<span class="string">"------------------- logged event for top service: "</span> + sb);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>logAuditEvent在写入audit-log之前先向metrics系统report，report代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">report</span><span class="params">(<span class="keyword">long</span> currTime, String userName, String cmd)</span> </span>&#123;</span><br><span class="line">  LOG.debug(<span class="string">"a metric is reported: cmd: &#123;&#125; user: &#123;&#125;"</span>, cmd, userName);</span><br><span class="line">  userName = UserGroupInformation.trimLoginMethod(userName);</span><br><span class="line">  <span class="comment">// 一个时间区间一个rollingWindowManager</span></span><br><span class="line">  <span class="comment">// 遍历所有的manager，让所有区间中的metrics加1</span></span><br><span class="line">  <span class="keyword">for</span> (RollingWindowManager rollingWindowManager : rollingWindowManagers</span><br><span class="line">      .values()) &#123;</span><br><span class="line">    rollingWindowManager.recordMetric(currTime, cmd, userName, <span class="number">1</span>);</span><br><span class="line">    rollingWindowManager.recordMetric(currTime,</span><br><span class="line">        TopConf.ALL_CMDS, userName, <span class="number">1</span>);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>其中有一个重要的属性需要说一下<code>rollingWindowManagers</code>，rollingWindowManagers是一个key为Integer，value为RollingWindowManager的map，map的长度由<code>dfs.namenode.top.windows.minutes</code>属性的元素个数控制，key的值就是该属性的元素，该属性的值是一个数组，默认是<code>{&quot;1&quot;,&quot;5&quot;,&quot;25&quot;}</code>。此属性代表这我要统计三个时间区间的值，三个区间分别为1分钟、5分钟和25分钟。这样做是为了观察一个趋势。</p>
+<p>每个时间区间对应一个<code>RollingWindowManager</code>，而rollingWindowManagers是存放这些manager的map，各个区间具体的metrics统计由各自的manager控制。manager通过调用<code>recordMetric</code>对metrics进行更新，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">recordMetric</span><span class="params">(<span class="keyword">long</span> time, String command, String user, <span class="keyword">long</span> delta)</span> </span>&#123;</span><br><span class="line">  RollingWindow window = getRollingWindow(command, user);</span><br><span class="line">  window.incAt(time, delta);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>RollingWindow是通过<code>getRollingWindow</code>得到的，从上面统计流程的分析中得知RollingWindow位于统计中的最底层，由RollingWindow进行滑动窗口进行统计，下面看下getRollingWindow代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> RollingWindow <span class="title">getRollingWindow</span><span class="params">(String metric, String user)</span> </span>&#123;</span><br><span class="line">  <span class="comment">// ConcurrentHashMap&lt;String, RollingWindowMap&gt; metricMap</span></span><br><span class="line">  RollingWindowMap rwMap = metricMap.get(metric);</span><br><span class="line">  <span class="keyword">if</span> (rwMap == <span class="keyword">null</span>) &#123;</span><br><span class="line">    rwMap = <span class="keyword">new</span> RollingWindowMap();</span><br><span class="line">    RollingWindowMap prevRwMap = metricMap.putIfAbsent(metric, rwMap);</span><br><span class="line">    <span class="keyword">if</span> (prevRwMap != <span class="keyword">null</span>) &#123;</span><br><span class="line">      rwMap = prevRwMap;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  RollingWindow window = rwMap.get(user);</span><br><span class="line">  <span class="keyword">if</span> (window != <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="keyword">return</span> window;</span><br><span class="line">  &#125;</span><br><span class="line">  window = <span class="keyword">new</span> RollingWindow(windowLenMs, bucketsPerWindow);</span><br><span class="line">  RollingWindow prevWindow = rwMap.putIfAbsent(user, window);</span><br><span class="line">  <span class="keyword">if</span> (prevWindow != <span class="keyword">null</span>) &#123;</span><br><span class="line">    window = prevWindow;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> window;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>由此代码可以看出RollingWindow、RollingWindowMap、metricsMap和RollingWindowManager的关系，metricsMap是RollingWindowManager的一个属性，metricsMap是ConcurrentHashMap(<em>线程安全</em>)类型，key是操作名，value是RollingWindowMap，而RollingWindowMap也是ConcurrentHashMap类型的map，key是user name，value是RollingWindow。</p>
+<p>recordMetric时通过command和user定位到RollingWindow，然后调用RollingWindow.incAt进行累加，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">incAt</span><span class="params">(<span class="keyword">long</span> time, <span class="keyword">long</span> delta)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">int</span> bi = computeBucketIndex(time);</span><br><span class="line">  Bucket bucket = buckets[bi];</span><br><span class="line">  <span class="comment">// If the last time the bucket was updated is out of the scope of the</span></span><br><span class="line">  <span class="comment">// rolling window, reset the bucket.</span></span><br><span class="line">  <span class="keyword">if</span> (bucket.isStaleNow(time)) &#123;</span><br><span class="line">    bucket.safeReset(time);</span><br><span class="line">  &#125;</span><br><span class="line">  bucket.inc(delta);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>RollingWindow进行metrics累加时，通过当前time定位到某个bucket中，让bucket进行累加。bucket进行累加时先判断当前bucket是否过时，也就是说当前bucket是否还在以当前time为结尾的时间窗口中，不在则进行重置。</p>
+<p>定位bucket的代码是在<code>computeBucketIndex</code>中，</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">int</span> <span class="title">computeBucketIndex</span><span class="params">(<span class="keyword">long</span> time)</span> </span>&#123;</span><br><span class="line">  <span class="comment">// time%windwoLenMs 得到time所在window中的偏移量</span></span><br><span class="line">  <span class="keyword">int</span> positionOnWindow = (<span class="keyword">int</span>) (time % windowLenMs);</span><br><span class="line">  <span class="keyword">int</span> bucketIndex = positionOnWindow * buckets.length / windowLenMs;</span><br><span class="line">  <span class="keyword">return</span> bucketIndex;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>计算time所在的bucket时，先计算time所在window的偏移量positionOnWindow<em>(time%windowLenMs)</em>，然后计算每个bucket的时间长度time_length<em>(windowLenMs/buckets.length)</em>，然后让<code>positionOnWindow/time_length</code>就得到了bucketIndex，也就是上面的代码<code>bucketIndex = positionOnWindow * buckets.length / windowLenMs</code></p>
+<p>然后调用bucket.isStaleNow判断是否过时，过时则重置。代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">boolean</span> <span class="title">isStaleNow</span><span class="params">(<span class="keyword">long</span> time)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">long</span> utime = updateTime.get();</span><br><span class="line">  <span class="keyword">return</span> time - utime &gt;= windowLenMs;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">safeReset</span><span class="params">(<span class="keyword">long</span> time)</span> </span>&#123;</span><br><span class="line">  <span class="comment">// At any point in time, only one thread is allowed to reset the</span></span><br><span class="line">  <span class="comment">// bucket</span></span><br><span class="line">  <span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123;</span><br><span class="line">    <span class="keyword">if</span> (isStaleNow(time)) &#123;</span><br><span class="line">      <span class="comment">// reset the value before setting the time, it allows other</span></span><br><span class="line">      <span class="comment">// threads to safely assume that the value is updated if the</span></span><br><span class="line">      <span class="comment">// time is not stale</span></span><br><span class="line">      value.set(<span class="number">0</span>);</span><br><span class="line">      updateTime.set(time);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// else a concurrent thread has already reset it: do nothing</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Bucket是RollingWindow的一个内部类，有两个属性value和updateTime，都是<em>AtomicLong</em>类型的，这里需要注意的是updateTime并不是在value每次递增的时候改变，updateTime只改变一次，其实相当于bucket开始计数的startTime，当次startTime与当前时间time的差值大于windowLenMs时，就认为bucket过时了，需要重置。</p>
+<h2 id="get统计数据"><a href="#get统计数据" class="headerlink" title="get统计数据"></a>get统计数据</h2><p>通过jmx获得数据的入口函数是getTopUserOpCounts，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> String <span class="title">getTopUserOpCounts</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  ...</span><br><span class="line">  Date now = <span class="keyword">new</span> Date();</span><br><span class="line">  <span class="comment">// get 统计结果</span></span><br><span class="line">  <span class="comment">// private TopMetrics topMetrics;</span></span><br><span class="line">  <span class="keyword">final</span> List&lt;RollingWindowManager.TopWindow&gt; topWindows =</span><br><span class="line">      topMetrics.getTopWindows();</span><br><span class="line">  Map&lt;String, Object&gt; topMap = <span class="keyword">new</span> TreeMap&lt;String, Object&gt;();</span><br><span class="line">  topMap.put(<span class="string">"windows"</span>, topWindows);</span><br><span class="line">  topMap.put(<span class="string">"timestamp"</span>, DFSUtil.dateToIso8601String(now));</span><br><span class="line">  ObjectMapper mapper = <span class="keyword">new</span> ObjectMapper();</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> mapper.writeValueAsString(topMap);</span><br><span class="line">  &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">    LOG.warn(<span class="string">"Failed to fetch TopUser metrics"</span>, e);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>通过TopMetrics.getTopWindows得到</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> List&lt;TopWindow&gt; <span class="title">getTopWindows</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">long</span> monoTime = Time.monotonicNow();</span><br><span class="line">  List&lt;TopWindow&gt; windows = Lists.newArrayListWithCapacity</span><br><span class="line">      (rollingWindowManagers.size());</span><br><span class="line">  <span class="keyword">for</span> (Entry&lt;Integer, RollingWindowManager&gt; entry : rollingWindowManagers</span><br><span class="line">      .entrySet()) &#123;</span><br><span class="line">    TopWindow window = entry.getValue().snapshot(monoTime);</span><br><span class="line">    windows.add(window);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> windows;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>getTopWindows只是遍历rollingWindowManagers得到多个时间段的统计结果，而真正取得topuser的是各个时间区间对应的RollingWindowManager.snapshot。</p>
+<p>在跟读snapshot代码之前，先跟读下RollingWindowManager类，此类中有一些内部类，</p>
+<blockquote>
+<p>首先看下<code>TopWindow</code>、<code>Op</code>和<code>User</code>，这三者的关系是<code>TopWindow</code>中有个属性top，类型<code>List&lt;Op&gt;</code>，<code>Op</code>有一个属性topUsers，类型是<code>List&lt;User&gt;</code>。TopWindow是当前window中各个metrics的一个快照，各个metrics以Op为对象存放在top的list中，list中一个Op就是一个metrics，Op中存放的是操作此metrics的所有user及其操作总次数，Op中的各个user信息是存放在User对象中，User对象中记录着当前user对Op的操作次数。</p>
+</blockquote>
+<blockquote>
+<p>还有两个内部类<code>TopN</code>和<code>NameValuePair</code>，TopN是一个优先级队列(PriorityQueue，关于优先级队列会在随后的blog中进行分析)，存放的元素是NameValuePair对象，NameValuePair实现了<code>Comparable</code>接口，重写compareTo方法，实现NameValuePair对象以value的大小作为比较的依据<em>(NameValuePair中的name是user，value是user对Op的操作次数)</em>。NameValuePair实现了自己定义的compareTo方法之后在TopN的优先级队列中就可以依靠value的值进行排序，则TopN的对象就是操作过Op的所有user的topN排序的结果。</p>
+</blockquote>
+<p>RollingWindowManager中的内部类的关系屡清楚之后就来看下snapshot代码，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> TopWindow <span class="title">snapshot</span><span class="params">(<span class="keyword">long</span> time)</span> </span>&#123;</span><br><span class="line">  TopWindow window = <span class="keyword">new</span> TopWindow(windowLenMs);</span><br><span class="line">  ...</span><br><span class="line">  <span class="comment">// metricMap 存放的是 metrics -&gt; RollingWindowMap</span></span><br><span class="line">  <span class="keyword">for</span> (Map.Entry&lt;String, RollingWindowMap&gt; entry : metricMap.entrySet()) &#123;</span><br><span class="line">    String metricName = entry.getKey();</span><br><span class="line">    <span class="comment">// RollingWindowMap 存放的是 username -&gt; RollingWindow</span></span><br><span class="line">    RollingWindowMap rollingWindows = entry.getValue();</span><br><span class="line">    <span class="comment">// 通过metricName和time得到当前window中user的topN</span></span><br><span class="line">    <span class="comment">// 顺序是从小到大，升序</span></span><br><span class="line">    TopN topN = getTopUsersForMetric(time, metricName, rollingWindows);</span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> size = topN.size();</span><br><span class="line">    <span class="keyword">if</span> (size == <span class="number">0</span>) &#123;</span><br><span class="line">      <span class="keyword">continue</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    Op op = <span class="keyword">new</span> Op(metricName, topN.getTotal());</span><br><span class="line">    window.addOp(op);</span><br><span class="line">    <span class="comment">// Reverse the users from the TopUsers using a stack, </span></span><br><span class="line">    <span class="comment">// since we'd like them sorted in descending rather than ascending order</span></span><br><span class="line">    <span class="comment">// 栈，利用栈先进后出的特点，将topN中的升序变为降序</span></span><br><span class="line">    Stack&lt;NameValuePair&gt; reverse = <span class="keyword">new</span> Stack&lt;NameValuePair&gt;();</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; size; i++) &#123;</span><br><span class="line">      reverse.push(topN.poll());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; size; i++) &#123;</span><br><span class="line">      NameValuePair userEntry = reverse.pop();</span><br><span class="line">      <span class="comment">// topN中的NameValuePair以User的形态存放到Op的topUsers list中</span></span><br><span class="line">      User user = <span class="keyword">new</span> User(userEntry.name, Long.valueOf(userEntry.value));</span><br><span class="line">      op.addUser(user);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> window;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>snapshot将当前状态存放在TopWindow中返回，每个Op的topUsers是通过方法<code>getTopUsersForMetric</code>得到的，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> TopN <span class="title">getTopUsersForMetric</span><span class="params">(<span class="keyword">long</span> time, String metricName, </span></span></span><br><span class="line"><span class="function"><span class="params">    RollingWindowMap rollingWindows)</span> </span>&#123;</span><br><span class="line">  TopN topN = <span class="keyword">new</span> TopN(topUsersCnt);</span><br><span class="line">  Iterator&lt;Map.Entry&lt;String, RollingWindow&gt;&gt; iterator =</span><br><span class="line">      rollingWindows.entrySet().iterator();</span><br><span class="line">  <span class="keyword">while</span> (iterator.hasNext()) &#123;</span><br><span class="line">    Map.Entry&lt;String, RollingWindow&gt; entry = iterator.next();</span><br><span class="line">    String userName = entry.getKey();</span><br><span class="line">    RollingWindow aWindow = entry.getValue();</span><br><span class="line">    <span class="comment">// getSum 得到当前window中各个bucket计数的总和</span></span><br><span class="line">    <span class="keyword">long</span> windowSum = aWindow.getSum(time);</span><br><span class="line">    <span class="comment">// do the gc here</span></span><br><span class="line">    <span class="keyword">if</span> (windowSum == <span class="number">0</span>) &#123;</span><br><span class="line">      LOG.debug(<span class="string">"gc window of metric: &#123;&#125; userName: &#123;&#125;"</span>,</span><br><span class="line">          metricName, userName);</span><br><span class="line">      iterator.remove();</span><br><span class="line">      <span class="keyword">continue</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    LOG.debug(<span class="string">"offer window of metric: &#123;&#125; userName: &#123;&#125; sum: &#123;&#125;"</span>,</span><br><span class="line">        metricName, userName, windowSum);</span><br><span class="line">    <span class="comment">// 将NameValuePair放入TopN中，重写offer，对NameValuePair进行排序放入堆中</span></span><br><span class="line">    topN.offer(<span class="keyword">new</span> NameValuePair(userName, windowSum));</span><br><span class="line">  &#125;</span><br><span class="line">  LOG.info(<span class="string">"topN size for command &#123;&#125; is: &#123;&#125;"</span>, metricName, topN.size());</span><br><span class="line">  <span class="keyword">return</span> topN;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="附加"><a href="#附加" class="headerlink" title="附加"></a>附加</h2><ul>
+<li><p>window中bucket的个数关系到统计的精度，window中bucket的个数越多，精度越高。<br>解析：window中bucket中的统计次数是以bucket的updateTime为开始时间，则如果window的长度是60s，bucket的个数是6个，则每个bucket的长度是10s。如果从时间0开始统计，则bucket0的updateTime是第0s，bucket1的updateTime是第10s，bucket9的updateTime是第50s，在65时，用户调用getTopUserOpCounts方法统计第65s时的topN user，则当前window应该是5s到65s，可是bucket0统计的时间区间是0-10s，此时bucket0的updateTime已经超过了统计的阈值，bucket0已经过时，则此时统计的区间只能从bucket1，也就是从10s处开始统计，从10s-65s处，<em>也就是少统计了5s，即5s-10s区间中的值</em>，误差是5s，如果从bucket的长度为5s，则统计的结果值就是正确的，不会出现误差，则得出结论，bucket个数越多，则精度越高。但是bucket也不能太多，会损耗性能。</p>
+</li>
+<li><p>为什么采用滑动窗口</p>
+</li>
+</ul>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://issues.apache.org/jira/browse/HDFS-6982" target="_blank" rel="noopener">Patch地址</a><br><a href="https://issues.apache.org/jira/secure/attachment/12665990/nntop-design-v1.pdf" target="_blank" rel="noopener">HDFS-6982设计文档</a><br><a href="http://blog.csdn.net/androidlushangderen/article/details/52586560" target="_blank" rel="noopener">HDFS nnTop统计功能</a></p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的肯定，是我装逼的最大的动力！</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/path/to/wechat-reward-image/wechatpay.png" alt="混绅士 WeChat Pay">
+          <p>微信打赏</p>
+        </div>
+      
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>本文作者：</strong>
+      混绅士
+    </li>
+    
+    <!--add wordcount and min2 read by szw-->
+    <li class="post-copyright-author">
+      <strong>本文字数：</strong>
+      7,288
+    </li>
+    <li class="post-copyright-author">
+      <strong>阅读时长：</strong>
+      39
+    </li>
+
+    <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="http://bigdatadecode.club/NameNode监控用户使用资源.html" title="NameNode监控用户使用资源">http://bigdatadecode.club/NameNode监控用户使用资源.html</a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>版权声明： </strong>
+      本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0</a> 许可协议。转载请注明出处！
+    </li>
+  </ul>
+
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
+          
+            <a href="/tags/BigData/" rel="tag"># BigData</a>
+          
+            <a href="/tags/HDFS/" rel="tag"># HDFS</a>
+          
+            <a href="/tags/nntop/" rel="tag"># nntop</a>
+          
+            <a href="/tags/使用资源/" rel="tag"># 使用资源</a>
+          
+        </div>
+      
+
+       
+        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/HDFS中LightWeightGSet与HashMap结构解析.html">HDFS中LightWeightGSet与HashMap结构解析</a></li><li><a href="/HDFS read解析.html">HDFS read解析(一)之Open文件流</a></li><li><a href="/HDFSCannotObtainBlockLengthForLocatedBlock.html">HDFS之Cannot obtain block length for LocatedBlock异常</a></li><li><a href="/HDFS中atime和mtime.html">HDFS中atime与mtime解析</a></li><li><a href="/HDFS权限.html">HDFS权限</a></li><li><a href="/Hadoop_get_NullPointerException.html">Hadoop get命令返回NullPointerException</a></li><li><a href="/[译]HDFS恢复过程2.html">HDFS恢复过程2</a></li><li><a href="/常用Hadoop命令.html">常用Hadoop命令</a></li><li><a href="/Hadoop-Ozone.html">Hadoop小文件利器Ozone调研</a></li><li><a href="/[译]HDFS恢复过程1.html">HDFS恢复过程1</a></li></ul> 
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/数据结构算法之leetcode Add Two Numbers.html" rel="next" title="数据结构算法之leetcode Add Two Numbers">
+                <i class="fa fa-chevron-left"></i> 数据结构算法之leetcode Add Two Numbers
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/数据结构算法之leetcode Median of two arrays.html" rel="prev" title="数据结构算法之leetcode Median of two arrays">
+                数据结构算法之leetcode Median of two arrays <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+  <div class="bdsharebuttonbox">
+    <a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+    <a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>  
+    <a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>      
+    <a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+    <a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+    <a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a>
+    <a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a>
+    <a href="#" class="bds_more" data-cmd="more"></a>
+    <a class="bds_count" data-cmd="count"></a>
+  </div>
+  <script>
+    window._bd_share_config = {
+      "common": {
+        "bdText": "",
+        "bdMini": "1",
+        "bdMiniList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "bdPic": ""
+      },
+      "image": {
+        "viewList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "viewText": "分享到：",
+        "viewSize": "16"
+      },
+      "slide": {
+        "bdImg": "5",
+        "bdPos": "left",
+        "bdTop": "100"
+      }
+    }
+  </script>
+
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>       
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/uploads/avatar.png" alt="混绅士">
+          <p class="site-author-name" itemprop="name">混绅士</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">97</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">157</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <!-- <i class="fa  fa-fw fa-globe"></i> -->
+              <!-- modify icon to fire by szw -->
+              <i class="fa fa-fire fa-" aria-hidden="true"></i>
+              热文推荐
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                </li>
+              
+            </ul>
+          </div>
+
+
+        
+
+        
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <!-- modify icon to fire by szw -->
+                <i class="fa fa-history fa-" aria-hidden="true"></i>
+                近期文章
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                
+                  <li>
+                    <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                  </li>
+                
+                  <li>
+                    <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+ 
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#架构"><span class="nav-number">1.</span> <span class="nav-text">架构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#细节设计"><span class="nav-number">2.</span> <span class="nav-text">细节设计</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#代码跟读"><span class="nav-number">3.</span> <span class="nav-text">代码跟读</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#get统计数据"><span class="nav-number">4.</span> <span class="nav-text">get统计数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#附加"><span class="nav-number">5.</span> <span class="nav-text">附加</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考"><span class="nav-number">6.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+
+          </div>
+
+          <div class="post-toc-wrap sidebar-panel sidebar-panel-active" style="margin: 0 2px; text-align: left;">
+            
+              <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+                <div class="links-of-blogroll-title">
+                  <!-- <i class="fa  fa-fw fa-globe"></i> -->
+                  <!-- modify icon to fire by szw -->
+                  <i class="fa fa-fire fa-" aria-hidden="true"></i>
+                  热文推荐
+                </div>
+                <ul class="links-of-blogroll-list">
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                    </li>
+                  
+                </ul>
+              </div>
+            
+  
+            
+                <div class="links-of-blogroll motion-element links-of-blogroll-block">
+                  <div class="links-of-blogroll-title">
+                    <!-- modify icon to fire by szw -->
+                    <i class="fa fa-history fa-" aria-hidden="true"></i>
+                    近期文章
+                  </div>
+                  <ul class="links-of-blogroll-list">
+                    
+                    
+                      <li>
+                        <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
+                      </li>
+                    
+                  </ul>
+                </div>
+              
+          </div>
+
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+
+  </aside>
+
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">混绅士</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+<!--add total count by szw-->
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共617.7k字</span>
+</div>
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user">本站访客数</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      人次
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye">本站总访问量</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      次
+    </span>
+  
+</div>
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.0"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("nP29Qpe35cHgQTQIFL94dGoW-gzGzoHsz", "eVPY9SfyVH11gSsbPBEcAQM0");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+</body>
+</html>

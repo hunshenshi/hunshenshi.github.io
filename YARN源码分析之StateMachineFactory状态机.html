@@ -1,0 +1,1398 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="0hClWroWscvQbyOyRPhAZWjOZJ6g3SFCdO47yYakvdk">
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="27E5EbutCm">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="Hadoop,BigData,YARN,StateMachineFactory,">
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0">
+
+
+
+
+
+
+<meta name="description" content="状态机由一组状态组成，这些状态大体分为三类，分别为初始状态、中间状态和最终状态。状态机首先由初始状态A开始运行，经过一系列的中间状态后到达最终状态，并在最终状态退出，从而形成一个有向无环图。其状态处理的逻辑是收到一个事件，触发状态A到状态B的转换，而转换操作是由事件对应的hook完成的。 YARN中引入了事件机制和状态机机制，事件机制可以在这篇文章中了解下事件机制的调度器，本篇主要从源码的角度解析">
+<meta name="keywords" content="Hadoop,BigData,YARN,StateMachineFactory">
+<meta property="og:type" content="article">
+<meta property="og:title" content="YARN源码分析之StateMachineFactory状态机">
+<meta property="og:url" content="http://bigdatadecode.club/YARN源码分析之StateMachineFactory状态机.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="状态机由一组状态组成，这些状态大体分为三类，分别为初始状态、中间状态和最终状态。状态机首先由初始状态A开始运行，经过一系列的中间状态后到达最终状态，并在最终状态退出，从而形成一个有向无环图。其状态处理的逻辑是收到一个事件，触发状态A到状态B的转换，而转换操作是由事件对应的hook完成的。 YARN中引入了事件机制和状态机机制，事件机制可以在这篇文章中了解下事件机制的调度器，本篇主要从源码的角度解析">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://bigdatadecode.club/blogimgs/StateMachine/RMApp.png">
+<meta property="og:updated_time" content="2019-02-12T09:23:37.672Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="YARN源码分析之StateMachineFactory状态机">
+<meta name="twitter:description" content="状态机由一组状态组成，这些状态大体分为三类，分别为初始状态、中间状态和最终状态。状态机首先由初始状态A开始运行，经过一系列的中间状态后到达最终状态，并在最终状态退出，从而形成一个有向无环图。其状态处理的逻辑是收到一个事件，触发状态A到状态B的转换，而转换操作是由事件对应的hook完成的。 YARN中引入了事件机制和状态机机制，事件机制可以在这篇文章中了解下事件机制的调度器，本篇主要从源码的角度解析">
+<meta name="twitter:image" content="http://bigdatadecode.club/blogimgs/StateMachine/RMApp.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    sidebar: {"position":"right","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://bigdatadecode.club/YARN源码分析之StateMachineFactory状态机.html">
+
+
+
+
+
+  <title> YARN源码分析之StateMachineFactory状态机 | big data decode club </title>
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-80813521-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+
+
+
+
+
+
+  <div style="display: none;">
+    <script src="//s95.cnzz.com/z_stat.php?id=1260961002&web_id=1260961002" language="JavaScript"></script>
+  </div>
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">big data decode club</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">hunhun -- Any answers you can find in source code.</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/YARN源码分析之StateMachineFactory状态机.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="混绅士">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="big data decode club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                YARN源码分析之StateMachineFactory状态机
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-08-12T11:16:00+08:00">
+                2016-08-12
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-02-12T17:23:37+08:00">
+                2019-02-12
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/YARN源码分析之StateMachineFactory状态机.html" class="leancloud_visitors" data-flag-title="YARN源码分析之StateMachineFactory状态机">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>状态机由一组状态组成，这些状态大体分为三类，分别为初始状态、中间状态和最终状态。状态机首先由初始状态A开始运行，经过一系列的中间状态后到达最终状态，并在最终状态退出，从而形成一个有向无环图。其<em>状态处理的逻辑是收到一个事件，触发状态A到状态B的转换，而转换操作是由事件对应的hook完成的</em>。</p>
+<p>YARN中引入了事件机制和状态机机制，事件机制可以在<a href="http://bigdatadecode.club/YARN源码分析之AsyncDispatcher事件调度器.html">这篇文章</a>中了解下事件机制的调度器，本篇主要从源码的角度解析下状态机机制中的关键类StateMachineFactory，以ApplicationMaster的状态转换为例。</p>
+<a id="more"></a>
+<h2 id="RMAppImpl中的StateMachineFactory"><a href="#RMAppImpl中的StateMachineFactory" class="headerlink" title="RMAppImpl中的StateMachineFactory"></a>RMAppImpl中的StateMachineFactory</h2><p>ApplicationMaster的实现在RMAPPImpl类中，其状态转换在RMAppImpl中声明，首先声明了一个静态final类型的属性stateMachineFactory，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> StateMachineFactory&lt;RMAppImpl,</span><br><span class="line">                                         RMAppState,</span><br><span class="line">                                         RMAppEventType,</span><br><span class="line">                                         RMAppEvent&gt; stateMachineFactory</span><br><span class="line">                             = <span class="keyword">new</span> StateMachineFactory&lt;RMAppImpl,</span><br><span class="line">                                         RMAppState,</span><br><span class="line">                                         RMAppEventType,</span><br><span class="line">                                         RMAppEvent&gt;(RMAppState.NEW)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">   <span class="comment">// Transitions from NEW state</span></span><br><span class="line">  .addTransition(RMAppState.NEW, RMAppState.NEW,</span><br><span class="line">      RMAppEventType.NODE_UPDATE, <span class="keyword">new</span> RMAppNodeUpdateTransition())</span><br><span class="line">  .addTransition(RMAppState.NEW, RMAppState.NEW_SAVING,</span><br><span class="line">      RMAppEventType.START, <span class="keyword">new</span> RMAppNewlySavingTransition())</span><br><span class="line">  ...<span class="comment">// 若干状态转换的定义</span></span><br><span class="line">  .installTopology();</span><br></pre></td></tr></table></figure>
+<p>StateMachineFactory从名字可以看出其是一个工厂，负责产生状态机，则RMAPPImpl中必有一个属性来接收该工厂产生的状态机类，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> StateMachine&lt;RMAppState, RMAppEventType, RMAppEvent&gt; stateMachine;</span><br><span class="line"><span class="comment">// 从stateMachineFactory中得到一个stateMachine对象</span></span><br><span class="line"><span class="keyword">this</span>.stateMachine = stateMachineFactory.make(<span class="keyword">this</span>);</span><br></pre></td></tr></table></figure>
+<p>下面从状态机的调用流程中解析下StateMachineFactory中的方法。</p>
+<p>首先看下StateMachineFactory类的声明：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * State machine topology.</span></span><br><span class="line"><span class="comment"> * This object is semantically immutable.  If you have a</span></span><br><span class="line"><span class="comment"> * StateMachineFactory there's no operation in the API that changes</span></span><br><span class="line"><span class="comment"> * its semantic properties.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &lt;OPERAND&gt; The object type on which this state machine operates.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &lt;STATE&gt; The state of the entity.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &lt;EVENTTYPE&gt; The external eventType to be handled.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &lt;EVENT&gt; The event object.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">final</span> <span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">StateMachineFactory</span></span></span><br><span class="line"><span class="class">             &lt;<span class="title">OPERAND</span>, <span class="title">STATE</span> <span class="keyword">extends</span> <span class="title">Enum</span>&lt;<span class="title">STATE</span>&gt;,</span></span><br><span class="line"><span class="class">              <span class="title">EVENTTYPE</span> <span class="keyword">extends</span> <span class="title">Enum</span>&lt;<span class="title">EVENTTYPE</span>&gt;, <span class="title">EVENT</span>&gt; </span>&#123;...&#125;</span><br></pre></td></tr></table></figure>
+<p>从类的注释中可以得知StateMachineFactory是一组状态的拓扑图，OPERAND是这组状态机的操作者，STATE是这组状态机中的状态，EVENTTYPE是触发状态转移的事件类型，EVENT是触发状态转移的事件。</p>
+<p><em>StateMachineFactory的状态拓扑图是通过多种addTransition让用户添加各种状态转移，最后通过installTopology完成一个状态机拓扑的搭建，其中初始状态是通过StateMachineFactory的构造函数指定的</em>。下面看下构造函数：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">StateMachineFactory</span><span class="params">(STATE defaultInitialState)</span> </span>&#123;</span><br><span class="line">  <span class="comment">// 构成一个transition链</span></span><br><span class="line">  <span class="keyword">this</span>.transitionsListNode = <span class="keyword">null</span>;</span><br><span class="line">  <span class="keyword">this</span>.defaultInitialState = defaultInitialState;</span><br><span class="line">  <span class="keyword">this</span>.optimized = <span class="keyword">false</span>;</span><br><span class="line">  <span class="comment">// 主要用于存放preState、eventType和transition的映射关系</span></span><br><span class="line">  <span class="keyword">this</span>.stateMachineTable = <span class="keyword">null</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>RMAPPImpl中的初始状态是<code>RMAppState.NEW</code>，由其初始状态初始化一个StateMachineFactory实例，然后通过addTransition注册各种状态转移。</p>
+<h2 id="addTransition"><a href="#addTransition" class="headerlink" title="addTransition"></a>addTransition</h2><p>StateMachineFactory中有五个addTransition方法，如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> StateMachineFactory</span><br><span class="line">           &lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;</span><br><span class="line">        addTransition(STATE preState, STATE postState, EVENTTYPE eventType) &#123;</span><br><span class="line">  <span class="keyword">return</span> addTransition(preState, postState, eventType, <span class="keyword">null</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> StateMachineFactory&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt; <span class="title">addTransition</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">    STATE preState, STATE postState, Set&lt;EVENTTYPE&gt; eventTypes)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> addTransition(preState, postState, eventTypes, <span class="keyword">null</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> StateMachineFactory&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt; <span class="title">addTransition</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">    STATE preState, STATE postState, Set&lt;EVENTTYPE&gt; eventTypes,</span></span></span><br><span class="line"><span class="function"><span class="params">    SingleArcTransition&lt;OPERAND, EVENT&gt; hook)</span> </span>&#123;</span><br><span class="line">  StateMachineFactory&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt; factory = <span class="keyword">null</span>;</span><br><span class="line">  <span class="keyword">for</span> (EVENTTYPE event : eventTypes) &#123;</span><br><span class="line">    <span class="keyword">if</span> (factory == <span class="keyword">null</span>) &#123;</span><br><span class="line">      factory = addTransition(preState, postState, event, hook);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      factory = factory.addTransition(preState, postState, event, hook);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> factory;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> StateMachineFactory</span><br><span class="line">           &lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;</span><br><span class="line">        addTransition(STATE preState, STATE postState,</span><br><span class="line">                      EVENTTYPE eventType,</span><br><span class="line">                      SingleArcTransition&lt;OPERAND, EVENT&gt; hook)&#123;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">new</span> StateMachineFactory&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;</span><br><span class="line">      (<span class="keyword">this</span>, <span class="keyword">new</span> ApplicableSingleOrMultipleTransition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;</span><br><span class="line">         (preState, eventType, <span class="keyword">new</span> SingleInternalArc(postState, hook)));</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> StateMachineFactory</span><br><span class="line">           &lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;</span><br><span class="line">        addTransition(STATE preState, Set&lt;STATE&gt; postStates,</span><br><span class="line">                      EVENTTYPE eventType,</span><br><span class="line">                      MultipleArcTransition&lt;OPERAND, EVENT, STATE&gt; hook)&#123;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">new</span> StateMachineFactory&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;</span><br><span class="line">      (<span class="keyword">this</span>,</span><br><span class="line">       <span class="keyword">new</span> ApplicableSingleOrMultipleTransition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;</span><br><span class="line">         (preState, eventType, <span class="keyword">new</span> MultipleInternalArc(postStates, hook)));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>由其上的addTransition方法可以看出定于了三种状态转换方式，分别是</p>
+<ol>
+<li>preState通过<em>某个事件</em>转换为postState，也就是状态机在preState时，接收到Event事件后，执行对应的hook，并在执行完成后将当前的状态转换为postState。<br><code>addTransition(STATE preState, STATE postState, EVENTTYPE eventType, SingleArcTransition&lt;OPERAND, EVENT&gt; hook)</code></li>
+<li>preState通过<em>多个事件</em>转换为postState，也就是状态机在preState时，接收到某些Event事件后，执行对应的hook，并在执行完成后将当前的状态转换为postState。<br><code>addTransition(STATE preState, STATE postState, Set&lt;EVENTTYPE&gt; eventTypes, SingleArcTransition&lt;OPERAND, EVENT&gt; hook)</code></li>
+<li>preState通过某个事件转换为<em>多个postState</em>，也就是状态机在preState时，接收到Event事件后，执行对应的hook，并在执行完成后将返回hook的返回值所表示的状态。<br><code>addTransition(STATE preState, Set&lt;STATE&gt; postStates, EVENTTYPE eventType, MultipleArcTransition&lt;OPERAND, EVENT, STATE&gt; hook)</code></li>
+</ol>
+<p>下面先看下1中的addTransition</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> StateMachineFactory</span><br><span class="line">           &lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;</span><br><span class="line">        addTransition(STATE preState, STATE postState,</span><br><span class="line">                      EVENTTYPE eventType,</span><br><span class="line">                      SingleArcTransition&lt;OPERAND, EVENT&gt; hook)&#123;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">new</span> StateMachineFactory&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;</span><br><span class="line">      (<span class="keyword">this</span>, <span class="keyword">new</span> ApplicableSingleOrMultipleTransition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;</span><br><span class="line">         (preState, eventType, <span class="keyword">new</span> SingleInternalArc(postState, hook)));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>从其代码可以看出在addTransition中又new了一个新的StateMachineFactory。这里涉及到两个类<code>ApplicableSingleOrMultipleTransition</code>和<code>SingleInternalArc</code>。</p>
+<p>先来看下SingleInternalArc类</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">SingleInternalArc</span></span></span><br><span class="line"><span class="class">                  <span class="keyword">implements</span> <span class="title">Transition</span>&lt;<span class="title">OPERAND</span>, <span class="title">STATE</span>, <span class="title">EVENTTYPE</span>, <span class="title">EVENT</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> STATE postState;</span><br><span class="line">  <span class="keyword">private</span> SingleArcTransition&lt;OPERAND, EVENT&gt; hook; <span class="comment">// transition hook</span></span><br><span class="line"></span><br><span class="line">  SingleInternalArc(STATE postState,</span><br><span class="line">      SingleArcTransition&lt;OPERAND, EVENT&gt; hook) &#123;</span><br><span class="line">    <span class="keyword">this</span>.postState = postState;</span><br><span class="line">    <span class="keyword">this</span>.hook = hook;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> STATE <span class="title">doTransition</span><span class="params">(OPERAND operand, STATE oldState,</span></span></span><br><span class="line"><span class="function"><span class="params">                            EVENT event, EVENTTYPE eventType)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (hook != <span class="keyword">null</span>) &#123;</span><br><span class="line">      hook.transition(operand, event);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> postState;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>该类有两个属性，分别为表示STATE的postState属性和表示事件发生之后调用对应hook进行处理的SingleArcTransition属性。</p>
+<p>该类只有一个<code>doTransition</code>方法，该方法中会调用<code>hook.transition</code>去处理发生该事件之后的状态变化，hook正常处理结束之后，返回postState状态。</p>
+<p>该类是用来处理<em>一个状态被一个事件触发之后转移到下一个状态</em>的，还有一个对应的处理多个状态<code>MultipleInternalArc</code>类，其逻辑结构和<code>SingleInternalArc</code>类似，只是在hook处理结束之后，判断下postState是否在备选的状态集中，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">MultipleInternalArc</span></span></span><br><span class="line"><span class="class">            <span class="keyword">implements</span> <span class="title">Transition</span>&lt;<span class="title">OPERAND</span>, <span class="title">STATE</span>, <span class="title">EVENTTYPE</span>, <span class="title">EVENT</span>&gt;</span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Fields</span></span><br><span class="line">  <span class="comment">// 存储可供选择的postState状态</span></span><br><span class="line">  <span class="keyword">private</span> Set&lt;STATE&gt; validPostStates;</span><br><span class="line">  <span class="comment">// 事件对应的hook</span></span><br><span class="line">  <span class="keyword">private</span> MultipleArcTransition&lt;OPERAND, EVENT, STATE&gt; hook;  <span class="comment">// transition hook</span></span><br><span class="line"></span><br><span class="line">  MultipleInternalArc(Set&lt;STATE&gt; postStates,</span><br><span class="line">                 MultipleArcTransition&lt;OPERAND, EVENT, STATE&gt; hook) &#123;</span><br><span class="line">    <span class="keyword">this</span>.validPostStates = postStates;</span><br><span class="line">    <span class="keyword">this</span>.hook = hook;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> STATE <span class="title">doTransition</span><span class="params">(OPERAND operand, STATE oldState,</span></span></span><br><span class="line"><span class="function"><span class="params">                            EVENT event, EVENTTYPE eventType)</span></span></span><br><span class="line"><span class="function">      <span class="keyword">throws</span> InvalidStateTransitonException </span>&#123;</span><br><span class="line">    STATE postState = hook.transition(operand, event);</span><br><span class="line">    <span class="comment">// 校验postState是否在可选的状态集中</span></span><br><span class="line">    <span class="keyword">if</span> (!validPostStates.contains(postState)) &#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> InvalidStateTransitonException(oldState, eventType);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> postState;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>接下来看下<code>ApplicableSingleOrMultipleTransition</code></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">ApplicableSingleOrMultipleTransition</span></span></span><br><span class="line"><span class="class">           &lt;<span class="title">OPERAND</span>, <span class="title">STATE</span> <span class="keyword">extends</span> <span class="title">Enum</span>&lt;<span class="title">STATE</span>&gt;,</span></span><br><span class="line"><span class="class">            <span class="title">EVENTTYPE</span> <span class="keyword">extends</span> <span class="title">Enum</span>&lt;<span class="title">EVENTTYPE</span>&gt;, <span class="title">EVENT</span>&gt;</span></span><br><span class="line"><span class="class">        <span class="keyword">implements</span> <span class="title">ApplicableTransition</span>&lt;<span class="title">OPERAND</span>, <span class="title">STATE</span>, <span class="title">EVENTTYPE</span>, <span class="title">EVENT</span>&gt; </span>&#123;</span><br><span class="line">  <span class="keyword">final</span> STATE preState;</span><br><span class="line">  <span class="keyword">final</span> EVENTTYPE eventType;</span><br><span class="line">  <span class="keyword">final</span> Transition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt; transition;</span><br><span class="line"></span><br><span class="line">  ApplicableSingleOrMultipleTransition</span><br><span class="line">      (STATE preState, EVENTTYPE eventType,</span><br><span class="line">       Transition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt; transition) &#123;</span><br><span class="line">    <span class="keyword">this</span>.preState = preState;</span><br><span class="line">    <span class="keyword">this</span>.eventType = eventType;</span><br><span class="line">    <span class="keyword">this</span>.transition = transition;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">void</span> apply</span><br><span class="line">           (StateMachineFactory&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt; subject) &#123;</span><br><span class="line">    Map&lt;EVENTTYPE, Transition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;&gt; transitionMap</span><br><span class="line">      = subject.stateMachineTable.get(preState);</span><br><span class="line">    <span class="keyword">if</span> (transitionMap == <span class="keyword">null</span>) &#123;</span><br><span class="line">      <span class="comment">// I use HashMap here because I would expect most EVENTTYPE's to not</span></span><br><span class="line">      <span class="comment">//  apply out of a particular state, so FSM sizes would be </span></span><br><span class="line">      <span class="comment">//  quadratic if I use EnumMap's here as I do at the top level.</span></span><br><span class="line">      transitionMap = <span class="keyword">new</span> HashMap&lt;EVENTTYPE,</span><br><span class="line">        Transition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;&gt;();</span><br><span class="line">      subject.stateMachineTable.put(preState, transitionMap);</span><br><span class="line">    &#125;</span><br><span class="line">    transitionMap.put(eventType, transition);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>ApplicableSingleOrMultipleTransition</code>主要是将preState、eventType和transition的映射关系放入<code>stateMachineTable</code>属性中。</p>
+<p>addTransition调用的构造方法为：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> StateMachineFactory</span><br><span class="line">    (StateMachineFactory&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt; that,</span><br><span class="line">     ApplicableTransition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt; t) &#123;</span><br><span class="line">  <span class="keyword">this</span>.defaultInitialState = that.defaultInitialState;</span><br><span class="line">  <span class="keyword">this</span>.transitionsListNode </span><br><span class="line">      = <span class="keyword">new</span> TransitionsListNode(t, that.transitionsListNode);</span><br><span class="line">  <span class="keyword">this</span>.optimized = <span class="keyword">false</span>;</span><br><span class="line">  <span class="keyword">this</span>.stateMachineTable = <span class="keyword">null</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这个构造函数主要是对属性<code>transitionsListNode</code>进行实例化，transitionsListNode的主要作用的把状态机中的transition按照<em>状态转移的顺利逆序</em>的链成一个链表。下面看下transitionsListNode是怎么实现这个链表的，</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">TransitionsListNode</span> </span>&#123;</span><br><span class="line">  <span class="keyword">final</span> ApplicableTransition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt; transition;</span><br><span class="line">  <span class="keyword">final</span> TransitionsListNode next;</span><br><span class="line"></span><br><span class="line">  TransitionsListNode</span><br><span class="line">      (ApplicableTransition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt; transition,</span><br><span class="line">      TransitionsListNode next) &#123;</span><br><span class="line">    <span class="keyword">this</span>.transition = transition;</span><br><span class="line">    <span class="keyword">this</span>.next = next;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>有两个属性，分别为ApplicableTransition(一个接口，ApplicableSingleOrMultipleTransition实现了该接口)的transition和TransitionsListNode的next属性。从构造函数中可以看出transition是当前状态转移对应的处理类，next指向的是下一个TransitionsListNode，<em>此时的下一个TransitionsListNode其实是上一个StateMachineFactory中的TransitionListNode</em>。</p>
+<p>跳过2中的addTransition，先看下3中的addTransition，</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> StateMachineFactory</span><br><span class="line">           &lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;</span><br><span class="line">        addTransition(STATE preState, Set&lt;STATE&gt; postStates,</span><br><span class="line">                      EVENTTYPE eventType,</span><br><span class="line">                      MultipleArcTransition&lt;OPERAND, EVENT, STATE&gt; hook)&#123;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">new</span> StateMachineFactory&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;</span><br><span class="line">      (<span class="keyword">this</span>,</span><br><span class="line">       <span class="keyword">new</span> ApplicableSingleOrMultipleTransition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;</span><br><span class="line">         (preState, eventType, <span class="keyword">new</span> MultipleInternalArc(postStates, hook)));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>和1中的addTransition类似，只是将<code>SingleArcTransition</code>换成了<code>MultipleInternalArc</code>，这两个类的区别在上面已经介绍过，其余的代码逻辑是一样的。</p>
+<p>现在看下2中的addTransition</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> StateMachineFactory&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt; <span class="title">addTransition</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">    STATE preState, STATE postState, Set&lt;EVENTTYPE&gt; eventTypes,</span></span></span><br><span class="line"><span class="function"><span class="params">    SingleArcTransition&lt;OPERAND, EVENT&gt; hook)</span> </span>&#123;</span><br><span class="line">  StateMachineFactory&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt; factory = <span class="keyword">null</span>;</span><br><span class="line">  <span class="keyword">for</span> (EVENTTYPE event : eventTypes) &#123;</span><br><span class="line">    <span class="keyword">if</span> (factory == <span class="keyword">null</span>) &#123;</span><br><span class="line">      factory = addTransition(preState, postState, event, hook);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      factory = factory.addTransition(preState, postState, event, hook);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> factory;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>2中只是循环所有的事件类型对每一个事件类型调用1中的addTransition。</p>
+<p>通过对所有addTransition的分析发现每个addTransition都会new一个新的StateMachineFactory，并将上一个StateMachineFactory的一些属性值赋值到当前StateMachineFactory中。</p>
+<h2 id="installTopology"><a href="#installTopology" class="headerlink" title="installTopology"></a>installTopology</h2><p>addTransition把状态都添加到StateMachineFactory中之后，通过调用installTopology进行状态链的初始化。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> StateMachineFactory</span><br><span class="line">           &lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;</span><br><span class="line">        installTopology() &#123;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">new</span> StateMachineFactory&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;(<span class="keyword">this</span>, <span class="keyword">true</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里也实例化了一个新的StateMachineFactory，不同的是将属性<code>optimized</code>设置为true。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> StateMachineFactory</span><br><span class="line">    (StateMachineFactory&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt; that,</span><br><span class="line">     <span class="keyword">boolean</span> optimized) &#123;</span><br><span class="line">  <span class="keyword">this</span>.defaultInitialState = that.defaultInitialState;</span><br><span class="line">  <span class="keyword">this</span>.transitionsListNode = that.transitionsListNode;</span><br><span class="line">  <span class="keyword">this</span>.optimized = optimized;</span><br><span class="line">  <span class="keyword">if</span> (optimized) &#123;</span><br><span class="line">    makeStateMachineTable();</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    stateMachineTable = <span class="keyword">null</span>;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>当optimized为true是，会在构造函数中调用<code>makeStateMachineTable</code>对<code>stateMachineTable</code>进行赋值。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">makeStateMachineTable</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="comment">// 声明一个stack数据结构，用来存储TransitionsListNode链中的TransitionsListNode</span></span><br><span class="line">  <span class="comment">// 之所以用stack，是因为TransitionsListNode链是按照状态转移的逆序排列的</span></span><br><span class="line">  <span class="comment">// 也就是说TransitionsListNode链中的第一个是状态转移中最后一个状态对应的ApplicableSingleOrMultipleTransition</span></span><br><span class="line">  Stack&lt;ApplicableTransition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;&gt; stack =</span><br><span class="line">    <span class="keyword">new</span> Stack&lt;ApplicableTransition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;&gt;();</span><br><span class="line"></span><br><span class="line">  Map&lt;STATE, Map&lt;EVENTTYPE, Transition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;&gt;&gt;</span><br><span class="line">    prototype = <span class="keyword">new</span> HashMap&lt;STATE, Map&lt;EVENTTYPE, Transition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;&gt;&gt;();</span><br><span class="line"></span><br><span class="line">  prototype.put(defaultInitialState, <span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">  <span class="comment">// I use EnumMap here because it'll be faster and denser.  I would</span></span><br><span class="line">  <span class="comment">//  expect most of the states to have at least one transition.</span></span><br><span class="line">  stateMachineTable</span><br><span class="line">     = <span class="keyword">new</span> EnumMap&lt;STATE, Map&lt;EVENTTYPE,</span><br><span class="line">                         Transition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;&gt;&gt;(prototype);</span><br><span class="line">  <span class="comment">// 将TransitionsListNode链中的ApplicableSingleOrMultipleTransition入stack</span></span><br><span class="line">  <span class="keyword">for</span> (TransitionsListNode cursor = transitionsListNode;</span><br><span class="line">       cursor != <span class="keyword">null</span>;</span><br><span class="line">       cursor = cursor.next) &#123;</span><br><span class="line">    stack.push(cursor.transition);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// 将ApplicableSingleOrMultipleTransition出stack，</span></span><br><span class="line">  <span class="comment">// 调用apply对stateMachineTable进行赋值</span></span><br><span class="line">  <span class="keyword">while</span> (!stack.isEmpty()) &#123;</span><br><span class="line">    stack.pop().apply(<span class="keyword">this</span>);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>下面看下<code>ApplicableSingleOrMultipleTransition.apply</code>方法</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> apply</span><br><span class="line">         (StateMachineFactory&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt; subject) &#123;</span><br><span class="line">  <span class="comment">// 从stateMachineTable中拿到preState对应的transitionMap</span></span><br><span class="line">  Map&lt;EVENTTYPE, Transition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;&gt; transitionMap</span><br><span class="line">    = subject.stateMachineTable.get(preState);</span><br><span class="line">  <span class="comment">// transitionMap为null则new一个transitionMap的HashMap</span></span><br><span class="line">  <span class="keyword">if</span> (transitionMap == <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="comment">// I use HashMap here because I would expect most EVENTTYPE's to not</span></span><br><span class="line">    <span class="comment">//  apply out of a particular state, so FSM sizes would be </span></span><br><span class="line">    <span class="comment">//  quadratic if I use EnumMap's here as I do at the top level.</span></span><br><span class="line">    transitionMap = <span class="keyword">new</span> HashMap&lt;EVENTTYPE,</span><br><span class="line">      Transition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;&gt;();</span><br><span class="line">    subject.stateMachineTable.put(preState, transitionMap);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// 将eventType对应的Transition放入transitionMap中</span></span><br><span class="line">  transitionMap.put(eventType, transition);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="触发状态转移"><a href="#触发状态转移" class="headerlink" title="触发状态转移"></a>触发状态转移</h2><p>RMAPPImpl中状态转移的触发是在<code>RMAPPImpl.handle</code>中触发的，在handle中调用<code>this.stateMachine.doTransition(event.getType(), event)</code>，其中stateMachine是在RMAPPImpl的构造方法中调用<code>stateMachineFactory.make(this)</code>进行实例化的。</p>
+<p>看下make方法</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> StateMachine&lt;STATE, EVENTTYPE, EVENT&gt; <span class="title">make</span><span class="params">(OPERAND operand)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">new</span> InternalStateMachine(operand, defaultInitialState);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在make中new了一个InternalStateMachine对象，则stateMachine其实是InternalStateMachine类的对象，<code>stateMachine.doTransition</code>的调用其实就是stateMachine.doTransition的doTransition方法，然而在<code>stateMachine.doTransition</code>方法中又调用了StateMachineFactory的doTransition方法，<code>StateMachineFactory.doTransition</code>代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// StateMachineFactory.doTransition</span></span><br><span class="line"><span class="keyword">private</span> STATE doTransition</span><br><span class="line">         (OPERAND operand, STATE oldState, EVENTTYPE eventType, EVENT event)</span><br><span class="line">    <span class="keyword">throws</span> InvalidStateTransitonException &#123;</span><br><span class="line">  <span class="comment">// We can assume that stateMachineTable is non-null because we call</span></span><br><span class="line">  <span class="comment">//  maybeMakeStateMachineTable() when we build an InnerStateMachine ,</span></span><br><span class="line">  <span class="comment">//  and this code only gets called from inside a working InnerStateMachine .</span></span><br><span class="line">  Map&lt;EVENTTYPE, Transition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;&gt; transitionMap</span><br><span class="line">    = stateMachineTable.get(oldState);</span><br><span class="line">  <span class="keyword">if</span> (transitionMap != <span class="keyword">null</span>) &#123;</span><br><span class="line">    Transition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt; transition</span><br><span class="line">        = transitionMap.get(eventType);</span><br><span class="line">    <span class="keyword">if</span> (transition != <span class="keyword">null</span>) &#123;</span><br><span class="line">      <span class="keyword">return</span> transition.doTransition(operand, oldState, event, eventType);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">throw</span> <span class="keyword">new</span> InvalidStateTransitonException(oldState, eventType);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>StateMachineFactory.doTransition</code>只能通过内部类<code>InnerStateMachine</code>的doTransition方法调用，调用<code>StateMachineFactory.doTransition</code>时假设<code>stateMachineTable</code>不为null，因为在InnerStateMachine的构造方法中可能会调用<code>maybeMakeStateMachineTable</code>方法。</p>
+<p>从stateMachineTable中得到当前state和eventType对应的transition，然后调用<em>transition.doTransition</em>方法，调用eventType对应的hook去执行相关逻辑。</p>
+<p>transition是一个接口，实现该接口的有两个类SingleInternalArc和MultipleInternalArc，相应的hook处理完之后，doTransition返回结束时的状态。</p>
+<p>至此一次状态转移就完成了。</p>
+<h2 id="状态转移代码示例"><a href="#状态转移代码示例" class="headerlink" title="状态转移代码示例"></a>状态转移代码示例</h2><p>下面以RMAppEventType.START事件类型被触发之后，发送的状态转移。</p>
+<p>首先该事件在RMAppImpl.handle中被处理，调用<code>this.stateMachine.doTransition(event.getType(), event)</code>方法，跟踪到<code>InternalStateMachine.doTransition</code>，在其内又继续调用<code>StateMachineFactory.this.doTransition</code>，然后根据<em>RMAppEventType.START</em>事件被触发时的状态<em>RMAppState.NEW</em>，从<code>stateMachineTable</code>中EventType和Transition的映射关系transitionMap，接着从transitionMap中拿到<em>RMAppEventType.START</em>对应的transition<em>(SingleInternalArc)</em>，接着调用transition的doTransition方法，这里才调用到该状态转移涉及到的hook，也就是在addTransition中注册的hook类<code>RMAppNewlySavingTransition</code></p>
+<p>代码流程为：<br><em>stateMachine__[InternalStateMachine]__.doTransition</em> -&gt; <em>StateMachineFactory.this.doTransition</em> -&gt; <em>transition__[SingleInternalArc]__.doTransition</em> -&gt; <em>hook__[RMAppNewlySavingTransition]__.transition</em></p>
+<p>此流程结束之后RMAppMaster的状态由<em>RMAppState.NEW</em>转移为<em>RMAppState.NEW_SAVING</em>，这套流程是在<code>addTransition(RMAppState.NEW, RMAppState.NEW_SAVING, RMAppEventType.START, new RMAppNewlySavingTransition())</code>中规定的。</p>
+<p>最后列一个RMApp的状态转移流程图<br><img src="/blogimgs/StateMachine/RMApp.png" alt="RMApp状态机" title="RMApp状态机"><br>图中的顶点是<em>状态</em>，边是触发状态转移的<em>事件类型</em>。</p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的肯定，是我装逼的最大的动力！</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/path/to/wechat-reward-image/wechatpay.png" alt="混绅士 WeChat Pay">
+          <p>微信打赏</p>
+        </div>
+      
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>本文作者：</strong>
+      混绅士
+    </li>
+    
+    <!--add wordcount and min2 read by szw-->
+    <li class="post-copyright-author">
+      <strong>本文字数：</strong>
+      8,289
+    </li>
+    <li class="post-copyright-author">
+      <strong>阅读时长：</strong>
+      47
+    </li>
+
+    <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="http://bigdatadecode.club/YARN源码分析之StateMachineFactory状态机.html" title="YARN源码分析之StateMachineFactory状态机">http://bigdatadecode.club/YARN源码分析之StateMachineFactory状态机.html</a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>版权声明： </strong>
+      本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0</a> 许可协议。转载请注明出处！
+    </li>
+  </ul>
+
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
+          
+            <a href="/tags/BigData/" rel="tag"># BigData</a>
+          
+            <a href="/tags/YARN/" rel="tag"># YARN</a>
+          
+            <a href="/tags/StateMachineFactory/" rel="tag"># StateMachineFactory</a>
+          
+        </div>
+      
+
+       
+        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/YARNSrcRMContainerAllocator.html">YARN源码分析之RMContainerAllocator</a></li><li><a href="/Application-fail-RM-change.html">Application运行失败导致RM主备切换</a></li><li><a href="/YARN-Lost-Node显示异常.html">YARN Lost Node显示异常</a></li><li><a href="/YARN源码分析之AsyncDispatcher事件调度器.html">YARN源码分析之AsyncDispatcher事件调度器</a></li><li><a href="/YARNSrcMRAppMasterStart.html">YARN源码分析之MRAppMaster启动</a></li><li><a href="/YARNSrcApplicationMasterArch.html">YARN源码分析之ApplicationMaster架构</a></li><li><a href="/YARN源码分析之Fair Scheduler part1.html">YARN源码分析之Fair Scheduler part1</a></li><li><a href="/YarnSrcMRCreateContainerRequest.html">YARN源码分析之MR创建container请求</a></li><li><a href="/YARNSrcAMAssignPolicy.html">YARN源码分析之ApplicationMaster分配策略</a></li><li><a href="/YARNSrcApplicationMasterStart.html">YARN源码分析之ApplicationMaster启动流程</a></li></ul> 
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/YARN源码分析之AsyncDispatcher事件调度器.html" rel="next" title="YARN源码分析之AsyncDispatcher事件调度器">
+                <i class="fa fa-chevron-left"></i> YARN源码分析之AsyncDispatcher事件调度器
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/HDFS中LightWeightGSet与HashMap结构解析.html" rel="prev" title="HDFS中LightWeightGSet与HashMap结构解析">
+                HDFS中LightWeightGSet与HashMap结构解析 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+  <div class="bdsharebuttonbox">
+    <a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+    <a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>  
+    <a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>      
+    <a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+    <a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+    <a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a>
+    <a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a>
+    <a href="#" class="bds_more" data-cmd="more"></a>
+    <a class="bds_count" data-cmd="count"></a>
+  </div>
+  <script>
+    window._bd_share_config = {
+      "common": {
+        "bdText": "",
+        "bdMini": "1",
+        "bdMiniList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "bdPic": ""
+      },
+      "image": {
+        "viewList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "viewText": "分享到：",
+        "viewSize": "16"
+      },
+      "slide": {
+        "bdImg": "5",
+        "bdPos": "left",
+        "bdTop": "100"
+      }
+    }
+  </script>
+
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>       
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/uploads/avatar.png" alt="混绅士">
+          <p class="site-author-name" itemprop="name">混绅士</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">97</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">157</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <!-- <i class="fa  fa-fw fa-globe"></i> -->
+              <!-- modify icon to fire by szw -->
+              <i class="fa fa-fire fa-" aria-hidden="true"></i>
+              热文推荐
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                </li>
+              
+            </ul>
+          </div>
+
+
+        
+
+        
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <!-- modify icon to fire by szw -->
+                <i class="fa fa-history fa-" aria-hidden="true"></i>
+                近期文章
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                
+                  <li>
+                    <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                  </li>
+                
+                  <li>
+                    <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+ 
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#RMAppImpl中的StateMachineFactory"><span class="nav-number">1.</span> <span class="nav-text">RMAppImpl中的StateMachineFactory</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#addTransition"><span class="nav-number">2.</span> <span class="nav-text">addTransition</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#installTopology"><span class="nav-number">3.</span> <span class="nav-text">installTopology</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#触发状态转移"><span class="nav-number">4.</span> <span class="nav-text">触发状态转移</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#状态转移代码示例"><span class="nav-number">5.</span> <span class="nav-text">状态转移代码示例</span></a></li></ol></div>
+            
+
+          </div>
+
+          <div class="post-toc-wrap sidebar-panel sidebar-panel-active" style="margin: 0 2px; text-align: left;">
+            
+              <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+                <div class="links-of-blogroll-title">
+                  <!-- <i class="fa  fa-fw fa-globe"></i> -->
+                  <!-- modify icon to fire by szw -->
+                  <i class="fa fa-fire fa-" aria-hidden="true"></i>
+                  热文推荐
+                </div>
+                <ul class="links-of-blogroll-list">
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                    </li>
+                  
+                </ul>
+              </div>
+            
+  
+            
+                <div class="links-of-blogroll motion-element links-of-blogroll-block">
+                  <div class="links-of-blogroll-title">
+                    <!-- modify icon to fire by szw -->
+                    <i class="fa fa-history fa-" aria-hidden="true"></i>
+                    近期文章
+                  </div>
+                  <ul class="links-of-blogroll-list">
+                    
+                    
+                      <li>
+                        <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
+                      </li>
+                    
+                  </ul>
+                </div>
+              
+          </div>
+
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+
+  </aside>
+
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">混绅士</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+<!--add total count by szw-->
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共617.7k字</span>
+</div>
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user">本站访客数</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      人次
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye">本站总访问量</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      次
+    </span>
+  
+</div>
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.0"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("nP29Qpe35cHgQTQIFL94dGoW-gzGzoHsz", "eVPY9SfyVH11gSsbPBEcAQM0");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+</body>
+</html>

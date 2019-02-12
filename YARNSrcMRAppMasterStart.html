@@ -1,0 +1,1404 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="0hClWroWscvQbyOyRPhAZWjOZJ6g3SFCdO47yYakvdk">
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="27E5EbutCm">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="Hadoop,BigData,YARN,MRAppMaster,">
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0">
+
+
+
+
+
+
+<meta name="description" content="由YARN源码分析之ApplicationMaster启动流程中得知MR的AppMaster是由MRAppMaster启动的，在脚本中调用了AppMaster的main方法。 本文就顺着代码来对MRAppMaster进行解析下。">
+<meta name="keywords" content="Hadoop,BigData,YARN,MRAppMaster">
+<meta property="og:type" content="article">
+<meta property="og:title" content="YARN源码分析之MRAppMaster启动">
+<meta property="og:url" content="http://bigdatadecode.club/YARNSrcMRAppMasterStart.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="由YARN源码分析之ApplicationMaster启动流程中得知MR的AppMaster是由MRAppMaster启动的，在脚本中调用了AppMaster的main方法。 本文就顺着代码来对MRAppMaster进行解析下。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-02-12T09:23:37.676Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="YARN源码分析之MRAppMaster启动">
+<meta name="twitter:description" content="由YARN源码分析之ApplicationMaster启动流程中得知MR的AppMaster是由MRAppMaster启动的，在脚本中调用了AppMaster的main方法。 本文就顺着代码来对MRAppMaster进行解析下。">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    sidebar: {"position":"right","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://bigdatadecode.club/YARNSrcMRAppMasterStart.html">
+
+
+
+
+
+  <title> YARN源码分析之MRAppMaster启动 | big data decode club </title>
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-80813521-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+
+
+
+
+
+
+  <div style="display: none;">
+    <script src="//s95.cnzz.com/z_stat.php?id=1260961002&web_id=1260961002" language="JavaScript"></script>
+  </div>
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">big data decode club</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">hunhun -- Any answers you can find in source code.</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/YARNSrcMRAppMasterStart.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="混绅士">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="big data decode club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                YARN源码分析之MRAppMaster启动
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-08-09T01:28:16+08:00">
+                2017-08-09
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-02-12T17:23:37+08:00">
+                2019-02-12
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/YARNSrcMRAppMasterStart.html" class="leancloud_visitors" data-flag-title="YARN源码分析之MRAppMaster启动">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>由<a href="http://bigdatadecode.club/YARNSrcApplicationMasterStart.html">YARN源码分析之ApplicationMaster启动流程</a>中得知MR的AppMaster是由MRAppMaster启动的，在脚本中调用了AppMaster的main方法。</p>
+<p>本文就顺着代码来对MRAppMaster进行解析下。</p>
+<a id="more"></a>
+<p>先来看下该类的main方法，</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">  	<span class="comment">// Environment中的环境变量是在launch_container.sh中export的</span></span><br><span class="line">    String containerIdStr =</span><br><span class="line">        System.getenv(Environment.CONTAINER_ID.name());</span><br><span class="line">    String nodeHostString = System.getenv(Environment.NM_HOST.name());</span><br><span class="line">    String nodePortString = System.getenv(Environment.NM_PORT.name());</span><br><span class="line">    String nodeHttpPortString =</span><br><span class="line">        System.getenv(Environment.NM_HTTP_PORT.name());</span><br><span class="line">    String appSubmitTimeStr =</span><br><span class="line">        System.getenv(ApplicationConstants.APP_SUBMIT_TIME_ENV);</span><br><span class="line">    ...    </span><br><span class="line">    <span class="comment">// 一个MR对应一个MRAppMater对象</span></span><br><span class="line">    MRAppMaster appMaster =</span><br><span class="line">        <span class="keyword">new</span> MRAppMaster(applicationAttemptId, containerId, nodeHostString,</span><br><span class="line">            Integer.parseInt(nodePortString),</span><br><span class="line">            Integer.parseInt(nodeHttpPortString), appSubmitTime);</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">// 初始化并启动appMaster</span></span><br><span class="line">    initAndStartAppMaster(appMaster, conf, jobUserName);</span><br><span class="line">  &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">    LOG.fatal(<span class="string">"Error starting MRAppMaster"</span>, t);</span><br><span class="line">    ExitUtil.terminate(<span class="number">1</span>, t);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>MRAppMaster首先从环境变量中获取相关的信息，然后调用<code>initAndStartAppMaster</code>开启AppMaster服务。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">initAndStartAppMaster</span><span class="params">(<span class="keyword">final</span> MRAppMaster appMaster,</span></span></span><br><span class="line"><span class="function"><span class="params">    <span class="keyword">final</span> JobConf conf, String jobUserName)</span> <span class="keyword">throws</span> IOException,</span></span><br><span class="line"><span class="function">    InterruptedException </span>&#123;</span><br><span class="line">  ...</span><br><span class="line">  appMasterUgi.doAs(<span class="keyword">new</span> PrivilegedExceptionAction&lt;Object&gt;() &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">run</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">      appMaster.init(conf);</span><br><span class="line">      appMaster.start();</span><br><span class="line">      <span class="keyword">if</span>(appMaster.errorHappenedShutDown) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IOException(<span class="string">"Was asked to shut down."</span>);</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>MRAppMaster继承了CompositeService，则调用init进行服务初始化，start启动服务。而init又调用<code>MRAppMaster.serviceInit</code>对appMaster进行初始化，调用<code>MRAppMaster.serviceStart</code>启动AppMaster服务。</p>
+<h2 id="MRAppMaster初始化"><a href="#MRAppMaster初始化" class="headerlink" title="MRAppMaster初始化"></a>MRAppMaster初始化</h2><p>先看下AppMaster的初始化。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">serviceInit</span><span class="params">(<span class="keyword">final</span> Configuration conf)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">  ...  </span><br><span class="line">  <span class="comment">// 判断一些目录是否存在</span></span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    String user = UserGroupInformation.getCurrentUser().getShortUserName();</span><br><span class="line">    <span class="comment">// 目录为 /tmp/hadoop-yarn/staging/user/.staging</span></span><br><span class="line">    Path stagingDir = MRApps.getStagingAreaDir(conf, user);</span><br><span class="line">    FileSystem fs = getFileSystem(conf);</span><br><span class="line">    <span class="keyword">boolean</span> stagingExists = fs.exists(stagingDir);</span><br><span class="line">    <span class="comment">// 目录为 /tmp/hadoop-yarn/staging/user/.staging/jobId/COMMIT_STARTED</span></span><br><span class="line">    Path startCommitFile = MRApps.getStartJobCommitFile(conf, user, jobId);</span><br><span class="line">    <span class="keyword">boolean</span> commitStarted = fs.exists(startCommitFile);</span><br><span class="line">    <span class="comment">// 目录为 /tmp/hadoop-yarn/staging/user/.staging/jobId/COMMIT_SUCCESS</span></span><br><span class="line">    Path endCommitSuccessFile = MRApps.getEndJobCommitSuccessFile(conf, user, jobId);</span><br><span class="line">    <span class="keyword">boolean</span> commitSuccess = fs.exists(endCommitSuccessFile);</span><br><span class="line">    <span class="comment">// 目录为 /tmp/hadoop-yarn/staging/user/.staging/jobId/COMMIT_FAIL</span></span><br><span class="line">    Path endCommitFailureFile = MRApps.getEndJobCommitFailureFile(conf, user, jobId);</span><br><span class="line">    <span class="keyword">boolean</span> commitFailure = fs.exists(endCommitFailureFile);</span><br><span class="line">    ...</span><br><span class="line">  &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> YarnRuntimeException(<span class="string">"Error while initializing"</span>, e);</span><br><span class="line">  &#125;  </span><br><span class="line">  <span class="keyword">if</span> (errorHappenedShutDown) &#123;</span><br><span class="line">    <span class="comment">// 发生error的处理逻辑</span></span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">  	<span class="comment">// 创建MR依赖的OutputCommitter</span></span><br><span class="line">    committer = createOutputCommitter(conf);</span><br><span class="line">    <span class="comment">// 为MRAppMaster服务创建异步调度器服务</span></span><br><span class="line">    dispatcher = createDispatcher();</span><br><span class="line">    addIfService(dispatcher);</span><br><span class="line">    <span class="comment">//service to handle requests from JobClient</span></span><br><span class="line">    <span class="comment">// 创建MRClientService</span></span><br><span class="line">    clientService = createClientService(context);</span><br><span class="line">    <span class="comment">// Init ClientService separately so that we stop it separately, since this</span></span><br><span class="line">    <span class="comment">// service needs to wait some time before it stops so clients can know the</span></span><br><span class="line">    <span class="comment">// final states</span></span><br><span class="line">    clientService.init(conf);</span><br><span class="line">    <span class="comment">// 根据mr的运行方式创建不同的container分配router</span></span><br><span class="line">    <span class="comment">// 调度各个状态 流程 ？？？？？？？？？##########################？？？？？？？？？？</span></span><br><span class="line">    <span class="comment">// 请求的流程，分配的container是rm已经分配到am上的资源？？？主动分配的？在哪申请</span></span><br><span class="line">    containerAllocator = createContainerAllocator(clientService, context);</span><br><span class="line">    <span class="comment">//service to handle the output committer</span></span><br><span class="line">    committerEventHandler = createCommitterEventHandler(context, committer);</span><br><span class="line">    addIfService(committerEventHandler);</span><br><span class="line">    <span class="comment">//service to handle requests to TaskUmbilicalProtocol</span></span><br><span class="line">    <span class="comment">// 主要负责启动task 使用TaskUmbilicalProtocol协议</span></span><br><span class="line">    taskAttemptListener = createTaskAttemptListener(context);</span><br><span class="line">    addIfService(taskAttemptListener);</span><br><span class="line">    <span class="comment">//service to log job history events</span></span><br><span class="line">    EventHandler&lt;JobHistoryEvent&gt; historyService = </span><br><span class="line">      createJobHistoryHandler(context);</span><br><span class="line">    dispatcher.register(org.apache.hadoop.mapreduce.jobhistory.EventType.class,</span><br><span class="line">        historyService);</span><br><span class="line">    <span class="keyword">this</span>.jobEventDispatcher = <span class="keyword">new</span> JobEventDispatcher();</span><br><span class="line">    <span class="comment">//register the event dispatchers</span></span><br><span class="line">    dispatcher.register(JobEventType.class, jobEventDispatcher);</span><br><span class="line">    dispatcher.register(TaskEventType.class, <span class="keyword">new</span> TaskEventDispatcher());</span><br><span class="line">    dispatcher.register(TaskAttemptEventType.class, </span><br><span class="line">        <span class="keyword">new</span> TaskAttemptEventDispatcher());</span><br><span class="line">    dispatcher.register(CommitterEventType.class, committerEventHandler);</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">// Now that there's a FINISHING state for application on RM to give AMs</span></span><br><span class="line">    <span class="comment">// plenty of time to clean up after unregister it's safe to clean staging</span></span><br><span class="line">    <span class="comment">// directory after unregistering with RM. So, we start the staging-dir</span></span><br><span class="line">    <span class="comment">// cleaner BEFORE the ContainerAllocator so that on shut-down,</span></span><br><span class="line">    <span class="comment">// ContainerAllocator unregisters first and then the staging-dir cleaner</span></span><br><span class="line">    <span class="comment">// deletes staging directory.</span></span><br><span class="line">    <span class="comment">// 开启清理服务</span></span><br><span class="line">    <span class="comment">// 与OutputCommitter的区别</span></span><br><span class="line">    addService(createStagingDirCleaningService());</span><br><span class="line">    <span class="comment">// service to allocate containers from RM (if non-uber) or to fake it (uber)</span></span><br><span class="line">    addIfService(containerAllocator);</span><br><span class="line">    dispatcher.register(ContainerAllocator.EventType.class, containerAllocator);</span><br><span class="line">    <span class="comment">// corresponding service to launch allocated containers via NodeManager</span></span><br><span class="line">    containerLauncher = createContainerLauncher(context);</span><br><span class="line">    addIfService(containerLauncher);</span><br><span class="line">    dispatcher.register(ContainerLauncher.EventType.class, containerLauncher);</span><br><span class="line">    <span class="comment">// Add the JobHistoryEventHandler last so that it is properly stopped first.</span></span><br><span class="line">    <span class="comment">// This will guarantee that all history-events are flushed before AM goes</span></span><br><span class="line">    <span class="comment">// ahead with shutdown.</span></span><br><span class="line">    <span class="comment">// Note: Even though JobHistoryEventHandler is started last, if any</span></span><br><span class="line">    <span class="comment">// component creates a JobHistoryEvent in the meanwhile, it will be just be</span></span><br><span class="line">    <span class="comment">// queued inside the JobHistoryEventHandler</span></span><br><span class="line">    <span class="comment">// 可见服务的启动顺序是先进后出</span></span><br><span class="line">    addIfService(historyService);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">super</span>.serviceInit(conf);</span><br><span class="line">&#125; <span class="comment">// end of init()</span></span><br></pre></td></tr></table></figure>
+<p>如果一切正常会进入最后一个<code>if</code> <code>else</code>语句块的else中进行AM的初始化。来看下初始化中都包括哪些服务。</p>
+<blockquote>
+<p>先创建<code>OutputCommitter</code>对象，这是一个抽象类，实现类有FileOutputCommitter。随后用与构建<code>CommitterEventHandler</code>服务，并将此服务加入AppMaster服务中。<br>OutputCommitter的作用有</p>
+</blockquote>
+<ol>
+<li>job初始化时进行一些准备工作，比如为job创建临时输出目录</li>
+<li>job完成时进行一些扫尾工作，比如当job完成之后删除临时输出目录</li>
+<li>为task准备临时输出目录</li>
+<li>检查task是否需要commit</li>
+<li>commit task输出目录</li>
+<li>放弃task commit</li>
+</ol>
+<blockquote>
+<p>创建异步调度器dispatcher。主要用于事件的调度，是yarn框架中一个重要的概念。</p>
+</blockquote>
+<blockquote>
+<p>创建MRClientService对象clientService，MRClientService主要用于client与am进行通信，需要对其进行单独的初始化和停止。</p>
+</blockquote>
+<blockquote>
+<p>创建TaskAttemptListenerImpl服务，主要用与和task的通行。</p>
+</blockquote>
+<blockquote>
+<p>创建StagingDirCleaningService服务，用于删除临时目录。此服务要在containerAllocator服务之前添加，因为container注销之后才能清楚该container的临时目录。======那和outputCommitter有什么区别呢？？？？</p>
+</blockquote>
+<blockquote>
+<p>创建ContainerAllocatorRouter服务，用与分配container。根据MR是否为Uber类型创建不同的分配策略，如果是Uber则创建<code>LocalContainerAllocator</code>，否则创建<code>RMContainerAllocator</code></p>
+</blockquote>
+<blockquote>
+<p>创建JobHistoryEventHandler服务，这个服务是最后添加的，要保证此服务先停止。</p>
+</blockquote>
+<p>初始化不只是添加一些服务还会向异步调度器中注册一些事件处理器，包括jobhistory.EventType、JobEventType、TaskEventType、TaskAttemptEventType、CommitterEventType、ContainerAllocator.EventType和ContainerLauncher.EventType。</p>
+<h2 id="MRAppMaster启动"><a href="#MRAppMaster启动" class="headerlink" title="MRAppMaster启动"></a>MRAppMaster启动</h2><p>初始化之后，调用<code>serviceStart</code>启动服务，看下都启动了什么服务</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">serviceStart</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">  ...</span><br><span class="line">  <span class="comment">// /////////////////// Create the job itself.</span></span><br><span class="line">  <span class="comment">// 开启job的状态机 JobImpl NEW</span></span><br><span class="line">  job = createJob(getConfig(), forcedState, shutDownMessage);</span><br><span class="line">  <span class="comment">// job创建成功之后，向jobHistory发送EventType.AM_STARTED事件类型，</span></span><br><span class="line">  <span class="comment">// 但是为什么会有amInfos，amInfos用来干啥？</span></span><br><span class="line">  <span class="keyword">for</span> (AMInfo info : amInfos) &#123;</span><br><span class="line">    dispatcher.getEventHandler().handle(</span><br><span class="line">        <span class="keyword">new</span> JobHistoryEvent(job.getID(), <span class="keyword">new</span> AMStartedEvent(info</span><br><span class="line">            .getAppAttemptId(), info.getStartTime(), info.getContainerId(),</span><br><span class="line">            info.getNodeManagerHost(), info.getNodeManagerPort(), info</span><br><span class="line">                .getNodeManagerHttpPort())));</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Send out an MR AM inited event for this AM.</span></span><br><span class="line">  dispatcher.getEventHandler().handle(</span><br><span class="line">      <span class="keyword">new</span> JobHistoryEvent(job.getID(), <span class="keyword">new</span> AMStartedEvent(amInfo</span><br><span class="line">          .getAppAttemptId(), amInfo.getStartTime(), amInfo.getContainerId(),</span><br><span class="line">          amInfo.getNodeManagerHost(), amInfo.getNodeManagerPort(), amInfo</span><br><span class="line">              .getNodeManagerHttpPort(), <span class="keyword">this</span>.forcedState == <span class="keyword">null</span> ? <span class="keyword">null</span></span><br><span class="line">                  : <span class="keyword">this</span>.forcedState.toString())));</span><br><span class="line">  amInfos.add(amInfo);</span><br><span class="line"></span><br><span class="line">  <span class="comment">// metrics system init is really init &amp; start.</span></span><br><span class="line">  <span class="comment">// It's more test friendly to put it here.</span></span><br><span class="line">  DefaultMetricsSystem.initialize(<span class="string">"MRAppMaster"</span>);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">boolean</span> initFailed = <span class="keyword">false</span>;</span><br><span class="line">  <span class="keyword">if</span> (!errorHappenedShutDown) &#123;</span><br><span class="line">    <span class="comment">// create a job event for job intialization</span></span><br><span class="line">    <span class="comment">// job init  job从NEW变为INITED</span></span><br><span class="line">    JobEvent initJobEvent = <span class="keyword">new</span> JobEvent(job.getID(), JobEventType.JOB_INIT);</span><br><span class="line">    <span class="comment">// Send init to the job (this does NOT trigger job execution)</span></span><br><span class="line">    <span class="comment">// This is a synchronous call, not an event through dispatcher. We want</span></span><br><span class="line">    <span class="comment">// job-init to be done completely here.</span></span><br><span class="line">    <span class="comment">// 注意注释的内容，与dispatcher的区别</span></span><br><span class="line">    jobEventDispatcher.handle(initJobEvent);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// If job is still not initialized, an error happened during</span></span><br><span class="line">    <span class="comment">// initialization. Must complete starting all of the services so failure</span></span><br><span class="line">    <span class="comment">// events can be processed.</span></span><br><span class="line">    initFailed = (((JobImpl)job).getInternalState() != JobStateInternal.INITED);</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">// Start ClientService here, since it's not initialized if</span></span><br><span class="line">    <span class="comment">// errorHappenedShutDown is true</span></span><br><span class="line">    clientService.start();</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">//start all the components</span></span><br><span class="line">  <span class="keyword">super</span>.serviceStart();</span><br><span class="line"></span><br><span class="line">  <span class="comment">// finally set the job classloader</span></span><br><span class="line">  MRApps.setClassLoader(jobClassLoader, getConfig());</span><br><span class="line">  <span class="comment">// 如果job INITED失败，则job的状态为JOB_INIT_FAILED</span></span><br><span class="line">  <span class="keyword">if</span> (initFailed) &#123;</span><br><span class="line">    JobEvent initFailedEvent = <span class="keyword">new</span> JobEvent(job.getID(), JobEventType.JOB_INIT_FAILED);</span><br><span class="line">    jobEventDispatcher.handle(initFailedEvent);</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="comment">// All components have started, start the job.</span></span><br><span class="line">    startJobs();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在启动MRAppMaster所有服务之前</p>
+<ol>
+<li>先调用<code>createJob</code>创建job，job是JobImpl对象。job的创建开启了job的状态机旅程，初始的状态是<em>NEW</em>。在createJob中还会向异步调度器注册JobFinishEvent事件类型。</li>
+<li>触发job的JOB_INIT并交给事件处理器JobEventDispatcher进行处理，<strong>此时是同步的，等待job init的结果</strong>。</li>
+<li>在启动MRAppMaster中服务之前要先启动clientService，然后启动所有的服务</li>
+<li>如果job从NEW转化为INITED时发生了故障，则置<code>initFailed</code>为true，向JobEventDispatcher发送JobEventType.JOB_INIT_FAILED事件类型</li>
+<li>一切正常之后调用<code>startJobs()</code></li>
+</ol>
+<p>针对上述流程我们看下具体代码，</p>
+<p>serviceStart时先调用createJob创建一个job，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> Job <span class="title">createJob</span><span class="params">(Configuration conf, JobStateInternal forcedState, </span></span></span><br><span class="line"><span class="function"><span class="params">    String diagnostic)</span> </span>&#123;</span><br><span class="line">  <span class="comment">// new 出job对象，开启job状态机(初始化job的状态时NEW)</span></span><br><span class="line">  <span class="comment">// create single job</span></span><br><span class="line">  Job newJob =</span><br><span class="line">      <span class="keyword">new</span> JobImpl(jobId, appAttemptID, conf, dispatcher.getEventHandler(),</span><br><span class="line">          taskAttemptListener, jobTokenSecretManager, jobCredentials, clock,</span><br><span class="line">          completedTasksFromPreviousRun, metrics,</span><br><span class="line">          committer, newApiCommitter,</span><br><span class="line">          currentUser.getUserName(), appSubmitTime, amInfos, context, </span><br><span class="line">          forcedState, diagnostic);</span><br><span class="line">  ((RunningAppContext) context).jobs.put(newJob.getID(), newJob);</span><br><span class="line">  <span class="comment">// 开始job的状态之后，向异步调度器注册JobFinishEvent事件类型的handler</span></span><br><span class="line">  dispatcher.register(JobFinishEvent.Type.class,</span><br><span class="line">      createJobFinishEventHandler());     </span><br><span class="line">  <span class="keyword">return</span> newJob;</span><br><span class="line">&#125; <span class="comment">// end createJob()</span></span><br></pre></td></tr></table></figure>
+<p>createJob的时候用到一个属性<code>amInfos</code>，amInfos是一个list，在serviceStart时实例化。</p>
+<blockquote>
+<p>在createJob之后，会将amInfos中的amInfo构建一个EventType.AM_STARTED事件类型的JobHistoryEvent事件，这里有些疑问，一个mr会有多个amInfo？而且不是因为重试？？？</p>
+</blockquote>
+<p>如果期间没有发生error，则触发JobEventType.JOB_INIT事件类型，由<code>jobEventDispatcher.handle(initJobEvent)</code>处理，最终调用的是JobImpl.handle交由状态机进行处理，job原先状态是NEW，则JobEventType.JOB_INIT的处理类是<code>InitTransition</code>，逻辑如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> JobStateInternal <span class="title">transition</span><span class="params">(JobImpl job, JobEvent event)</span> </span>&#123;</span><br><span class="line">  ...</span><br><span class="line">  <span class="comment">// 创建job context</span></span><br><span class="line">  <span class="keyword">if</span> (job.newApiCommitter) &#123;</span><br><span class="line">    job.jobContext = <span class="keyword">new</span> JobContextImpl(job.conf,</span><br><span class="line">        job.oldJobId);</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    job.jobContext = <span class="keyword">new</span> org.apache.hadoop.mapred.JobContextImpl(</span><br><span class="line">        job.conf, job.oldJobId);</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    setup(job);</span><br><span class="line">    job.fs = job.getFileSystem(job.conf);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//log to job history</span></span><br><span class="line">    <span class="comment">// EventType.JOB_SUBMITTED</span></span><br><span class="line">    JobSubmittedEvent jse = <span class="keyword">new</span> JobSubmittedEvent(job.oldJobId,</span><br><span class="line">          job.conf.get(MRJobConfig.JOB_NAME, <span class="string">"test"</span>), </span><br><span class="line">        job.conf.get(MRJobConfig.USER_NAME, <span class="string">"mapred"</span>),</span><br><span class="line">        job.appSubmitTime,</span><br><span class="line">        job.remoteJobConfFile.toString(),</span><br><span class="line">        job.jobACLs, job.queueName,</span><br><span class="line">        job.conf.get(MRJobConfig.WORKFLOW_ID, <span class="string">""</span>),</span><br><span class="line">        job.conf.get(MRJobConfig.WORKFLOW_NAME, <span class="string">""</span>),</span><br><span class="line">        job.conf.get(MRJobConfig.WORKFLOW_NODE_NAME, <span class="string">""</span>),</span><br><span class="line">        getWorkflowAdjacencies(job.conf),</span><br><span class="line">        job.conf.get(MRJobConfig.WORKFLOW_TAGS, <span class="string">""</span>));</span><br><span class="line">    job.eventHandler.handle(<span class="keyword">new</span> JobHistoryEvent(job.jobId, jse));</span><br><span class="line">    <span class="comment">//TODO JH Verify jobACLs, UserName via UGI?</span></span><br><span class="line">    <span class="comment">// 根据在JobSubmitter.submitJobInternal中划分的文件来切分task</span></span><br><span class="line">    <span class="comment">// 读取文件切分元信息</span></span><br><span class="line">    TaskSplitMetaInfo[] taskSplitMetaInfo = createSplits(job, job.jobId);</span><br><span class="line">    job.numMapTasks = taskSplitMetaInfo.length;</span><br><span class="line">    job.numReduceTasks = job.conf.getInt(MRJobConfig.NUM_REDUCES, <span class="number">0</span>);</span><br><span class="line">    <span class="comment">// mapWeight 和 reduceWeight 用来计算mr的进度</span></span><br><span class="line">    <span class="keyword">if</span> (job.numMapTasks == <span class="number">0</span> &amp;&amp; job.numReduceTasks == <span class="number">0</span>) &#123;</span><br><span class="line">      job.addDiagnostic(<span class="string">"No of maps and reduces are 0 "</span> + job.jobId);</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (job.numMapTasks == <span class="number">0</span>) &#123;</span><br><span class="line">      job.reduceWeight = <span class="number">0.9f</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (job.numReduceTasks == <span class="number">0</span>) &#123;</span><br><span class="line">      job.mapWeight = <span class="number">0.9f</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      job.mapWeight = job.reduceWeight = <span class="number">0.45f</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">long</span> inputLength = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; job.numMapTasks; ++i) &#123;</span><br><span class="line">      inputLength += taskSplitMetaInfo[i].getInputDataLength();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 判断该job是否可以在uber模式下运行</span></span><br><span class="line">    job.makeUberDecision(inputLength);</span><br><span class="line">    </span><br><span class="line">    job.taskAttemptCompletionEvents =</span><br><span class="line">        <span class="keyword">new</span> ArrayList&lt;TaskAttemptCompletionEvent&gt;(</span><br><span class="line">            job.numMapTasks + job.numReduceTasks + <span class="number">10</span>);</span><br><span class="line">    job.mapAttemptCompletionEvents =</span><br><span class="line">        <span class="keyword">new</span> ArrayList&lt;TaskCompletionEvent&gt;(job.numMapTasks + <span class="number">10</span>);</span><br><span class="line">    job.taskCompletionIdxToMapCompletionIdx = <span class="keyword">new</span> ArrayList&lt;Integer&gt;(</span><br><span class="line">        job.numMapTasks + job.numReduceTasks + <span class="number">10</span>);</span><br><span class="line">    <span class="comment">// 这里错误率，是指可以容忍一些map失败，而mr忽略这些失败的task，继续正常执行？？？？</span></span><br><span class="line">    job.allowedMapFailuresPercent =</span><br><span class="line">        job.conf.getInt(MRJobConfig.MAP_FAILURES_MAX_PERCENT, <span class="number">0</span>);</span><br><span class="line">    job.allowedReduceFailuresPercent =</span><br><span class="line">        job.conf.getInt(MRJobConfig.REDUCE_FAILURES_MAXPERCENT, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// create the Tasks but don't start them yet</span></span><br><span class="line">    <span class="comment">// 创建map reduce task对象</span></span><br><span class="line">    createMapTasks(job, inputLength, taskSplitMetaInfo);</span><br><span class="line">    createReduceTasks(job);</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">return</span> JobStateInternal.INITED;</span><br><span class="line">  &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">// Leave job in the NEW state. The MR AM will detect that the state is</span></span><br><span class="line">    <span class="comment">// not INITED and send a JOB_INIT_FAILED event.</span></span><br><span class="line">    <span class="keyword">return</span> JobStateInternal.NEW;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><em>job init的时候会根据文件split的元数据信息创建map和reduce task，此时并没有启动这些task</em>。</p>
+<p>initJob执行结束之后，返回给serviceStart目前job的状态，成功返回INITED，然后继续执行，启动在serviceInit中添加的service，然后执行startJob</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">startJobs</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="comment">/** create a job-start event to get this ball rolling */</span></span><br><span class="line">  JobEvent startJobEvent = <span class="keyword">new</span> JobStartEvent(job.getID(),</span><br><span class="line">      recoveredJobStartTime);</span><br><span class="line">  <span class="comment">/** send the job-start event. this triggers the job execution. */</span></span><br><span class="line">  <span class="comment">// 触发job execution</span></span><br><span class="line">  dispatcher.getEventHandler().handle(startJobEvent);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>startJobs主要是创建一个<code>JobEventType.JOB_START</code>事件类型，由JobImpl的状态机进行处理。<br>startJobs之前job的状态为INITED，则由<code>StartTransition</code>进行处理，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * This transition executes in the event-dispatcher thread, though it's</span></span><br><span class="line"><span class="comment"> * triggered in MRAppMaster's startJobs() method.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">transition</span><span class="params">(JobImpl job, JobEvent event)</span> </span>&#123;</span><br><span class="line">  JobStartEvent jse = (JobStartEvent) event;</span><br><span class="line">  <span class="keyword">if</span> (jse.getRecoveredJobStartTime() != <span class="number">0</span>) &#123;</span><br><span class="line">    job.startTime = jse.getRecoveredJobStartTime();</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    job.startTime = job.clock.getTime();</span><br><span class="line">  &#125;</span><br><span class="line">  JobInitedEvent jie =</span><br><span class="line">    <span class="keyword">new</span> JobInitedEvent(job.oldJobId,</span><br><span class="line">         job.startTime,</span><br><span class="line">         job.numMapTasks, job.numReduceTasks,</span><br><span class="line">         job.getState().toString(),</span><br><span class="line">         job.isUber());</span><br><span class="line">  job.eventHandler.handle(<span class="keyword">new</span> JobHistoryEvent(job.jobId, jie));</span><br><span class="line">  JobInfoChangeEvent jice = <span class="keyword">new</span> JobInfoChangeEvent(job.oldJobId,</span><br><span class="line">      job.appSubmitTime, job.startTime);</span><br><span class="line">  job.eventHandler.handle(<span class="keyword">new</span> JobHistoryEvent(job.jobId, jice));</span><br><span class="line">  job.metrics.runningJob(job);</span><br><span class="line">  <span class="comment">// CommitterEventHandler.handle CommitterEventType.JOB_SETUP</span></span><br><span class="line">  job.eventHandler.handle(<span class="keyword">new</span> CommitterJobSetupEvent(</span><br><span class="line">          job.jobId, job.jobContext));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>serviceStart</code>跳用<code>startJobs</code>之后，就完成了job的启动，MRAppMaster也启动完毕，触发job execution，使job之后会在另一个线程中进行状态机的转换，随后就是MRAppMaster中的各个服务来配合job来进行工作。</p>
+<p>在StartTransition中，创建<code>CommitterEventType.JOB_SETUP</code>事件类型，由<code>CommitterEventHandler.handle</code>处理，进行job的准备工作。</p>
+<p>最后这里需要注意下<code>StartTransition</code>上的注释，说StartTransition.transition是在<strong>事件异步调度器</strong>线程中执行的，也就是说现在job以后的流程已经和MRAppMaster分离了。<br>MRAppMaster在startJobs中异步调用<code>dispatcher.getEventHandler().handle(startJobEvent)</code>，然后返回到serviceStart，此时MRAppMaster启动成功，之后就是以服务的形态存活。</p>
+<p>下一篇接着介绍job在接收到<code>JobEventType.JOB_START</code>事件类型之后由INITED状态变为SETUP之后的流程。</p>
+<blockquote>
+<p>本篇只介绍了MRAppMaster的启动过程，并没有把MRAppMaster在MR执行过程的作用介绍完整，随后几篇我会顺着MR的执行流程来介绍MRAppMaster的具体作用。</p>
+</blockquote>
+<!--
+删除临时文件到底在哪？
+LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
+            " " + jobTempDir);
+-->
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的肯定，是我装逼的最大的动力！</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/path/to/wechat-reward-image/wechatpay.png" alt="混绅士 WeChat Pay">
+          <p>微信打赏</p>
+        </div>
+      
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>本文作者：</strong>
+      混绅士
+    </li>
+    
+    <!--add wordcount and min2 read by szw-->
+    <li class="post-copyright-author">
+      <strong>本文字数：</strong>
+      7,716
+    </li>
+    <li class="post-copyright-author">
+      <strong>阅读时长：</strong>
+      44
+    </li>
+
+    <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="http://bigdatadecode.club/YARNSrcMRAppMasterStart.html" title="YARN源码分析之MRAppMaster启动">http://bigdatadecode.club/YARNSrcMRAppMasterStart.html</a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>版权声明： </strong>
+      本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0</a> 许可协议。转载请注明出处！
+    </li>
+  </ul>
+
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
+          
+            <a href="/tags/BigData/" rel="tag"># BigData</a>
+          
+            <a href="/tags/YARN/" rel="tag"># YARN</a>
+          
+            <a href="/tags/MRAppMaster/" rel="tag"># MRAppMaster</a>
+          
+        </div>
+      
+
+       
+        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/YARNSrcRMContainerAllocator.html">YARN源码分析之RMContainerAllocator</a></li><li><a href="/YarnSrcMRCreateContainerRequest.html">YARN源码分析之MR创建container请求</a></li><li><a href="/YARN源码分析之Fair Scheduler part1.html">YARN源码分析之Fair Scheduler part1</a></li><li><a href="/YARN源码分析之AsyncDispatcher事件调度器.html">YARN源码分析之AsyncDispatcher事件调度器</a></li><li><a href="/Application-fail-RM-change.html">Application运行失败导致RM主备切换</a></li><li><a href="/YARNSrcApplicationMasterArch.html">YARN源码分析之ApplicationMaster架构</a></li><li><a href="/YARN源码分析之StateMachineFactory状态机.html">YARN源码分析之StateMachineFactory状态机</a></li><li><a href="/YARN-Lost-Node显示异常.html">YARN Lost Node显示异常</a></li><li><a href="/YARNSrcAMAssignPolicy.html">YARN源码分析之ApplicationMaster分配策略</a></li><li><a href="/YARNSrcApplicationMasterStart.html">YARN源码分析之ApplicationMaster启动流程</a></li></ul> 
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/HDFSCannotObtainBlockLengthForLocatedBlock.html" rel="next" title="HDFS之Cannot obtain block length for LocatedBlock异常">
+                <i class="fa fa-chevron-left"></i> HDFS之Cannot obtain block length for LocatedBlock异常
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/YarnSrcMRCreateContainerRequest.html" rel="prev" title="YARN源码分析之MR创建container请求">
+                YARN源码分析之MR创建container请求 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+  <div class="bdsharebuttonbox">
+    <a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+    <a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>  
+    <a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>      
+    <a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+    <a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+    <a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a>
+    <a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a>
+    <a href="#" class="bds_more" data-cmd="more"></a>
+    <a class="bds_count" data-cmd="count"></a>
+  </div>
+  <script>
+    window._bd_share_config = {
+      "common": {
+        "bdText": "",
+        "bdMini": "1",
+        "bdMiniList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "bdPic": ""
+      },
+      "image": {
+        "viewList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "viewText": "分享到：",
+        "viewSize": "16"
+      },
+      "slide": {
+        "bdImg": "5",
+        "bdPos": "left",
+        "bdTop": "100"
+      }
+    }
+  </script>
+
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>       
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/uploads/avatar.png" alt="混绅士">
+          <p class="site-author-name" itemprop="name">混绅士</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">97</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">157</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <!-- <i class="fa  fa-fw fa-globe"></i> -->
+              <!-- modify icon to fire by szw -->
+              <i class="fa fa-fire fa-" aria-hidden="true"></i>
+              热文推荐
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                </li>
+              
+            </ul>
+          </div>
+
+
+        
+
+        
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <!-- modify icon to fire by szw -->
+                <i class="fa fa-history fa-" aria-hidden="true"></i>
+                近期文章
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                
+                  <li>
+                    <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                  </li>
+                
+                  <li>
+                    <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+ 
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#MRAppMaster初始化"><span class="nav-number">1.</span> <span class="nav-text">MRAppMaster初始化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#MRAppMaster启动"><span class="nav-number">2.</span> <span class="nav-text">MRAppMaster启动</span></a></li></ol></div>
+            
+
+          </div>
+
+          <div class="post-toc-wrap sidebar-panel sidebar-panel-active" style="margin: 0 2px; text-align: left;">
+            
+              <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+                <div class="links-of-blogroll-title">
+                  <!-- <i class="fa  fa-fw fa-globe"></i> -->
+                  <!-- modify icon to fire by szw -->
+                  <i class="fa fa-fire fa-" aria-hidden="true"></i>
+                  热文推荐
+                </div>
+                <ul class="links-of-blogroll-list">
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                    </li>
+                  
+                </ul>
+              </div>
+            
+  
+            
+                <div class="links-of-blogroll motion-element links-of-blogroll-block">
+                  <div class="links-of-blogroll-title">
+                    <!-- modify icon to fire by szw -->
+                    <i class="fa fa-history fa-" aria-hidden="true"></i>
+                    近期文章
+                  </div>
+                  <ul class="links-of-blogroll-list">
+                    
+                    
+                      <li>
+                        <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
+                      </li>
+                    
+                  </ul>
+                </div>
+              
+          </div>
+
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+
+  </aside>
+
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">混绅士</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+<!--add total count by szw-->
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共617.7k字</span>
+</div>
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user">本站访客数</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      人次
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye">本站总访问量</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      次
+    </span>
+  
+</div>
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.0"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("nP29Qpe35cHgQTQIFL94dGoW-gzGzoHsz", "eVPY9SfyVH11gSsbPBEcAQM0");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+</body>
+</html>

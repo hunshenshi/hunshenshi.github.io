@@ -1,0 +1,1377 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="0hClWroWscvQbyOyRPhAZWjOZJ6g3SFCdO47yYakvdk">
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="27E5EbutCm">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="Hadoop,BigData,MapReduce,环形缓冲区,">
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0">
+
+
+
+
+
+
+<meta name="description" content="之前有两篇文件分别分析了Map和Reduce阶段的流程，这篇文章把Map阶段的环形缓冲区单独拿出来进行分析，对环形缓冲区的数据结构和数据进入环形缓冲区然后溢写到磁盘的流程进行分析。">
+<meta name="keywords" content="Hadoop,BigData,MapReduce,环形缓冲区">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MapReduce源码解析--环形缓冲区">
+<meta property="og:url" content="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="之前有两篇文件分别分析了Map和Reduce阶段的流程，这篇文章把Map阶段的环形缓冲区单独拿出来进行分析，对环形缓冲区的数据结构和数据进入环形缓冲区然后溢写到磁盘的流程进行分析。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://bigdatadecode.club/blogimgs/MapOutputBuffer/buffer_init.png">
+<meta property="og:updated_time" content="2019-02-12T09:23:37.670Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="MapReduce源码解析--环形缓冲区">
+<meta name="twitter:description" content="之前有两篇文件分别分析了Map和Reduce阶段的流程，这篇文章把Map阶段的环形缓冲区单独拿出来进行分析，对环形缓冲区的数据结构和数据进入环形缓冲区然后溢写到磁盘的流程进行分析。">
+<meta name="twitter:image" content="http://bigdatadecode.club/blogimgs/MapOutputBuffer/buffer_init.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    sidebar: {"position":"right","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html">
+
+
+
+
+
+  <title> MapReduce源码解析--环形缓冲区 | big data decode club </title>
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-80813521-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+
+
+
+
+
+
+  <div style="display: none;">
+    <script src="//s95.cnzz.com/z_stat.php?id=1260961002&web_id=1260961002" language="JavaScript"></script>
+  </div>
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">big data decode club</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">hunhun -- Any answers you can find in source code.</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="混绅士">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="big data decode club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                MapReduce源码解析--环形缓冲区
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-04-27T00:52:00+08:00">
+                2017-04-27
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-02-12T17:23:37+08:00">
+                2019-02-12
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/MapReduce源码解析--环形缓冲区.html" class="leancloud_visitors" data-flag-title="MapReduce源码解析--环形缓冲区">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>之前有两篇文件分别分析了<a href="http://bigdatadecode.club/MapReduce源码解析--Map解析.html">Map</a>和<a href="http://bigdatadecode.club/MapReduce源码解析--Reduce解析.html">Reduce</a>阶段的流程，这篇文章把Map阶段的<em>环形缓冲区</em>单独拿出来进行分析，对环形缓冲区的数据结构和数据进入环形缓冲区然后溢写到磁盘的流程进行分析。</p>
+<a id="more"></a>
+<h2 id="环形缓冲区数据结构"><a href="#环形缓冲区数据结构" class="headerlink" title="环形缓冲区数据结构"></a>环形缓冲区数据结构</h2><p>Map过程中环形缓冲区是指数据被map处理之后会先放入内存，内存中的这片区域就是环形缓冲区。</p>
+<p>环形缓冲区是在<code>MapTask.MapOutputBuffer</code>中定义的，相关的属性如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// k/v accounting</span></span><br><span class="line"><span class="comment">// 存放meta数据的IntBuffer，都是int entry，占4byte</span></span><br><span class="line"><span class="keyword">private</span> IntBuffer kvmeta; <span class="comment">// metadata overlay on backing store</span></span><br><span class="line"><span class="keyword">int</span> kvstart;            <span class="comment">// marks origin of spill metadata</span></span><br><span class="line"><span class="keyword">int</span> kvend;              <span class="comment">// marks end of spill metadata</span></span><br><span class="line"><span class="keyword">int</span> kvindex;            <span class="comment">// marks end of fully serialized records</span></span><br><span class="line"><span class="comment">// 分割meta和key value内容的标识   </span></span><br><span class="line"><span class="comment">// meta数据和key value内容都存放在同一个环形缓冲区，所以需要分隔开</span></span><br><span class="line"><span class="keyword">int</span> equator;            <span class="comment">// marks origin of meta/serialization</span></span><br><span class="line"><span class="keyword">int</span> bufstart;           <span class="comment">// marks beginning of spill</span></span><br><span class="line"><span class="keyword">int</span> bufend;             <span class="comment">// marks beginning of collectable</span></span><br><span class="line"><span class="keyword">int</span> bufmark;            <span class="comment">// marks end of record</span></span><br><span class="line"><span class="keyword">int</span> bufindex;           <span class="comment">// marks end of collected</span></span><br><span class="line"><span class="keyword">int</span> bufvoid;            <span class="comment">// marks the point where we should stop</span></span><br><span class="line">                        <span class="comment">// reading at the end of the buffer</span></span><br><span class="line"><span class="comment">// 存放key value的byte数组，单位是byte，注意与kvmeta区分</span></span><br><span class="line"><span class="keyword">byte</span>[] kvbuffer;        <span class="comment">// main output buffer</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">byte</span>[] b0 = <span class="keyword">new</span> <span class="keyword">byte</span>[<span class="number">0</span>];</span><br><span class="line"></span><br><span class="line"><span class="comment">// key value在kvbuffer中的地址存放在偏移kvindex的距离</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> VALSTART = <span class="number">0</span>;         <span class="comment">// val offset in acct</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> KEYSTART = <span class="number">1</span>;         <span class="comment">// key offset in acct</span></span><br><span class="line"><span class="comment">// partition信息存在kvmeta中偏移kvindex的距离</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> PARTITION = <span class="number">2</span>;        <span class="comment">// partition offset in acct</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> VALLEN = <span class="number">3</span>;           <span class="comment">// length of value</span></span><br><span class="line"><span class="comment">// 一对key value的meta数据在kvmeta中占用的个数</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> NMETA = <span class="number">4</span>;            <span class="comment">// num meta ints</span></span><br><span class="line"><span class="comment">// 一对key value的meta数据在kvmeta中占用的byte数</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> METASIZE = NMETA * <span class="number">4</span>; <span class="comment">// size in bytes</span></span><br></pre></td></tr></table></figure>
+<p>环形缓冲区其实是一个数组，数组中存放着key、value的序列化数据和key、value的元数据信息，key/value的元数据存储的格式是int类型，每个key/value对应一个元数据，元数据由4个int组成，第一个int存放value的起始位置，第二个存放key的起始位置，第三个存放partition，最后一个存放value的长度。</p>
+<p>key/value序列化的数据和元数据在环形缓冲区中的存储是由<em>equator</em>分隔的，key/value按照<em>索引递增</em>的方向存储，meta则按照<em>索引递减</em>的方向存储，将其数组抽象为一个环形结构之后，<em>以equator为界，key/value顺时针存储，meta逆时针存储</em>。</p>
+<h2 id="初始化"><a href="#初始化" class="headerlink" title="初始化"></a>初始化</h2><p>环形缓冲区的结构在<code>MapOutputBuffer.init</code>中创建。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">(MapOutputCollector.Context context</span></span></span><br><span class="line"><span class="function"><span class="params">                )</span> <span class="keyword">throws</span> IOException, ClassNotFoundException </span>&#123;</span><br><span class="line">...</span><br><span class="line">  <span class="comment">//MAP_SORT_SPILL_PERCENT = mapreduce.map.sort.spill.percent</span></span><br><span class="line">  <span class="comment">// map 端buffer所占的百分比</span></span><br><span class="line">  <span class="comment">//sanity checks</span></span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">float</span> spillper =</span><br><span class="line">    job.getFloat(JobContext.MAP_SORT_SPILL_PERCENT, (<span class="keyword">float</span>)<span class="number">0.8</span>);</span><br><span class="line">  <span class="comment">//IO_SORT_MB = "mapreduce.task.io.sort.mb"</span></span><br><span class="line">  <span class="comment">// map 端buffer大小</span></span><br><span class="line">  <span class="comment">// mapreduce.task.io.sort.mb * mapreduce.map.sort.spill.percent 最好是16的整数倍</span></span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">int</span> sortmb = job.getInt(JobContext.IO_SORT_MB, <span class="number">100</span>);</span><br><span class="line">  <span class="comment">// 所有的spill index 在内存所占的大小的阈值</span></span><br><span class="line">  indexCacheMemoryLimit = job.getInt(JobContext.INDEX_CACHE_MEMORY_LIMIT,</span><br><span class="line">                                     INDEX_CACHE_MEMORY_LIMIT_DEFAULT);</span><br><span class="line">  ...</span><br><span class="line">  <span class="comment">// 排序的实现类，可以自己实现。 这里用的是改写的快排</span></span><br><span class="line">  sorter = ReflectionUtils.newInstance(job.getClass(<span class="string">"map.sort.class"</span>,</span><br><span class="line">        QuickSort.class, IndexedSorter.class), job);</span><br><span class="line">  <span class="comment">// buffers and accounting</span></span><br><span class="line">  <span class="comment">// 上面IO_SORT_MB的单位是MB，左移20位将单位转化为byte</span></span><br><span class="line">  <span class="keyword">int</span> maxMemUsage = sortmb &lt;&lt; <span class="number">20</span>;</span><br><span class="line">  <span class="comment">// METASIZE是元数据的长度，元数据有4个int单元，分别为</span></span><br><span class="line">  <span class="comment">// VALSTART、KEYSTART、PARTITION、VALLEN，而int为4个byte，</span></span><br><span class="line">  <span class="comment">// 所以METASIZE长度为16。下面是计算buffer中最多有多少byte来存元数据</span></span><br><span class="line">  maxMemUsage -= maxMemUsage % METASIZE;</span><br><span class="line">  <span class="comment">// 元数据数组  以byte为单位</span></span><br><span class="line">  kvbuffer = <span class="keyword">new</span> <span class="keyword">byte</span>[maxMemUsage];</span><br><span class="line">  bufvoid = kvbuffer.length;</span><br><span class="line">  <span class="comment">// 将kvbuffer转化为int型的kvmeta  以int为单位，也就是4byte</span></span><br><span class="line">  kvmeta = ByteBuffer.wrap(kvbuffer)</span><br><span class="line">     .order(ByteOrder.nativeOrder())</span><br><span class="line">     .asIntBuffer();</span><br><span class="line">  <span class="comment">// 设置buf和kvmeta的分界线</span></span><br><span class="line">  setEquator(<span class="number">0</span>);</span><br><span class="line">  bufstart = bufend = bufindex = equator;</span><br><span class="line">  kvstart = kvend = kvindex;</span><br><span class="line">  <span class="comment">// kvmeta中存放元数据实体的最大个数</span></span><br><span class="line">  maxRec = kvmeta.capacity() / NMETA;</span><br><span class="line">  <span class="comment">// buffer spill时的阈值（不单单是sortmb*spillper）</span></span><br><span class="line">  <span class="comment">// 更加精确的是kvbuffer.length*spiller</span></span><br><span class="line">  softLimit = (<span class="keyword">int</span>)(kvbuffer.length * spillper);</span><br><span class="line">  <span class="comment">// 此变量较为重要，作为spill的动态衡量标准</span></span><br><span class="line">  bufferRemaining = softLimit;</span><br><span class="line">  ...</span><br><span class="line">  <span class="comment">// k/v serialization</span></span><br><span class="line">  comparator = job.getOutputKeyComparator();</span><br><span class="line">  keyClass = (Class&lt;K&gt;)job.getMapOutputKeyClass();</span><br><span class="line">  valClass = (Class&lt;V&gt;)job.getMapOutputValueClass();</span><br><span class="line">  serializationFactory = <span class="keyword">new</span> SerializationFactory(job);</span><br><span class="line">  keySerializer = serializationFactory.getSerializer(keyClass);</span><br><span class="line">  <span class="comment">// 将bb作为key序列化写入的output</span></span><br><span class="line">  keySerializer.open(bb);</span><br><span class="line">  valSerializer = serializationFactory.getSerializer(valClass);</span><br><span class="line">  <span class="comment">// 将bb作为value序列化写入的output</span></span><br><span class="line">  valSerializer.open(bb);</span><br><span class="line">  ...</span><br><span class="line">  <span class="comment">// combiner</span></span><br><span class="line">  ...</span><br><span class="line">  spillInProgress = <span class="keyword">false</span>;</span><br><span class="line">  <span class="comment">// 最后一次merge时，在有combiner的情况下，超过此阈值才执行combiner</span></span><br><span class="line">  minSpillsForCombine = job.getInt(JobContext.MAP_COMBINE_MIN_SPILLS, <span class="number">3</span>);</span><br><span class="line">  spillThread.setDaemon(<span class="keyword">true</span>);</span><br><span class="line">  spillThread.setName(<span class="string">"SpillThread"</span>);</span><br><span class="line">  spillLock.lock();</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    spillThread.start();</span><br><span class="line">    <span class="keyword">while</span> (!spillThreadRunning) &#123;</span><br><span class="line">      spillDone.await();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> IOException(<span class="string">"Spill thread failed to initialize"</span>, e);</span><br><span class="line">  &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    spillLock.unlock();</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">if</span> (sortSpillException != <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> IOException(<span class="string">"Spill thread failed to initialize"</span>,</span><br><span class="line">        sortSpillException);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>init是对环形缓冲区进行初始化构造，由<em>mapreduce.task.io.sort.mb</em>决定map中环形缓冲区的大小sortmb，默认是100M。</p>
+<p>此缓冲区也用于存放meta，一个meta占用METASIZE(16byte)，则其中用于存放数据的大小是<em>maxMemUsage -= sortmb &lt;&lt; 20 % METASIZE</em>(由此可知最好设置sortmb转换为byte之后是16的整数倍)，然后用maxMemUsage初始化<em>kvbuffer字节数组</em>和<em>kvmeta整形数组</em>，最后设置数组的一些标识信息。利用<code>setEquator(0)</code>设置kvbuffer和kvmeta的分界线，初始化的时候以<strong>0</strong>为分界线，kvindex为<em>aligned - METASIZE + kvbuffer.length</em>，其位置在环形数组中相当于按照逆时针方向减去METASIZE，由kvindex设置<em>kvstart = kvend = kvindex</em>，由equator设置<em>bufstart = bufend = bufindex = equator</em>，还得设置<em>bufvoid = kvbuffer.length</em>，bufvoid用于标识用于存放数据的最大位置。</p>
+<p>为了提高效率，当buffer占用达到阈值之后，会进行spill，这个阈值是由<em>bufferRemaining</em>进行检查的，bufferRemaining由<code>softLimit = (int)(kvbuffer.length * spillper); bufferRemaining = softLimit;</code>进行初始化赋值，这里需要注意的是softLimit并不是<em>sortmb*spillper</em>，而是<em>kvbuffer.length * spillper</em>，当sortmb &lt;&lt; 20是16的整数倍时，才可以认为softLimit是sortmb*spillper。</p>
+<p>下面是setEquator的代码</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// setEquator(0)的代码如下</span></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">setEquator</span><span class="params">(<span class="keyword">int</span> pos)</span> </span>&#123;</span><br><span class="line">  equator = pos;</span><br><span class="line">  <span class="comment">// set index prior to first entry, aligned at meta boundary</span></span><br><span class="line">  <span class="comment">// 第一个 entry的末尾位置，即元数据和kv数据的分界线   单位是byte</span></span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">int</span> aligned = pos - (pos % METASIZE);</span><br><span class="line">  <span class="comment">// Cast one of the operands to long to avoid integer overflow</span></span><br><span class="line">  <span class="comment">// 元数据中存放数据的起始位置</span></span><br><span class="line">  kvindex = (<span class="keyword">int</span>)</span><br><span class="line">    (((<span class="keyword">long</span>)aligned - METASIZE + kvbuffer.length) % kvbuffer.length) / <span class="number">4</span>;</span><br><span class="line">  LOG.info(<span class="string">"(EQUATOR) "</span> + pos + <span class="string">" kvi "</span> + kvindex +</span><br><span class="line">      <span class="string">"("</span> + (kvindex * <span class="number">4</span>) + <span class="string">")"</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>buffer初始化之后的抽象数据结构如下图所示：<br><img src="/blogimgs/MapOutputBuffer/buffer_init.png" alt="环形缓冲区数据结构图" title="环形缓冲区数据结构图"></p>
+<h2 id="写入buffer"><a href="#写入buffer" class="headerlink" title="写入buffer"></a>写入buffer</h2><p>Map通过<code>NewOutputCollector.write</code>方法调用<code>collector.collect</code>向buffer中写入数据，数据写入之前已在<code>NewOutputCollector.write</code>中对要写入的数据进行逐条分区，下面看下<em>collect</em></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// MapOutputBuffer.collect</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">collect</span><span class="params">(K key, V value, <span class="keyword">final</span> <span class="keyword">int</span> partition</span></span></span><br><span class="line"><span class="function"><span class="params">                                 )</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">  ...</span><br><span class="line">  <span class="comment">// 新数据collect时，先将剩余的空间减去元数据的长度，之后进行判断</span></span><br><span class="line">  bufferRemaining -= METASIZE;</span><br><span class="line">  <span class="keyword">if</span> (bufferRemaining &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="comment">// start spill if the thread is not running and the soft limit has been</span></span><br><span class="line">    <span class="comment">// reached</span></span><br><span class="line">    spillLock.lock();</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="keyword">do</span> &#123;</span><br><span class="line">        <span class="comment">// 首次spill时，spillInProgress是false</span></span><br><span class="line">        <span class="keyword">if</span> (!spillInProgress) &#123;</span><br><span class="line">          <span class="comment">// 得到kvindex的byte位置</span></span><br><span class="line">          <span class="keyword">final</span> <span class="keyword">int</span> kvbidx = <span class="number">4</span> * kvindex;</span><br><span class="line">          <span class="comment">// 得到kvend的byte位置</span></span><br><span class="line">          <span class="keyword">final</span> <span class="keyword">int</span> kvbend = <span class="number">4</span> * kvend;</span><br><span class="line">          <span class="comment">// serialized, unspilled bytes always lie between kvindex and</span></span><br><span class="line">          <span class="comment">// bufindex, crossing the equator. Note that any void space</span></span><br><span class="line">          <span class="comment">// created by a reset must be included in "used" bytes</span></span><br><span class="line">          <span class="keyword">final</span> <span class="keyword">int</span> bUsed = distanceTo(kvbidx, bufindex);</span><br><span class="line">          <span class="keyword">final</span> <span class="keyword">boolean</span> bufsoftlimit = bUsed &gt;= softLimit;</span><br><span class="line">          <span class="keyword">if</span> ((kvbend + METASIZE) % kvbuffer.length !=</span><br><span class="line">              equator - (equator % METASIZE)) &#123;</span><br><span class="line">            <span class="comment">// spill finished, reclaim space</span></span><br><span class="line">            resetSpill();</span><br><span class="line">            bufferRemaining = Math.min(</span><br><span class="line">                distanceTo(bufindex, kvbidx) - <span class="number">2</span> * METASIZE,</span><br><span class="line">                softLimit - bUsed) - METASIZE;</span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">          &#125; <span class="keyword">else</span> <span class="keyword">if</span> (bufsoftlimit &amp;&amp; kvindex != kvend) &#123;</span><br><span class="line">            <span class="comment">// spill records, if any collected; check latter, as it may</span></span><br><span class="line">            <span class="comment">// be possible for metadata alignment to hit spill pcnt</span></span><br><span class="line">            startSpill();</span><br><span class="line">            <span class="keyword">final</span> <span class="keyword">int</span> avgRec = (<span class="keyword">int</span>)</span><br><span class="line">              (mapOutputByteCounter.getCounter() /</span><br><span class="line">              mapOutputRecordCounter.getCounter());</span><br><span class="line">            <span class="comment">// leave at least half the split buffer for serialization data</span></span><br><span class="line">            <span class="comment">// ensure that kvindex &gt;= bufindex</span></span><br><span class="line">            <span class="keyword">final</span> <span class="keyword">int</span> distkvi = distanceTo(bufindex, kvbidx);</span><br><span class="line">            <span class="keyword">final</span> <span class="keyword">int</span> newPos = (bufindex +</span><br><span class="line">              Math.max(<span class="number">2</span> * METASIZE - <span class="number">1</span>,</span><br><span class="line">                      Math.min(distkvi / <span class="number">2</span>,</span><br><span class="line">                               distkvi / (METASIZE + avgRec) * METASIZE)))</span><br><span class="line">              % kvbuffer.length;</span><br><span class="line">            setEquator(newPos);</span><br><span class="line">            bufmark = bufindex = newPos;</span><br><span class="line">            <span class="keyword">final</span> <span class="keyword">int</span> serBound = <span class="number">4</span> * kvend;</span><br><span class="line">            <span class="comment">// bytes remaining before the lock must be held and limits</span></span><br><span class="line">            <span class="comment">// checked is the minimum of three arcs: the metadata space, the</span></span><br><span class="line">            <span class="comment">// serialization space, and the soft limit</span></span><br><span class="line">            bufferRemaining = Math.min(</span><br><span class="line">                <span class="comment">// metadata max</span></span><br><span class="line">                distanceTo(bufend, newPos),</span><br><span class="line">                Math.min(</span><br><span class="line">                  <span class="comment">// serialization max</span></span><br><span class="line">                  distanceTo(newPos, serBound),</span><br><span class="line">                  <span class="comment">// soft limit</span></span><br><span class="line">                  softLimit)) - <span class="number">2</span> * METASIZE;</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125; <span class="keyword">while</span> (<span class="keyword">false</span>);</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">      spillLock.unlock();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// 将key value 及元数据信息写入缓冲区</span></span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="comment">// serialize key bytes into buffer</span></span><br><span class="line">    <span class="keyword">int</span> keystart = bufindex;</span><br><span class="line">    <span class="comment">// 将key序列化写入kvbuffer中，并移动bufindex</span></span><br><span class="line">    keySerializer.serialize(key);</span><br><span class="line">    <span class="comment">// key所占空间被bufvoid分隔，则移动key，</span></span><br><span class="line">    <span class="comment">// 将其值放在连续的空间中便于sort时key的对比</span></span><br><span class="line">    <span class="keyword">if</span> (bufindex &lt; keystart) &#123;</span><br><span class="line">      <span class="comment">// wrapped the key; must make contiguous</span></span><br><span class="line">      bb.shiftBufferedKey();</span><br><span class="line">      keystart = <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// serialize value bytes into buffer</span></span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> valstart = bufindex;</span><br><span class="line">    valSerializer.serialize(value);</span><br><span class="line">    <span class="comment">// It's possible for records to have zero length, i.e. the serializer</span></span><br><span class="line">    <span class="comment">// will perform no writes. To ensure that the boundary conditions are</span></span><br><span class="line">    <span class="comment">// checked and that the kvindex invariant is maintained, perform a</span></span><br><span class="line">    <span class="comment">// zero-length write into the buffer. The logic monitoring this could be</span></span><br><span class="line">    <span class="comment">// moved into collect, but this is cleaner and inexpensive. For now, it</span></span><br><span class="line">    <span class="comment">// is acceptable.</span></span><br><span class="line">    bb.write(b0, <span class="number">0</span>, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// the record must be marked after the preceding write, as the metadata</span></span><br><span class="line">    <span class="comment">// for this record are not yet written</span></span><br><span class="line">    <span class="keyword">int</span> valend = bb.markRecord();</span><br><span class="line"></span><br><span class="line">    mapOutputRecordCounter.increment(<span class="number">1</span>);</span><br><span class="line">    mapOutputByteCounter.increment(</span><br><span class="line">        distanceTo(keystart, valend, bufvoid));</span><br><span class="line"></span><br><span class="line">    <span class="comment">// write accounting info</span></span><br><span class="line">    kvmeta.put(kvindex + PARTITION, partition);</span><br><span class="line">    kvmeta.put(kvindex + KEYSTART, keystart);</span><br><span class="line">    kvmeta.put(kvindex + VALSTART, valstart);</span><br><span class="line">    kvmeta.put(kvindex + VALLEN, distanceTo(valstart, valend));</span><br><span class="line">    <span class="comment">// advance kvindex</span></span><br><span class="line">    kvindex = (kvindex - NMETA + kvmeta.capacity()) % kvmeta.capacity();</span><br><span class="line">  &#125; <span class="keyword">catch</span> (MapBufferTooSmallException e) &#123;</span><br><span class="line">    LOG.info(<span class="string">"Record too large for in-memory buffer: "</span> + e.getMessage());</span><br><span class="line">    spillSingleRecord(key, value, partition);</span><br><span class="line">    mapOutputRecordCounter.increment(<span class="number">1</span>);</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>每次写入数据时，执行<code>bufferRemaining -= METASIZE</code>之后，检查<em>bufferRemaining</em>，</p>
+<p>如果大于0，直接将key/value序列化对和对应的meta写入buffer中，key/value是序列化之后写入的，key/value经过一些列的方法调用<code>Serializer.serialize(key/value) -&gt; WritableSerializer.serialize(key/value) -&gt; BytesWritable.write(dataOut) -&gt; DataOutputStream.write(bytes, 0, size) -&gt; MapOutputBuffer.Buffer.write(b, off, len)</code>，最后由<code>MapOutputBuffer.Buffer.write(b, off, len)</code>将数据写入<em>kvbuffer</em>中，write方法如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">write</span><span class="params">(<span class="keyword">byte</span> b[], <span class="keyword">int</span> off, <span class="keyword">int</span> len)</span></span></span><br><span class="line"><span class="function">    <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">  <span class="comment">// must always verify the invariant that at least METASIZE bytes are</span></span><br><span class="line">  <span class="comment">// available beyond kvindex, even when len == 0</span></span><br><span class="line">  bufferRemaining -= len;</span><br><span class="line">  <span class="keyword">if</span> (bufferRemaining &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="comment">// writing these bytes could exhaust available buffer space or fill</span></span><br><span class="line">    <span class="comment">// the buffer to soft limit. check if spill or blocking are necessary</span></span><br><span class="line">    <span class="keyword">boolean</span> blockwrite = <span class="keyword">false</span>;</span><br><span class="line">    spillLock.lock();</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="keyword">do</span> &#123;</span><br><span class="line">        checkSpillException();</span><br><span class="line"></span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> kvbidx = <span class="number">4</span> * kvindex;</span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> kvbend = <span class="number">4</span> * kvend;</span><br><span class="line">        <span class="comment">// ser distance to key index</span></span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> distkvi = distanceTo(bufindex, kvbidx);</span><br><span class="line">        <span class="comment">// ser distance to spill end index</span></span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> distkve = distanceTo(bufindex, kvbend);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// if kvindex is closer than kvend, then a spill is neither in</span></span><br><span class="line">        <span class="comment">// progress nor complete and reset since the lock was held. The</span></span><br><span class="line">        <span class="comment">// write should block only if there is insufficient space to</span></span><br><span class="line">        <span class="comment">// complete the current write, write the metadata for this record,</span></span><br><span class="line">        <span class="comment">// and write the metadata for the next record. If kvend is closer,</span></span><br><span class="line">        <span class="comment">// then the write should block if there is too little space for</span></span><br><span class="line">        <span class="comment">// either the metadata or the current write. Note that collect</span></span><br><span class="line">        <span class="comment">// ensures its metadata requirement with a zero-length write</span></span><br><span class="line">        blockwrite = distkvi &lt;= distkve</span><br><span class="line">          ? distkvi &lt;= len + <span class="number">2</span> * METASIZE</span><br><span class="line">          : distkve &lt;= len || distanceTo(bufend, kvbidx) &lt; <span class="number">2</span> * METASIZE;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (!spillInProgress) &#123;</span><br><span class="line">          <span class="keyword">if</span> (blockwrite) &#123;</span><br><span class="line">            <span class="keyword">if</span> ((kvbend + METASIZE) % kvbuffer.length !=</span><br><span class="line">                equator - (equator % METASIZE)) &#123;</span><br><span class="line">              <span class="comment">// spill finished, reclaim space</span></span><br><span class="line">              <span class="comment">// need to use meta exclusively; zero-len rec &amp; 100% spill</span></span><br><span class="line">              <span class="comment">// pcnt would fail</span></span><br><span class="line">              resetSpill(); <span class="comment">// resetSpill doesn't move bufindex, kvindex</span></span><br><span class="line">              bufferRemaining = Math.min(</span><br><span class="line">                  distkvi - <span class="number">2</span> * METASIZE,</span><br><span class="line">                  softLimit - distanceTo(kvbidx, bufindex)) - len;</span><br><span class="line">              <span class="keyword">continue</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// we have records we can spill; only spill if blocked</span></span><br><span class="line">            <span class="keyword">if</span> (kvindex != kvend) &#123;</span><br><span class="line">              startSpill();</span><br><span class="line">              <span class="comment">// Blocked on this write, waiting for the spill just</span></span><br><span class="line">              <span class="comment">// initiated to finish. Instead of repositioning the marker</span></span><br><span class="line">              <span class="comment">// and copying the partial record, we set the record start</span></span><br><span class="line">              <span class="comment">// to be the new equator</span></span><br><span class="line">              setEquator(bufmark);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">              <span class="comment">// We have no buffered records, and this record is too large</span></span><br><span class="line">              <span class="comment">// to write into kvbuffer. We must spill it directly from</span></span><br><span class="line">              <span class="comment">// collect</span></span><br><span class="line">              <span class="keyword">final</span> <span class="keyword">int</span> size = distanceTo(bufstart, bufindex) + len;</span><br><span class="line">              setEquator(<span class="number">0</span>);</span><br><span class="line">              bufstart = bufend = bufindex = equator;</span><br><span class="line">              kvstart = kvend = kvindex;</span><br><span class="line">              bufvoid = kvbuffer.length;</span><br><span class="line">              <span class="keyword">throw</span> <span class="keyword">new</span> MapBufferTooSmallException(size + <span class="string">" bytes"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (blockwrite) &#123;</span><br><span class="line">          <span class="comment">// wait for spill</span></span><br><span class="line">          <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">while</span> (spillInProgress) &#123;</span><br><span class="line">              reporter.progress();</span><br><span class="line">              spillDone.await();</span><br><span class="line">            &#125;</span><br><span class="line">          &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">              <span class="keyword">throw</span> <span class="keyword">new</span> IOException(</span><br><span class="line">                  <span class="string">"Buffer interrupted while waiting for the writer"</span>, e);</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125; <span class="keyword">while</span> (blockwrite);</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">      spillLock.unlock();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// here, we know that we have sufficient space to write</span></span><br><span class="line">  <span class="keyword">if</span> (bufindex + len &gt; bufvoid) &#123;</span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> gaplen = bufvoid - bufindex;</span><br><span class="line">    System.arraycopy(b, off, kvbuffer, bufindex, gaplen);</span><br><span class="line">    len -= gaplen;</span><br><span class="line">    off += gaplen;</span><br><span class="line">    bufindex = <span class="number">0</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  System.arraycopy(b, off, kvbuffer, bufindex, len);</span><br><span class="line">  bufindex += len;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>write方法将key/value写入kvbuffer中，如果bufindex+len超过了bufvoid，则将写入的内容分开存储，将一部分写入bufindex和bufvoid之间，然后重置bufindex，将剩余的部分写入，这里不区分key和value，写入key之后会在collect中判断<code>bufindex &lt; keystart</code>，当bufindex小时，则key被分开存储，执行<code>bb.shiftBufferedKey()</code>，value则直接写入，不用判断是否被分开存储，key不能分开存储是因为要对key进行排序。</p>
+<p><em>这里需要注意的是要写入的数据太长</em>，并且<em>kvinde==kvend</em>，则抛出<em>MapBufferTooSmallException</em>异常，在collect中捕获，将此数据直接spill到磁盘<code>spillSingleRecord</code>，<em>也就是当单条记录过长时，不写buffer，直接写入磁盘</em>。</p>
+<p>下面看下bb.shiftBufferedKey()代码</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// BlockingBuffer.shiftBufferedKey</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">shiftBufferedKey</span><span class="params">()</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">  <span class="comment">// spillLock unnecessary; both kvend and kvindex are current</span></span><br><span class="line">  <span class="keyword">int</span> headbytelen = bufvoid - bufmark;</span><br><span class="line">  bufvoid = bufmark;</span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">int</span> kvbidx = <span class="number">4</span> * kvindex;</span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">int</span> kvbend = <span class="number">4</span> * kvend;</span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">int</span> avail =</span><br><span class="line">    Math.min(distanceTo(<span class="number">0</span>, kvbidx), distanceTo(<span class="number">0</span>, kvbend));</span><br><span class="line">  <span class="keyword">if</span> (bufindex + headbytelen &lt; avail) &#123;</span><br><span class="line">    System.arraycopy(kvbuffer, <span class="number">0</span>, kvbuffer, headbytelen, bufindex);</span><br><span class="line">    System.arraycopy(kvbuffer, bufvoid, kvbuffer, <span class="number">0</span>, headbytelen);</span><br><span class="line">    bufindex += headbytelen;</span><br><span class="line">    bufferRemaining -= kvbuffer.length - bufvoid;</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="keyword">byte</span>[] keytmp = <span class="keyword">new</span> <span class="keyword">byte</span>[bufindex];</span><br><span class="line">    System.arraycopy(kvbuffer, <span class="number">0</span>, keytmp, <span class="number">0</span>, bufindex);</span><br><span class="line">    bufindex = <span class="number">0</span>;</span><br><span class="line">    out.write(kvbuffer, bufmark, headbytelen);</span><br><span class="line">    out.write(keytmp);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>shiftBufferedKey时，判断首部是否有足够的空间存放key，有没有足够的空间，则先将首部的部分key写入keytmp中，然后分两次写入，再次调用Buffer.write，如果有足够的空间，分两次copy，先将首部的部分key复制到headbytelen的位置，然后将末尾的部分key复制到首部，移动bufindex，重置bufferRemaining的值。</p>
+<p>key/value写入之后，继续写入元数据信息并重置kvindex的值。</p>
+<h2 id="spill"><a href="#spill" class="headerlink" title="spill"></a>spill</h2><p>一次写入buffer结束，当写入数据比较多，<em>bufferRemaining小于等于0</em>时，准备进行spill，首次spill，spillInProgress为false，此时查看<em>bUsed = distanceTo(kvbidx, bufindex)</em>，此时<em>bUsed &gt;= softLimit</em> 并且 <code>(kvbend + METASIZE) % kvbuffer.length == equator - (equator % METASIZE)</code>，则进行spill，调用<code>startSpill</code></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">startSpill</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="comment">// 元数据的边界赋值</span></span><br><span class="line">  kvend = (kvindex + NMETA) % kvmeta.capacity();</span><br><span class="line">  <span class="comment">// key/value的边界赋值</span></span><br><span class="line">  bufend = bufmark;</span><br><span class="line">  <span class="comment">// 设置spill运行标识</span></span><br><span class="line">  spillInProgress = <span class="keyword">true</span>;</span><br><span class="line">  ...</span><br><span class="line">  <span class="comment">// 利用重入锁，对spill线程进行唤醒</span></span><br><span class="line">  spillReady.signal();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>startSpill唤醒spill线程之后，进程spill操作，但此时map向buffer的写入操作并没有阻塞，需要重新边界equator和bufferRemaining的值，先来看下equator和bufferRemaining值的设定：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 根据已经写入的kv得出每个record的平均长度</span></span><br><span class="line"><span class="keyword">final</span> <span class="keyword">int</span> avgRec = (<span class="keyword">int</span>) (mapOutputByteCounter.getCounter() /</span><br><span class="line">  mapOutputRecordCounter.getCounter());</span><br><span class="line"><span class="comment">// leave at least half the split buffer for serialization data</span></span><br><span class="line"><span class="comment">// ensure that kvindex &gt;= bufindex</span></span><br><span class="line"><span class="comment">// 得到空余空间的大小</span></span><br><span class="line"><span class="keyword">final</span> <span class="keyword">int</span> distkvi = distanceTo(bufindex, kvbidx);</span><br><span class="line"><span class="comment">// 得出新equator的位置</span></span><br><span class="line"><span class="keyword">final</span> <span class="keyword">int</span> newPos = (bufindex +</span><br><span class="line">  Math.max(<span class="number">2</span> * METASIZE - <span class="number">1</span>,</span><br><span class="line">          Math.min(distkvi / <span class="number">2</span>,</span><br><span class="line">                   distkvi / (METASIZE + avgRec) * METASIZE)))</span><br><span class="line">  % kvbuffer.length;</span><br><span class="line">setEquator(newPos);</span><br><span class="line">bufmark = bufindex = newPos;</span><br><span class="line"><span class="keyword">final</span> <span class="keyword">int</span> serBound = <span class="number">4</span> * kvend;</span><br><span class="line"><span class="comment">// bytes remaining before the lock must be held and limits</span></span><br><span class="line"><span class="comment">// checked is the minimum of three arcs: the metadata space, the</span></span><br><span class="line"><span class="comment">// serialization space, and the soft limit</span></span><br><span class="line">bufferRemaining = Math.min(</span><br><span class="line">    <span class="comment">// metadata max</span></span><br><span class="line">    distanceTo(bufend, newPos),</span><br><span class="line">    Math.min(</span><br><span class="line">      <span class="comment">// serialization max</span></span><br><span class="line">      distanceTo(newPos, serBound),</span><br><span class="line">      <span class="comment">// soft limit</span></span><br><span class="line">      softLimit)) - <span class="number">2</span> * METASIZE;</span><br></pre></td></tr></table></figure>
+<p><strong>因为equator是kvbuffer和kvmeta的分界线，为了更多的空间存储kv，则最多拿出distkvi的一半来存储meta，并且利用avgRec估算distkvi能存放多少个record和meta对，根据record和meta对的个数估算meta所占空间的大小，从distkvi/2和meta所占空间的大小中取最小值，又因为distkvi中最少得存放一个meta，所占空间为METASIZE，在选取kvindex时需要求aligned，aligned最多为METASIZE-1，总和上述因素，最终选取equator为<code>(bufindex + Math.max(2 * METASIZE - 1, Math.min(distkvi / 2, distkvi / (METASIZE + avgRec) * METASIZE)))</code></strong>。equator选取之后，设置bufmark = bufindex = newPos和kvindex，但此时并不设置bufstart、bufend和kvstart、kvend，因为这几个值要用来表示spill数据的边界。</p>
+<p>spill之后，可用的空间减少了，则控制spill的bufferRemaining也应该重新设置，bufferRemaining取三个值的最小值<em>减去2*METASIZE</em>，三个值分别是meta可用占用的空间<code>distanceTo(bufend, newPos)</code>,kv可用空间<code>distanceTo(newPos, serBound)</code>和softLimit。<strong>这里为什么要减去2*METASIZE，一个是spill之前kvend到kvindex的距离，另一个是当时的kvindex空间？？？？</strong>此时，已有一个record要写入buffer，需要从bufferRemaining中减去当前record的元数据占用的空间，即减去METASIZE，另一个METASIZE是在计算equator时，没有包括kvindex到kvend(spill之前)的这段METASIZE，所以要减去这个METASIZE。</p>
+<p>接下来解析下SpillThread线程，查看其run方法：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  spillLock.lock();</span><br><span class="line">  spillThreadRunning = <span class="keyword">true</span>;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="keyword">while</span> (<span class="keyword">true</span>) &#123;</span><br><span class="line">      spillDone.signal();</span><br><span class="line">      <span class="comment">// 判断是否在spill，false则挂起SpillThread线程，等待唤醒</span></span><br><span class="line">      <span class="keyword">while</span> (!spillInProgress) &#123;</span><br><span class="line">        spillReady.await();</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">        spillLock.unlock();</span><br><span class="line">        <span class="comment">// 唤醒之后，进行排序和溢写到磁盘</span></span><br><span class="line">        sortAndSpill();</span><br><span class="line">      &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">        sortSpillException = t;</span><br><span class="line">      &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">        spillLock.lock();</span><br><span class="line">        <span class="keyword">if</span> (bufend &lt; bufstart) &#123;</span><br><span class="line">          bufvoid = kvbuffer.length;</span><br><span class="line">        &#125;</span><br><span class="line">        kvstart = kvend;</span><br><span class="line">        bufstart = bufend;</span><br><span class="line">        spillInProgress = <span class="keyword">false</span>;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">    Thread.currentThread().interrupt();</span><br><span class="line">  &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    spillLock.unlock();</span><br><span class="line">    spillThreadRunning = <span class="keyword">false</span>;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>run中主要是<code>sortAndSpill</code>，</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">sortAndSpill</span><span class="params">()</span> <span class="keyword">throws</span> IOException, ClassNotFoundException,</span></span><br><span class="line"><span class="function">                                   InterruptedException </span>&#123;</span><br><span class="line">  <span class="comment">//approximate the length of the output file to be the length of the</span></span><br><span class="line">  <span class="comment">//buffer + header lengths for the partitions</span></span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">long</span> size = distanceTo(bufstart, bufend, bufvoid) +</span><br><span class="line">              partitions * APPROX_HEADER_LENGTH;</span><br><span class="line">  FSDataOutputStream out = <span class="keyword">null</span>;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="comment">// create spill file</span></span><br><span class="line">    <span class="comment">// 用来存储index文件</span></span><br><span class="line">    <span class="keyword">final</span> SpillRecord spillRec = <span class="keyword">new</span> SpillRecord(partitions);</span><br><span class="line">    <span class="comment">// 创建写入磁盘的spill文件</span></span><br><span class="line">    <span class="keyword">final</span> Path filename =</span><br><span class="line">        mapOutputFile.getSpillFileForWrite(numSpills, size);</span><br><span class="line">    <span class="comment">// 打开文件流</span></span><br><span class="line">    out = rfs.create(filename);</span><br><span class="line">    <span class="comment">// kvend/4 是截止到当前位置能存放多少个元数据实体</span></span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> mstart = kvend / NMETA;</span><br><span class="line">    <span class="comment">// kvstart 处能存放多少个元数据实体</span></span><br><span class="line">    <span class="comment">// 元数据则在mstart和mend之间，(mstart - mend)则是元数据的个数</span></span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> mend = <span class="number">1</span> + <span class="comment">// kvend is a valid record</span></span><br><span class="line">      (kvstart &gt;= kvend</span><br><span class="line">      ? kvstart</span><br><span class="line">      : kvmeta.capacity() + kvstart) / NMETA;</span><br><span class="line">    <span class="comment">// 排序  只对元数据进行排序,只调整元数据在kvmeta中的顺序</span></span><br><span class="line">    <span class="comment">// 排序规则是MapOutputBuffer.compare， </span></span><br><span class="line">    <span class="comment">// 先对partition进行排序其次对key值排序</span></span><br><span class="line">    sorter.sort(MapOutputBuffer.<span class="keyword">this</span>, mstart, mend, reporter);</span><br><span class="line">    <span class="keyword">int</span> spindex = mstart;</span><br><span class="line">    <span class="comment">// 创建rec，用于存放该分区在数据文件中的信息</span></span><br><span class="line">    <span class="keyword">final</span> IndexRecord rec = <span class="keyword">new</span> IndexRecord();</span><br><span class="line">    <span class="keyword">final</span> InMemValBytes value = <span class="keyword">new</span> InMemValBytes();</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; partitions; ++i) &#123;</span><br><span class="line">      <span class="comment">// 临时文件是IFile格式的</span></span><br><span class="line">      IFile.Writer&lt;K, V&gt; writer = <span class="keyword">null</span>;</span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="keyword">long</span> segmentStart = out.getPos();</span><br><span class="line">        FSDataOutputStream partitionOut = CryptoUtils.wrapIfNecessary(job, out);</span><br><span class="line">        writer = <span class="keyword">new</span> Writer&lt;K, V&gt;(job, partitionOut, keyClass, valClass, codec,</span><br><span class="line">                                  spilledRecordsCounter);</span><br><span class="line">        <span class="comment">// 往磁盘写数据时先判断是否有combiner</span></span><br><span class="line">        <span class="keyword">if</span> (combinerRunner == <span class="keyword">null</span>) &#123;</span><br><span class="line">          <span class="comment">// spill directly</span></span><br><span class="line">          DataInputBuffer key = <span class="keyword">new</span> DataInputBuffer();</span><br><span class="line">          <span class="comment">// 写入相同partition的数据</span></span><br><span class="line">          <span class="keyword">while</span> (spindex &lt; mend &amp;&amp;</span><br><span class="line">              kvmeta.get(offsetFor(spindex % maxRec) + PARTITION) == i) &#123;</span><br><span class="line">            <span class="keyword">final</span> <span class="keyword">int</span> kvoff = offsetFor(spindex % maxRec);</span><br><span class="line">            <span class="keyword">int</span> keystart = kvmeta.get(kvoff + KEYSTART);</span><br><span class="line">            <span class="keyword">int</span> valstart = kvmeta.get(kvoff + VALSTART);</span><br><span class="line">            key.reset(kvbuffer, keystart, valstart - keystart);</span><br><span class="line">            getVBytesForOffset(kvoff, value);</span><br><span class="line">            writer.append(key, value);</span><br><span class="line">            ++spindex;</span><br><span class="line">          &#125;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">          <span class="keyword">int</span> spstart = spindex;</span><br><span class="line">          <span class="keyword">while</span> (spindex &lt; mend &amp;&amp;</span><br><span class="line">              kvmeta.get(offsetFor(spindex % maxRec)</span><br><span class="line">                        + PARTITION) == i) &#123;</span><br><span class="line">            ++spindex;</span><br><span class="line">          &#125;</span><br><span class="line">          <span class="comment">// Note: we would like to avoid the combiner if we've fewer</span></span><br><span class="line">          <span class="comment">// than some threshold of records for a partition</span></span><br><span class="line">          <span class="keyword">if</span> (spstart != spindex) &#123;</span><br><span class="line">            combineCollector.setWriter(writer);</span><br><span class="line">            RawKeyValueIterator kvIter =</span><br><span class="line">              <span class="keyword">new</span> MRResultIterator(spstart, spindex);</span><br><span class="line">            combinerRunner.combine(kvIter, combineCollector);</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// close the writer</span></span><br><span class="line">        writer.close();</span><br><span class="line"></span><br><span class="line">        <span class="comment">// record offsets</span></span><br><span class="line">        <span class="comment">// 记录当前partition i的信息写入索文件rec中</span></span><br><span class="line">        rec.startOffset = segmentStart;</span><br><span class="line">        rec.rawLength = writer.getRawLength() + CryptoUtils.cryptoPadding(job);</span><br><span class="line">        rec.partLength = writer.getCompressedLength() + CryptoUtils.cryptoPadding(job);</span><br><span class="line">        <span class="comment">// spillRec中存放了spill中partition的信息，便于后续堆排序时，取出partition相关的数据进行排序</span></span><br><span class="line">        spillRec.putIndex(rec, i);</span><br><span class="line"></span><br><span class="line">        writer = <span class="keyword">null</span>;</span><br><span class="line">      &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> != writer) writer.close();</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 判断内存中的index文件是否超出阈值，超出则将index文件写入磁盘</span></span><br><span class="line">    <span class="comment">// 当超出阈值时只是把当前index和之后的index写入磁盘</span></span><br><span class="line">    <span class="keyword">if</span> (totalIndexCacheMemory &gt;= indexCacheMemoryLimit) &#123;</span><br><span class="line">      <span class="comment">// create spill index file</span></span><br><span class="line">      <span class="comment">// 创建index文件</span></span><br><span class="line">      Path indexFilename =</span><br><span class="line">          mapOutputFile.getSpillIndexFileForWrite(numSpills, partitions</span><br><span class="line">              * MAP_OUTPUT_INDEX_RECORD_LENGTH);</span><br><span class="line">      spillRec.writeToFile(indexFilename, job);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      indexCacheList.add(spillRec);</span><br><span class="line">      totalIndexCacheMemory +=</span><br><span class="line">        spillRec.size() * MAP_OUTPUT_INDEX_RECORD_LENGTH;</span><br><span class="line">    &#125;</span><br><span class="line">    LOG.info(<span class="string">"Finished spill "</span> + numSpills);</span><br><span class="line">    ++numSpills;</span><br><span class="line">  &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (out != <span class="keyword">null</span>) out.close();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>sortAndSpill中，有mstart和mend得到一共有多少条record需要spill到磁盘，调用sorter.sort对meta进行排序，先对partition进行排序，然后按key排序，排序的结果只调整meta的顺序。</p>
+<p>排序之后，判断是否有combiner，没有则直接将record写入磁盘，写入时是一个partition一个IndexRecord，如果有combiner，则将该partition的record写入kvIter，然后调用combinerRunner.combine执行combiner。</p>
+<p>写入磁盘之后，将spillx.out对应的spillRec放入内存<em>indexCacheList.add(spillRec)</em>，如果所占内存totalIndexCacheMemory超过了indexCacheMemoryLimit，则创建index文件，将此次及以后的spillRec写入index文件存入磁盘。</p>
+<p>最后spill次数递增。sortAndSpill结束之后，回到run方法中，执行finally中的代码，对kvstart和bufstart赋值，<code>kvstart = kvend</code>，<code>bufstart = bufend</code>，设置spillInProgress的状态为false。</p>
+<p>在spill的同时，map往buffer的写操作并没有停止，依然在调用collect，再次回到collect方法中，</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// MapOutputBuffer.collect</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">collect</span><span class="params">(K key, V value, <span class="keyword">final</span> <span class="keyword">int</span> partition</span></span></span><br><span class="line"><span class="function"><span class="params">                                 )</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">  ...</span><br><span class="line">  <span class="comment">// 新数据collect时，先将剩余的空间减去元数据的长度，之后进行判断</span></span><br><span class="line">  bufferRemaining -= METASIZE;</span><br><span class="line">  <span class="keyword">if</span> (bufferRemaining &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="comment">// start spill if the thread is not running and the soft limit has been</span></span><br><span class="line">    <span class="comment">// reached</span></span><br><span class="line">    spillLock.lock();</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="keyword">do</span> &#123;</span><br><span class="line">        <span class="comment">// 首次spill时，spillInProgress是false</span></span><br><span class="line">        <span class="keyword">if</span> (!spillInProgress) &#123;</span><br><span class="line">          <span class="comment">// 得到kvindex的byte位置</span></span><br><span class="line">          <span class="keyword">final</span> <span class="keyword">int</span> kvbidx = <span class="number">4</span> * kvindex;</span><br><span class="line">          <span class="comment">// 得到kvend的byte位置</span></span><br><span class="line">          <span class="keyword">final</span> <span class="keyword">int</span> kvbend = <span class="number">4</span> * kvend;</span><br><span class="line">          <span class="comment">// serialized, unspilled bytes always lie between kvindex and</span></span><br><span class="line">          <span class="comment">// bufindex, crossing the equator. Note that any void space</span></span><br><span class="line">          <span class="comment">// created by a reset must be included in "used" bytes</span></span><br><span class="line">          <span class="keyword">final</span> <span class="keyword">int</span> bUsed = distanceTo(kvbidx, bufindex);</span><br><span class="line">          <span class="keyword">final</span> <span class="keyword">boolean</span> bufsoftlimit = bUsed &gt;= softLimit;</span><br><span class="line">          <span class="keyword">if</span> ((kvbend + METASIZE) % kvbuffer.length !=</span><br><span class="line">              equator - (equator % METASIZE)) &#123;</span><br><span class="line">            <span class="comment">// spill finished, reclaim space</span></span><br><span class="line">            resetSpill();</span><br><span class="line">            bufferRemaining = Math.min(</span><br><span class="line">                distanceTo(bufindex, kvbidx) - <span class="number">2</span> * METASIZE,</span><br><span class="line">                softLimit - bUsed) - METASIZE;</span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">          &#125; <span class="keyword">else</span> <span class="keyword">if</span> (bufsoftlimit &amp;&amp; kvindex != kvend) &#123;</span><br><span class="line">            ...</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125; <span class="keyword">while</span> (<span class="keyword">false</span>);</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">      spillLock.unlock();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>有新的record需要写入buffer时，判断<code>bufferRemaining -= METASIZE</code>，此时的bufferRemaining是在开始spill时被重置过的(此时的bufferRemaining应该比初始的softLimit要小)，当bufferRemaining小于等于0时，进入if，此时spillInProgress的状态为false，进入if (!spillInProgress)，startSpill时对kvend和bufend进行了重置，则此时<code>(kvbend + METASIZE) % kvbuffer.length != equator - (equator % METASIZE)</code>，调用<code>resetSpill()</code>，将kvstart、kvend和bufstart、bufend设置为上次startSpill时的位置。此时buffer已将一部分内容写入磁盘，有大量空余的空间，则对bufferRemaining进行重置，此次不spill。</p>
+<p>bufferRemaining取值为<code>Math.min(distanceTo(bufindex, kvbidx) - 2 * METASIZE, softLimit - bUsed) - METASIZE</code></p>
+<p>最后一个METASIZE是当前record进入collect之后bufferRemaining减去的那个METASIZE，为什么要减去2*METASIZE，不知道。。。。。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">resetSpill</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">int</span> e = equator;</span><br><span class="line">  bufstart = bufend = e;</span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">int</span> aligned = e - (e % METASIZE);</span><br><span class="line">  <span class="comment">// set start/end to point to first meta record</span></span><br><span class="line">  <span class="comment">// Cast one of the operands to long to avoid integer overflow</span></span><br><span class="line">  kvstart = kvend = (<span class="keyword">int</span>)</span><br><span class="line">    (((<span class="keyword">long</span>)aligned - METASIZE + kvbuffer.length) % kvbuffer.length) / <span class="number">4</span>;</span><br><span class="line">  LOG.info(<span class="string">"(RESET) equator "</span> + e + <span class="string">" kv "</span> + kvstart + <span class="string">"("</span> +</span><br><span class="line">    (kvstart * <span class="number">4</span>) + <span class="string">")"</span> + <span class="string">" kvi "</span> + kvindex + <span class="string">"("</span> + (kvindex * <span class="number">4</span>) + <span class="string">")"</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>当bufferRemaining再次小于等于0时，进行spill，这以后就都是套路了。环形缓冲区分析到此结束。</p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的肯定，是我装逼的最大的动力！</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/path/to/wechat-reward-image/wechatpay.png" alt="混绅士 WeChat Pay">
+          <p>微信打赏</p>
+        </div>
+      
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>本文作者：</strong>
+      混绅士
+    </li>
+    
+    <!--add wordcount and min2 read by szw-->
+    <li class="post-copyright-author">
+      <strong>本文字数：</strong>
+      14,279
+    </li>
+    <li class="post-copyright-author">
+      <strong>阅读时长：</strong>
+      82
+    </li>
+
+    <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区">http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html</a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>版权声明： </strong>
+      本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0</a> 许可协议。转载请注明出处！
+    </li>
+  </ul>
+
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
+          
+            <a href="/tags/BigData/" rel="tag"># BigData</a>
+          
+            <a href="/tags/MapReduce/" rel="tag"># MapReduce</a>
+          
+            <a href="/tags/环形缓冲区/" rel="tag"># 环形缓冲区</a>
+          
+        </div>
+      
+
+       
+        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/MapReduce源码解析--Reduce中values的Iterator的生成.html">MapReduce源码解析--Reduce中values的Iterator的生成</a></li><li><a href="/MapReduce源码解析--JobSplit.html">MapReduce源码解析--JobSplit</a></li><li><a href="/MapReduce源码解析--TotalOrderPartitioner.html">MapReduce源码解析--TotalOrderPartitioner</a></li><li><a href="/MapReduce源码解析--Map解析.html">MapReduce源码解析--Map解析</a></li><li><a href="/MapReduce源码解析--Reduce解析.html">MapReduce源码解析--Reduce解析</a></li><li><a href="/HDFS ReplicationMonitor副本监控线程解析.html">HDFS ReplicationMonitor副本监控线程解析</a></li><li><a href="/Hadoop_get_NullPointerException.html">Hadoop get命令返回NullPointerException</a></li><li><a href="/YARNSrcApplicationMasterArch.html">YARN源码分析之ApplicationMaster架构</a></li><li><a href="/[译]HDFS恢复过程2.html">HDFS恢复过程2</a></li><li><a href="/mac下编译Hadoop.html">mac下编译Hadoop</a></li></ul> 
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/MapReduce源码解析--Map解析.html" rel="next" title="MapReduce源码解析--Map解析">
+                <i class="fa fa-chevron-left"></i> MapReduce源码解析--Map解析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/MapReduce应用实例--二次排序之reduce内有序.html" rel="prev" title="MapReduce应用实例--二次排序之reduce内有序">
+                MapReduce应用实例--二次排序之reduce内有序 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+  <div class="bdsharebuttonbox">
+    <a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+    <a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>  
+    <a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>      
+    <a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+    <a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+    <a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a>
+    <a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a>
+    <a href="#" class="bds_more" data-cmd="more"></a>
+    <a class="bds_count" data-cmd="count"></a>
+  </div>
+  <script>
+    window._bd_share_config = {
+      "common": {
+        "bdText": "",
+        "bdMini": "1",
+        "bdMiniList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "bdPic": ""
+      },
+      "image": {
+        "viewList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "viewText": "分享到：",
+        "viewSize": "16"
+      },
+      "slide": {
+        "bdImg": "5",
+        "bdPos": "left",
+        "bdTop": "100"
+      }
+    }
+  </script>
+
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>       
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/uploads/avatar.png" alt="混绅士">
+          <p class="site-author-name" itemprop="name">混绅士</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">97</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">157</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <!-- <i class="fa  fa-fw fa-globe"></i> -->
+              <!-- modify icon to fire by szw -->
+              <i class="fa fa-fire fa-" aria-hidden="true"></i>
+              热文推荐
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                </li>
+              
+            </ul>
+          </div>
+
+
+        
+
+        
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <!-- modify icon to fire by szw -->
+                <i class="fa fa-history fa-" aria-hidden="true"></i>
+                近期文章
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                
+                  <li>
+                    <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                  </li>
+                
+                  <li>
+                    <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+ 
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#环形缓冲区数据结构"><span class="nav-number">1.</span> <span class="nav-text">环形缓冲区数据结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#初始化"><span class="nav-number">2.</span> <span class="nav-text">初始化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#写入buffer"><span class="nav-number">3.</span> <span class="nav-text">写入buffer</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#spill"><span class="nav-number">4.</span> <span class="nav-text">spill</span></a></li></ol></div>
+            
+
+          </div>
+
+          <div class="post-toc-wrap sidebar-panel sidebar-panel-active" style="margin: 0 2px; text-align: left;">
+            
+              <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+                <div class="links-of-blogroll-title">
+                  <!-- <i class="fa  fa-fw fa-globe"></i> -->
+                  <!-- modify icon to fire by szw -->
+                  <i class="fa fa-fire fa-" aria-hidden="true"></i>
+                  热文推荐
+                </div>
+                <ul class="links-of-blogroll-list">
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                    </li>
+                  
+                </ul>
+              </div>
+            
+  
+            
+                <div class="links-of-blogroll motion-element links-of-blogroll-block">
+                  <div class="links-of-blogroll-title">
+                    <!-- modify icon to fire by szw -->
+                    <i class="fa fa-history fa-" aria-hidden="true"></i>
+                    近期文章
+                  </div>
+                  <ul class="links-of-blogroll-list">
+                    
+                    
+                      <li>
+                        <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
+                      </li>
+                    
+                  </ul>
+                </div>
+              
+          </div>
+
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+
+  </aside>
+
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">混绅士</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+<!--add total count by szw-->
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共617.7k字</span>
+</div>
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user">本站访客数</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      人次
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye">本站总访问量</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      次
+    </span>
+  
+</div>
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.0"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("nP29Qpe35cHgQTQIFL94dGoW-gzGzoHsz", "eVPY9SfyVH11gSsbPBEcAQM0");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+</body>
+</html>

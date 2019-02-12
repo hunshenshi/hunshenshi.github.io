@@ -1,0 +1,1413 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="0hClWroWscvQbyOyRPhAZWjOZJ6g3SFCdO47yYakvdk">
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="27E5EbutCm">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="Hadoop,BigData,Checkpoint,Fsimage,Edits,">
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0">
+
+
+
+
+
+
+<meta name="description" content="NamNodeNameNode 的主要作用是  负责管理文件系统的命名空间、集群配置信息和存储块的复制； 维护着整个文件系统的文件目录树和文件根目录的元信息和每个文件对应的数据块列表； 接收用户的操作请求； 管理文件与block之间的关系，block与DataNode之间的关系；  NameNode 的启动流程为：  Loading fsimage - 从fsimage file中读取最新的文件系">
+<meta name="keywords" content="Hadoop,BigData,Checkpoint,Fsimage,Edits">
+<meta property="og:type" content="article">
+<meta property="og:title" content="NameNode元数据及checkpoint分析">
+<meta property="og:url" content="http://bigdatadecode.club/NameNode元数据及checkpoint分析.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="NamNodeNameNode 的主要作用是  负责管理文件系统的命名空间、集群配置信息和存储块的复制； 维护着整个文件系统的文件目录树和文件根目录的元信息和每个文件对应的数据块列表； 接收用户的操作请求； 管理文件与block之间的关系，block与DataNode之间的关系；  NameNode 的启动流程为：  Loading fsimage - 从fsimage file中读取最新的文件系">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://bigdatadecode.club/blogimgs/namenode-checkpoint/namenode-metadata-dir.png">
+<meta property="og:updated_time" content="2016-08-02T08:12:31.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="NameNode元数据及checkpoint分析">
+<meta name="twitter:description" content="NamNodeNameNode 的主要作用是  负责管理文件系统的命名空间、集群配置信息和存储块的复制； 维护着整个文件系统的文件目录树和文件根目录的元信息和每个文件对应的数据块列表； 接收用户的操作请求； 管理文件与block之间的关系，block与DataNode之间的关系；  NameNode 的启动流程为：  Loading fsimage - 从fsimage file中读取最新的文件系">
+<meta name="twitter:image" content="http://bigdatadecode.club/blogimgs/namenode-checkpoint/namenode-metadata-dir.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    sidebar: {"position":"right","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://bigdatadecode.club/NameNode元数据及checkpoint分析.html">
+
+
+
+
+
+  <title> NameNode元数据及checkpoint分析 | big data decode club </title>
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-80813521-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+
+
+
+
+
+
+  <div style="display: none;">
+    <script src="//s95.cnzz.com/z_stat.php?id=1260961002&web_id=1260961002" language="JavaScript"></script>
+  </div>
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">big data decode club</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">hunhun -- Any answers you can find in source code.</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/NameNode元数据及checkpoint分析.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="混绅士">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="big data decode club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                NameNode元数据及checkpoint分析
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-08-02T16:12:31+08:00">
+                2016-08-02
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2016-08-02T16:12:31+08:00">
+                2016-08-02
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/NameNode元数据及checkpoint分析.html" class="leancloud_visitors" data-flag-title="NameNode元数据及checkpoint分析">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="NamNode"><a href="#NamNode" class="headerlink" title="NamNode"></a>NamNode</h2><p>NameNode 的主要作用是</p>
+<ol>
+<li>负责管理文件系统的命名空间、集群配置信息和存储块的复制；</li>
+<li>维护着整个文件系统的文件目录树和文件根目录的元信息和每个文件对应的数据块列表；</li>
+<li>接收用户的操作请求；</li>
+<li>管理文件与block之间的关系，block与DataNode之间的关系；</li>
+</ol>
+<p>NameNode 的启动流程为：</p>
+<ol>
+<li>Loading fsimage - 从fsimage file中读取最新的文件系统的元数据快照(最近生成的fsimage_xx)</li>
+<li>Loading edits - 读取包含fsimage_xx之后的所有tx的edit logs并将edit logs中的操作从新操作一遍更新到元数据中，则此时NN更新到上次停止时的状态。</li>
+<li>checkpoint - 将当前状态写入新的checkpoint中，即产生一个新的fsimage_xx文件</li>
+<li>Safe mode - 等待各个<em>datanodes report</em>各自的block信息，形成blockMap，然后退出安全模式。</li>
+</ol>
+<p>此时NN启动结束，等待接受用户的操作请求，并把各种操作写入新的edit log中，定期进行checkpoint，对元数据进行快照。</p>
+<a id="more"></a>
+<h2 id="NameNode-元数据"><a href="#NameNode-元数据" class="headerlink" title="NameNode 元数据"></a>NameNode 元数据</h2><p>NameNode的所有操作及整个集群的状态都存储在<em>元数据</em>中。NN的元数据存储是由fsimage和edits文件组成。fsimage存放上次checkpoint生成的文件系统元数据，Edits存放文件系统<em>操作日志</em>。checkpoint的过程，就是合并fsimage和Edits文件，然后生成最新的fsimage的过程。</p>
+<p>NameNode在执行HDFS客户端提交的创建文件或者移动文件这样的<em>写操作</em>的时候，会首先把这些操作记录在Edit Log 文件之中，然后再更新内存中的文件系统镜像。内存中的<em>文件系统镜像</em>用于NameNode向客户端提供<em>读服务</em>，而 EditLog仅仅只是在数据恢复的时候起作用。记录在 EditLog之中的每一个操作又称为一个事务，每个事务有一个整数形式的事务id作为编号。EditLog会被切割为很多段，每一段称为一个Segment。正在写入的EditLog Segment处于in-progress状态，其文件名形如edits_inprogress_${start_txid}，其中${start_txid}表示这个segment的起始事务id。而已经写入完成的EditLog Segment处于finalized状态，其文件名形如edits_${start_txid}-${end_txid}，其中${start_txid}表示这个segment的起始事务id，${end_txid}表示这个segment 的结束事务id。</p>
+<p>NameNode会定期对内存中的文件系统镜像进行checkpoint操作，在磁盘上生成FSImage文件，FSImage文件的文件名形如fsimage_${end_txid}，其中${end_txid}表示这个fsimage文件的结束事务id。在NameNode启动的时候会进行数据恢复，首先把FSImage文件加载到内存中形成文件系统镜像，然后再把EditLog之中<strong>FsImage的结束事务id之后的EditLog</strong>回放到这个文件系统镜像上。</p>
+<h2 id="元数据在磁盘中的目录结构"><a href="#元数据在磁盘中的目录结构" class="headerlink" title="元数据在磁盘中的目录结构"></a>元数据在磁盘中的目录结构</h2><h3 id="NameNode中dfs-namenode-name-dir下的元数据"><a href="#NameNode中dfs-namenode-name-dir下的元数据" class="headerlink" title="NameNode中dfs.namenode.name.dir下的元数据"></a>NameNode中dfs.namenode.name.dir下的元数据</h3><p>NameNode元数据会周期性的固化到磁盘，所在磁盘目录是在<code>hdfs-site.xml</code>中由<code>dfs.namenode.name.dir</code>配置的。目录结构如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&gt; ll <span class="variable">$dfs</span>.namenode.name.dir</span><br><span class="line">drwxrwxr-x 2 hadoop hadoop 4096 Aug  1 19:03 current</span><br><span class="line">-rw-rw-r-- 1 hadoop hadoop   14 Jul 29 15:49 in_use.lock</span><br></pre></td></tr></table></figure>
+<p>current里的内容如下：<br><img src="/blogimgs/namenode-checkpoint/namenode-metadata-dir.png" alt="current目录" title="current目录"></p>
+<p>上面是将fsimage和edits都放在一个目录中，也可以通过配置将fsimage和edits分别放在不同的目录中。下面就具体介绍下目录中各个文件的作用：</p>
+<ul>
+<li>in_use.lock – 看名字可以得知这是一个锁文件，由NameNode持有，用来阻止多个NameNode同时修改该目录</li>
+<li>VERSION - Java属性文件，内容大致如下</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#Fri Jul 29 15:50:00 CST 2016</span></span><br><span class="line">namespaceID=1793378918</span><br><span class="line">clusterID=CID-0bcbc37e-90e2-40c5-91c2-101db9fc4f9b</span><br><span class="line">cTime=0</span><br><span class="line">storageType=NAME_NODE</span><br><span class="line">blockpoolID=BP-2041947102-172.16.2.126-1451322470514</span><br><span class="line">layoutVersion=-60</span><br></pre></td></tr></table></figure>
+<ul>
+<li>layoutVersion – HDFS元数据格式化的版本。如果给HDFS添加新的feature而需要改变元数据的格式化版本，则改变此属性，版本号是递减的。</li>
+<li>storageType – 说明这个文件存储的是什么进程的数据结构信息。(NAME_NODE或者JOURNAL_NODE，JOURNAL_NODE是JouranlNode的元数据，在DataNode中是DATA_NODE)</li>
+<li>cTime – 文件系统创建的时间，随着HDFS的升级而改变。(这里没有对HDFS升级，则记录值为0)</li>
+<li>namespaceID/clusterID/blockpoolID – 这些都唯一标识了HDFS集群。这些标识主要是用来防止DataNode注册到别的其它集群的NameNode中。这些标识符在联邦部署中尤其重要。在联邦模式下，每个NameSpace都唯一的namespaceID，管理着对应的唯一blockpoolID，而clusterID则是整个联邦集群的唯一逻辑单元，集群中所有的节点都相同。</li>
+<li>seen_txid – 这个文件里记录了最后一次checkpoint(将edits合并到fsimage中)或者edit回滚(将edits_inprogress_xx文件回滚成一个新的edits文件)之后的transactionID。注意这里记录的不是NameNode接受的最后一个transactionID，此文件不会在每次transaction都会更新，只在checkpoint和edit回滚时更新<strong>(但是通过观察2.6.0版本的本地元数据磁盘目录中记录的此值，是实时更新的，每次transaction都会更新，这个具体随后更代码看下什么情况，在此只做记录下)</strong>。此文件的目的是在NameNode启动过程中发现edits文件丢失的情况。如果edits文件丢失，NameNode启动的过程中加载fsimage文件，此时fsimage并不是最新的NameNode状态，而此时又缺失一些edits文件，但NameNode并不知道，而是正常启动了，此时就会造成一些数据丢失。seen_txid能用来防止这种情况发生，如果发现seen_txid中记录的值和edits的值不一样，则启动失败。</li>
+</ul>
+<h3 id="JournalNode下的元数据"><a href="#JournalNode下的元数据" class="headerlink" title="JournalNode下的元数据"></a>JournalNode下的元数据</h3><p>在HA模式下，edits由一组独立的守护进程JournalNodes进行收集。JournalNode的元数据目录配置在hdfs-site.xml的<code>dfs.journalnode.edits.dir</code>。JournalNode的元数据包含一个VERSION文件，多个edits_xx文件和一个edits_inprogress_xx，还包含一些与HA实现相关的文件，这些文件主要是为了防止脑裂，<em>但是JournalNode并不包含fsimage和seen_txid</em>。</p>
+<p>下面主要介绍下与NameNode元数据不一样的文件：</p>
+<ul>
+<li>committed-txid – 记录由NameNode提交的最后一个transaction ID</li>
+<li>last-promised-epoch – 这个文件记录了epoch，epoch是一个单调递增的数字。当standby变为active时，JournalNode会会增加epoch并存储。NameNode主要通过该值来告诉JournalNode谁是active，小于该值的NameNode禁止对JournalNode元数据写操作，写请求被忽略。</li>
+<li>last-writer-epoch – 和上面的值类似，该文件记录下最后一次发生写操作的epoch。</li>
+<li>paxos – 此目录包含一些临时文件，主要在实现paxos分布式算法协议中使用。这个目录通常是空的。</li>
+</ul>
+<h2 id="Checkpoint"><a href="#Checkpoint" class="headerlink" title="Checkpoint"></a>Checkpoint</h2><blockquote>
+<p>每个写操作都会写入Edit log中，随着时间的积累edit log会变的很大，极端情况下不仅会占满整个磁盘，而且在NN启动的时候会延长启动时间，因为NN需要将edits log中的操作重新执行一遍。这就需要checkpoint定期对元数据进行合并。</p>
+</blockquote>
+<p>Checkpoint主要是将fsimage和edit log的内容进行合并生成一个新的fsimage。这样在NN启动的时候就不用将巨大的edits里的事务再次执行一遍了，而是直接加载合并之后的新fsimage，然后重新执行未被合并的edits文件就可以了。</p>
+<p><em>创建新fsimage的过程需要大量的I/O、内存等资源，而且namesystem在Checkpoint的时候会限制用户的访问。则NN将Checkpoint过程放在SecondaryNameNode或者StandbyNameNode中。</em></p>
+<p>Checkpoint的触发条件有两个，满足其中一个即可：</p>
+<ol>
+<li>两次checkpoint的时间间隔达到阈值，由属性<code>dfs.namenode.checkpoint.period</code>控制，默认是3600s</li>
+<li>新生成的edit log中积累的事务数量达到了阈值，由属性<code>dfs.namenode.checkpoint.txns</code>控制，默认1000000</li>
+</ol>
+<p>SecondaryNameNode或者StandbyNameNode周期性的去检查是否符合触发Checkpoint的条件，间隔周期是由<code>dfs.namenode.checkpoint.check.period</code>控制的，默认是60s</p>
+<blockquote>
+<p>Fsimage回滚条件</p>
+</blockquote>
+<ol>
+<li>fsimage会在每次checkpoint时生成一个新的fsimage</li>
+<li>NN重启的时候也会生成一个新的fsimage</li>
+</ol>
+<p><em>fsimage默认会保存两个</em>，由属性<code>dfs.namenode.num.checkpoints.retained</code>控制</p>
+<blockquote>
+<p>Edits log回滚条件</p>
+</blockquote>
+<ol>
+<li>NameNode(active)周期性的检查当前的事务数是否超过了edits回滚阈值。<br>间隔周期是由<code>dfs.namenode.edit.log.autoroll.check.interval.ms</code>控制，默认是300000ms。<br>回滚的阈值是<code>dfs.namenode.edit.log.autoroll.multiplier.threshold</code>和<code>dfs.namenode.checkpoint.txns</code>的乘积，<code>dfs.namenode.edit.log.autoroll.multiplier.threshold</code>默认是2.0f</li>
+<li>在HA模式下，standby NN会周期的让active NN对edits进行回滚，间隔周期由<code>dfs.ha.log-roll.period</code><br>控制，默认是120s</li>
+</ol>
+<p>standby NN之所以周期的让active NN回滚edits log是因为standby NN不会读取<em>inprogress</em>的edits，只是周期（<code>dfs.ha.tail-edits.period</code>，默认是60s）的去检测已经完成的edits文件，并将该edits文件通过JournalNode读取到内存更新fsimage在内存中的状态。</p>
+<p><strong>HA模式下，client只和active进行通信，将写操作信息分别写入本地的edits中和JournalNode中的edits中，standby NN周期的去JournalNode中读取进行同步。只有在active宕机之后，standby才对外提供服务，平时只是实现了active的热备</strong></p>
+<p>edits log默认会保存<code>dfs.namenode.num.extra.edits.retained</code>条事务，默认是1000000条</p>
+<h2 id="查看fsimage和edits内容的命令"><a href="#查看fsimage和edits内容的命令" class="headerlink" title="查看fsimage和edits内容的命令"></a>查看fsimage和edits内容的命令</h2><blockquote>
+<p>查看fsimage命令</p>
+</blockquote>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hdfs oiv -p XML -i fsimage -o fsimage.xml</span><br></pre></td></tr></table></figure>
+<p><code>-i</code>是输入的fsimage文件名，<code>-o</code>是输出的文件名，<code>-p</code>是输出的格式。具体的细节可以查看官网或者使用help命令查看。</p>
+<blockquote>
+<p>查看edits命令</p>
+</blockquote>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hdfs oev -i edits -o edits.xml</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的肯定，是我装逼的最大的动力！</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/path/to/wechat-reward-image/wechatpay.png" alt="混绅士 WeChat Pay">
+          <p>微信打赏</p>
+        </div>
+      
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>本文作者：</strong>
+      混绅士
+    </li>
+    
+    <!--add wordcount and min2 read by szw-->
+    <li class="post-copyright-author">
+      <strong>本文字数：</strong>
+      3,102
+    </li>
+    <li class="post-copyright-author">
+      <strong>阅读时长：</strong>
+      13
+    </li>
+
+    <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="http://bigdatadecode.club/NameNode元数据及checkpoint分析.html" title="NameNode元数据及checkpoint分析">http://bigdatadecode.club/NameNode元数据及checkpoint分析.html</a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>版权声明： </strong>
+      本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0</a> 许可协议。转载请注明出处！
+    </li>
+  </ul>
+
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
+          
+            <a href="/tags/BigData/" rel="tag"># BigData</a>
+          
+            <a href="/tags/Checkpoint/" rel="tag"># Checkpoint</a>
+          
+            <a href="/tags/Fsimage/" rel="tag"># Fsimage</a>
+          
+            <a href="/tags/Edits/" rel="tag"># Edits</a>
+          
+        </div>
+      
+
+       
+        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/HDFS read解析.html">HDFS read解析(一)之Open文件流</a></li><li><a href="/Application-fail-RM-change.html">Application运行失败导致RM主备切换</a></li><li><a href="/HDFS-little-file-action.html">HDFS小文件合并实战</a></li><li><a href="/HDFSCannotObtainBlockLengthForLocatedBlock.html">HDFS之Cannot obtain block length for LocatedBlock异常</a></li><li><a href="/HDFS中atime和mtime.html">HDFS中atime与mtime解析</a></li><li><a href="/HDFS权限.html">HDFS权限</a></li><li><a href="/Hadoop_get_NullPointerException.html">Hadoop get命令返回NullPointerException</a></li><li><a href="/YARNSrcApplicationMasterArch.html">YARN源码分析之ApplicationMaster架构</a></li><li><a href="/[译]HDFS恢复过程2.html">HDFS恢复过程2</a></li><li><a href="/mac下编译Hadoop.html">mac下编译Hadoop</a></li></ul> 
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/HDFS ReplicationMonitor副本监控线程解析.html" rel="next" title="HDFS ReplicationMonitor副本监控线程解析">
+                <i class="fa fa-chevron-left"></i> HDFS ReplicationMonitor副本监控线程解析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/Hadoop RPC 解析.html" rel="prev" title="Hadoop RPC 解析">
+                Hadoop RPC 解析 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+  <div class="bdsharebuttonbox">
+    <a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+    <a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>  
+    <a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>      
+    <a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+    <a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+    <a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a>
+    <a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a>
+    <a href="#" class="bds_more" data-cmd="more"></a>
+    <a class="bds_count" data-cmd="count"></a>
+  </div>
+  <script>
+    window._bd_share_config = {
+      "common": {
+        "bdText": "",
+        "bdMini": "1",
+        "bdMiniList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "bdPic": ""
+      },
+      "image": {
+        "viewList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "viewText": "分享到：",
+        "viewSize": "16"
+      },
+      "slide": {
+        "bdImg": "5",
+        "bdPos": "left",
+        "bdTop": "100"
+      }
+    }
+  </script>
+
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>       
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/uploads/avatar.png" alt="混绅士">
+          <p class="site-author-name" itemprop="name">混绅士</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">97</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">157</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <!-- <i class="fa  fa-fw fa-globe"></i> -->
+              <!-- modify icon to fire by szw -->
+              <i class="fa fa-fire fa-" aria-hidden="true"></i>
+              热文推荐
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                </li>
+              
+            </ul>
+          </div>
+
+
+        
+
+        
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <!-- modify icon to fire by szw -->
+                <i class="fa fa-history fa-" aria-hidden="true"></i>
+                近期文章
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                
+                  <li>
+                    <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                  </li>
+                
+                  <li>
+                    <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+ 
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#NamNode"><span class="nav-number">1.</span> <span class="nav-text">NamNode</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#NameNode-元数据"><span class="nav-number">2.</span> <span class="nav-text">NameNode 元数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#元数据在磁盘中的目录结构"><span class="nav-number">3.</span> <span class="nav-text">元数据在磁盘中的目录结构</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#NameNode中dfs-namenode-name-dir下的元数据"><span class="nav-number">3.1.</span> <span class="nav-text">NameNode中dfs.namenode.name.dir下的元数据</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#JournalNode下的元数据"><span class="nav-number">3.2.</span> <span class="nav-text">JournalNode下的元数据</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Checkpoint"><span class="nav-number">4.</span> <span class="nav-text">Checkpoint</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#查看fsimage和edits内容的命令"><span class="nav-number">5.</span> <span class="nav-text">查看fsimage和edits内容的命令</span></a></li></ol></div>
+            
+
+          </div>
+
+          <div class="post-toc-wrap sidebar-panel sidebar-panel-active" style="margin: 0 2px; text-align: left;">
+            
+              <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+                <div class="links-of-blogroll-title">
+                  <!-- <i class="fa  fa-fw fa-globe"></i> -->
+                  <!-- modify icon to fire by szw -->
+                  <i class="fa fa-fire fa-" aria-hidden="true"></i>
+                  热文推荐
+                </div>
+                <ul class="links-of-blogroll-list">
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                    </li>
+                  
+                </ul>
+              </div>
+            
+  
+            
+                <div class="links-of-blogroll motion-element links-of-blogroll-block">
+                  <div class="links-of-blogroll-title">
+                    <!-- modify icon to fire by szw -->
+                    <i class="fa fa-history fa-" aria-hidden="true"></i>
+                    近期文章
+                  </div>
+                  <ul class="links-of-blogroll-list">
+                    
+                    
+                      <li>
+                        <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
+                      </li>
+                    
+                  </ul>
+                </div>
+              
+          </div>
+
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+
+  </aside>
+
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">混绅士</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+<!--add total count by szw-->
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共617.7k字</span>
+</div>
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user">本站访客数</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      人次
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye">本站总访问量</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      次
+    </span>
+  
+</div>
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.0"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("nP29Qpe35cHgQTQIFL94dGoW-gzGzoHsz", "eVPY9SfyVH11gSsbPBEcAQM0");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,1364 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="0hClWroWscvQbyOyRPhAZWjOZJ6g3SFCdO47yYakvdk">
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="27E5EbutCm">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="Hadoop,BigData,MapReduce,JobSplit,">
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0">
+
+
+
+
+
+
+<meta name="description" content="MapReduce就是将一个大job切分为n个task，由map和reduce分别去执行，但是切分规则是什么呢？其实job的切分也就是job所需文件的切分。 下面就从源码的角度简单分析下。 文件切分MR是通过JobSubmitter.submitJobInternal提交给RM的，在submitJobInternal中通过writeSplits(JobContext job, Path jobSu">
+<meta name="keywords" content="Hadoop,BigData,MapReduce,JobSplit">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MapReduce源码解析--JobSplit">
+<meta property="og:url" content="http://bigdatadecode.club/MapReduce源码解析--JobSplit.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="MapReduce就是将一个大job切分为n个task，由map和reduce分别去执行，但是切分规则是什么呢？其实job的切分也就是job所需文件的切分。 下面就从源码的角度简单分析下。 文件切分MR是通过JobSubmitter.submitJobInternal提交给RM的，在submitJobInternal中通过writeSplits(JobContext job, Path jobSu">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-02-12T09:23:37.654Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="MapReduce源码解析--JobSplit">
+<meta name="twitter:description" content="MapReduce就是将一个大job切分为n个task，由map和reduce分别去执行，但是切分规则是什么呢？其实job的切分也就是job所需文件的切分。 下面就从源码的角度简单分析下。 文件切分MR是通过JobSubmitter.submitJobInternal提交给RM的，在submitJobInternal中通过writeSplits(JobContext job, Path jobSu">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    sidebar: {"position":"right","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://bigdatadecode.club/MapReduce源码解析--JobSplit.html">
+
+
+
+
+
+  <title> MapReduce源码解析--JobSplit | big data decode club </title>
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-80813521-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+
+
+
+
+
+
+  <div style="display: none;">
+    <script src="//s95.cnzz.com/z_stat.php?id=1260961002&web_id=1260961002" language="JavaScript"></script>
+  </div>
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">big data decode club</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">hunhun -- Any answers you can find in source code.</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/MapReduce源码解析--JobSplit.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="混绅士">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="big data decode club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                MapReduce源码解析--JobSplit
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-04-21T18:29:00+08:00">
+                2017-04-21
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-02-12T17:23:37+08:00">
+                2019-02-12
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/MapReduce源码解析--JobSplit.html" class="leancloud_visitors" data-flag-title="MapReduce源码解析--JobSplit">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>MapReduce就是将一个大job切分为n个task，由map和reduce分别去执行，但是切分规则是什么呢？<em>其实job的切分也就是job所需文件的切分</em>。</p>
+<p>下面就从源码的角度简单分析下。</p>
+<h2 id="文件切分"><a href="#文件切分" class="headerlink" title="文件切分"></a>文件切分</h2><p>MR是通过JobSubmitter.submitJobInternal提交给RM的，在submitJobInternal中通过<code>writeSplits(JobContext job, Path jobSubmitDir)</code>将job的输入文件进行split，writeSplit只是对新旧api进行了下封装，根据你的代码选择新旧api，这里调用<code>writeNewSplits</code>使用新API对file进行split<br><a id="more"></a></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> &lt;T extends InputSplit&gt;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">writeNewSplits</span><span class="params">(JobContext job, Path jobSubmitDir)</span> <span class="keyword">throws</span> IOException,</span></span><br><span class="line"><span class="function">    InterruptedException, ClassNotFoundException </span>&#123;</span><br><span class="line">  Configuration conf = job.getConfiguration();</span><br><span class="line">  <span class="comment">// 创建一个InputFormat，用于指定文件的格式化格式，默认是FileInputFormat</span></span><br><span class="line">  InputFormat&lt;?, ?&gt; input =</span><br><span class="line">    ReflectionUtils.newInstance(job.getInputFormatClass(), conf);</span><br><span class="line">  <span class="comment">// 从JobContext中的INPUT_DIR中拿到files，然后根据splitSize对文件进行切分</span></span><br><span class="line">  List&lt;InputSplit&gt; splits = input.getSplits(job);</span><br><span class="line">  T[] array = (T[]) splits.toArray(<span class="keyword">new</span> InputSplit[splits.size()]);</span><br><span class="line">  <span class="comment">// sort the splits into order based on size, so that the biggest</span></span><br><span class="line">  <span class="comment">// go first</span></span><br><span class="line">  <span class="comment">// 对splits进行排序，按照split的大小进行逆序排序，先处理大的</span></span><br><span class="line">  Arrays.sort(array, <span class="keyword">new</span> SplitComparator());</span><br><span class="line">  <span class="comment">// 将split信息固化到文件中</span></span><br><span class="line">  JobSplitWriter.createSplitFiles(jobSubmitDir, conf, </span><br><span class="line">      jobSubmitDir.getFileSystem(conf), array);</span><br><span class="line">  <span class="keyword">return</span> array.length;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>writeNewSplits根据得到的InputFormat实例，调用getSplits对文件进行切分，这也是切分的主要逻辑，看下代码</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> List&lt;InputSplit&gt; <span class="title">getSplits</span><span class="params">(JobContext job)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">  <span class="comment">// 得到split的大小，由mapreduce.input.fileinputformat.split.minsize控制</span></span><br><span class="line">  <span class="keyword">long</span> minSize = Math.max(getFormatMinSplitSize(), getMinSplitSize(job));</span><br><span class="line">  <span class="comment">// split的最大值，默认是Long.MAX_VALUE</span></span><br><span class="line">  <span class="keyword">long</span> maxSize = getMaxSplitSize(job);</span><br><span class="line">  <span class="comment">// generate splits</span></span><br><span class="line">  List&lt;InputSplit&gt; splits = <span class="keyword">new</span> ArrayList&lt;InputSplit&gt;();</span><br><span class="line">  <span class="comment">// 多线程得到输入路径中的文件状态</span></span><br><span class="line">  List&lt;FileStatus&gt; files = listStatus(job);</span><br><span class="line">  <span class="comment">// 以文件为单位进行切分</span></span><br><span class="line">  <span class="keyword">for</span> (FileStatus file: files) &#123;</span><br><span class="line">    Path path = file.getPath();</span><br><span class="line">    <span class="keyword">long</span> length = file.getLen();</span><br><span class="line">    <span class="keyword">if</span> (length != <span class="number">0</span>) &#123;</span><br><span class="line">      <span class="comment">// 得到file所有block的locations信息，详情请看BlockLocations类</span></span><br><span class="line">      BlockLocation[] blkLocations;</span><br><span class="line">      <span class="keyword">if</span> (file <span class="keyword">instanceof</span> LocatedFileStatus) &#123;</span><br><span class="line">        blkLocations = ((LocatedFileStatus) file).getBlockLocations();</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        FileSystem fs = path.getFileSystem(job.getConfiguration());</span><br><span class="line">        blkLocations = fs.getFileBlockLocations(file, <span class="number">0</span>, length);</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">// 判断是否可以切分，压缩文件不能切分</span></span><br><span class="line">      <span class="keyword">if</span> (isSplitable(job, path)) &#123;</span><br><span class="line">      	<span class="comment">// 得到当前file的block大小</span></span><br><span class="line">        <span class="keyword">long</span> blockSize = file.getBlockSize();</span><br><span class="line">        <span class="comment">// 计算切分值 max(minSize, min(blockSize,maxSize))</span></span><br><span class="line">        <span class="comment">// 出与对MR的优化，minSize配置的一般都等于blockSize或者是blockSize的整数倍</span></span><br><span class="line">        <span class="comment">// 如果大blockSize，会有别的block通过网络传输到map节点，造成网络压力</span></span><br><span class="line">        <span class="keyword">long</span> splitSize = computeSplitSize(blockSize, minSize, maxSize);</span><br><span class="line">        <span class="comment">// 循环切分，这里有个小优化，在大数据中避免出现小文件，</span></span><br><span class="line">        <span class="comment">// 将最后剩下一个比splitSize稍微大一点不再进行切分，</span></span><br><span class="line">        <span class="comment">// 因为SPLIT_SLOP = 1.1，而不是 1</span></span><br><span class="line">        <span class="keyword">long</span> bytesRemaining = length;</span><br><span class="line">        <span class="keyword">while</span> (((<span class="keyword">double</span>) bytesRemaining)/splitSize &gt; SPLIT_SLOP) &#123;</span><br><span class="line">          <span class="comment">// 根据偏移量length-bytesRemaining，在blkLocations中找到偏移量所在block的index</span></span><br><span class="line">          <span class="comment">// 这里只是起始block的index，该split可能包含多个block</span></span><br><span class="line">          <span class="comment">// length为1100，block为128，splitSize为500，则第一个split的index为0，第二个则是4</span></span><br><span class="line">          <span class="keyword">int</span> blkIndex = getBlockIndex(blkLocations, length-bytesRemaining);</span><br><span class="line">          <span class="comment">// 将文件的切分信息通过makeSplit写入FileSplit对象中</span></span><br><span class="line">          <span class="comment">// 只是将当前blkIndex的block的相关信息放入FileSplit中</span></span><br><span class="line">          splits.add(makeSplit(path, length-bytesRemaining, splitSize,</span><br><span class="line">                      blkLocations[blkIndex].getHosts(),</span><br><span class="line">                      blkLocations[blkIndex].getCachedHosts()));</span><br><span class="line">          bytesRemaining -= splitSize;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (bytesRemaining != <span class="number">0</span>) &#123;</span><br><span class="line">          <span class="keyword">int</span> blkIndex = getBlockIndex(blkLocations, length-bytesRemaining);</span><br><span class="line">          splits.add(makeSplit(path, length-bytesRemaining, bytesRemaining,</span><br><span class="line">                     blkLocations[blkIndex].getHosts(),</span><br><span class="line">                     blkLocations[blkIndex].getCachedHosts()));</span><br><span class="line">        &#125;</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123; <span class="comment">// not splitable</span></span><br><span class="line">        splits.add(makeSplit(path, <span class="number">0</span>, length, blkLocations[<span class="number">0</span>].getHosts(),</span><br><span class="line">                    blkLocations[<span class="number">0</span>].getCachedHosts()));</span><br><span class="line">      &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123; </span><br><span class="line">      <span class="comment">//Create empty hosts array for zero length files</span></span><br><span class="line">      splits.add(makeSplit(path, <span class="number">0</span>, length, <span class="keyword">new</span> String[<span class="number">0</span>]));</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// Save the number of input files for metrics/loadgen</span></span><br><span class="line">  job.getConfiguration().setLong(NUM_INPUT_FILES, files.size());</span><br><span class="line">  ...</span><br><span class="line">  <span class="keyword">return</span> splits;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>getSplits主要是将files的进行切片，将文件路径path、偏移量(即起始位置，是该split在整个文件中的起始位置)、切分大小splitSize、偏移量所在block的locations信息Host和在内存中的host信息写入<code>FileSplit</code>对象中，一个split对应一个对象，最后放入splits中返回。</p>
+<p>其它详细信息已在代码中进行注释，<strong>这里需要注意的是由于splitSize可能大于blockSize，则切分的split可能有多个block组成，代码中得到的blockIndex只是偏移量所在block的index，而记录在FileSplit中的Hosts信息也只是偏移量所在block的副本所在hosts</strong>。</p>
+<p>writeNewSplits中input.getSplits将files进行切分放入list中，然后将list转换为array，对array中的元素根据长度进行逆序排序。最后调用<code>JobSplitWriter.createSplitFiles</code>将保存切分信息的array落地到文件，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T extends InputSplit&gt; <span class="function"><span class="keyword">void</span> <span class="title">createSplitFiles</span><span class="params">(Path jobSubmitDir, </span></span></span><br><span class="line"><span class="function"><span class="params">    Configuration conf, FileSystem fs, T[] splits)</span> </span></span><br><span class="line"><span class="function"><span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">  <span class="comment">// 通过createFile创建分片文件并获取文件系统数据输出流FSDataOutputStream实例out，</span></span><br><span class="line">  FSDataOutputStream out = createFile(fs, </span><br><span class="line">      JobSubmissionFiles.getJobSplitFile(jobSubmitDir), conf);</span><br><span class="line">  <span class="comment">// 将分片数据FileSplit对象写入分片文件，并返回split的元数据</span></span><br><span class="line">  SplitMetaInfo[] info = writeNewSplits(conf, splits, out);</span><br><span class="line">  out.close();</span><br><span class="line">  <span class="comment">// 将split的元数据写入分片元数据文件中</span></span><br><span class="line">  writeJobSplitMetaInfo(fs,JobSubmissionFiles.getJobSplitMetaFile(jobSubmitDir), </span><br><span class="line">      <span class="keyword">new</span> FsPermission(JobSubmissionFiles.JOB_FILE_PERMISSION), splitVersion,</span><br><span class="line">      info);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>createSplitFiles创建的文件包括两个，分别是记录切片的切片文件和记录切片元数据的切片元数据文件，这两个文件分别记录的是什么内容继续分析代码。</p>
+<p>先看下<code>createFile</code>，该方法通过<code>JobSubmissionFiles.getJobSplitFile(jobSubmitDir)</code>得到切片文件的路径，根据其路径创建一个数据输出流<code>FileSystem.create</code>，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> FSDataOutputStream <span class="title">createFile</span><span class="params">(FileSystem fs, Path splitFile, </span></span></span><br><span class="line"><span class="function"><span class="params">    Configuration job)</span>  <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">  <span class="comment">// 根据jobSubmitDir/job.split的路径创建数据输出流</span></span><br><span class="line">  FSDataOutputStream out = FileSystem.create(fs, splitFile, </span><br><span class="line">      <span class="keyword">new</span> FsPermission(JobSubmissionFiles.JOB_FILE_PERMISSION));</span><br><span class="line">  <span class="comment">// 设置切片文件的副本数，默认是10</span></span><br><span class="line">  <span class="keyword">int</span> replication = job.getInt(Job.SUBMIT_REPLICATION, <span class="number">10</span>);</span><br><span class="line">  fs.setReplication(splitFile, (<span class="keyword">short</span>)replication);</span><br><span class="line">  <span class="comment">// 将切片文件的头信息写入切片文件中</span></span><br><span class="line">  <span class="comment">// 头信息为 SPLIT_FILE_HEADER(值为SPL) 和 splitVersion(值为JobSplit.META_SPLIT_VERSION  1)</span></span><br><span class="line">  writeSplitHeader(out);</span><br><span class="line">  <span class="keyword">return</span> out;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>将数据输出流返回，接着调用<code>writeNewSplits</code>将split数据写入切片文件(<em>job.split</em>)中，并返回切片的元数据信息，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> &lt;T extends InputSplit&gt; </span><br><span class="line">SplitMetaInfo[] writeNewSplits(Configuration conf, </span><br><span class="line">    T[] array, FSDataOutputStream out)</span><br><span class="line"><span class="keyword">throws</span> IOException, InterruptedException &#123;</span><br><span class="line">  <span class="comment">// new 出用于存放元数据信息的数组</span></span><br><span class="line">  SplitMetaInfo[] info = <span class="keyword">new</span> SplitMetaInfo[array.length];</span><br><span class="line">  <span class="keyword">if</span> (array.length != <span class="number">0</span>) &#123;</span><br><span class="line">    SerializationFactory factory = <span class="keyword">new</span> SerializationFactory(conf);</span><br><span class="line">    <span class="keyword">int</span> i = <span class="number">0</span>;</span><br><span class="line">    <span class="comment">// mapreduce.job.max.split.locations</span></span><br><span class="line">    <span class="comment">// 该split中多个block副本所在的host个数不能超过该值</span></span><br><span class="line">    <span class="keyword">int</span> maxBlockLocations = conf.getInt(MRConfig.MAX_BLOCK_LOCATIONS_KEY,</span><br><span class="line">        MRConfig.MAX_BLOCK_LOCATIONS_DEFAULT);</span><br><span class="line">    <span class="keyword">long</span> offset = out.getPos();</span><br><span class="line">    <span class="keyword">for</span>(T split: array) &#123;</span><br><span class="line">      <span class="keyword">long</span> prevCount = out.getPos();</span><br><span class="line">      <span class="comment">// 将split的类名 这里就是FileSplit写入job.split文件中</span></span><br><span class="line">      Text.writeString(out, split.getClass().getName());</span><br><span class="line">      Serializer&lt;T&gt; serializer = </span><br><span class="line">        factory.getSerializer((Class&lt;T&gt;) split.getClass());</span><br><span class="line">      serializer.open(out);</span><br><span class="line">      <span class="comment">// 将split数据序列化写入job.split中</span></span><br><span class="line">      serializer.serialize(split);</span><br><span class="line">      <span class="keyword">long</span> currCount = out.getPos();</span><br><span class="line">      <span class="comment">// 此处得到的locations只是offset所在block的locations？</span></span><br><span class="line">      <span class="comment">// 应该拿到的是job.split中数据的position</span></span><br><span class="line">      <span class="comment">// 加入该split有多个block组成，其余block的location在哪合并的？</span></span><br><span class="line">      String[] locations = split.getLocations();</span><br><span class="line">      <span class="keyword">if</span> (locations.length &gt; maxBlockLocations) &#123;</span><br><span class="line">        LOG.warn(<span class="string">"Max block location exceeded for split: "</span></span><br><span class="line">            + split + <span class="string">" splitsize: "</span> + locations.length +</span><br><span class="line">            <span class="string">" maxsize: "</span> + maxBlockLocations);</span><br><span class="line">        locations = Arrays.copyOf(locations, maxBlockLocations);</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">// 将split元数据信息写入SplitMetaInfo的数组中</span></span><br><span class="line">      <span class="comment">// 元数据包括locations、offset和length</span></span><br><span class="line">      info[i++] = </span><br><span class="line">        <span class="keyword">new</span> JobSplit.SplitMetaInfo( </span><br><span class="line">            locations, offset,</span><br><span class="line">            split.getLength());</span><br><span class="line">      offset += currCount - prevCount;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> info;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>从代码中得知job.split文件中的内容为头信息(<em>SPLIT_FILE_HEADER</em> 值为SPL 和 <em>splitVersion</em> 值为JobSplit.META_SPLIT_VERSION  1)和若干个split数据，split数据为split类名+FileSplit对象序列化后的内容。</p>
+<p>写入job.split之后将split元数据信息返回，继续调用<code>writeJobSplitMetaInfo</code>将元数据信息写入job.splitmetainfo中。代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">writeJobSplitMetaInfo</span><span class="params">(FileSystem fs, Path filename, </span></span></span><br><span class="line"><span class="function"><span class="params">    FsPermission p, <span class="keyword">int</span> splitMetaInfoVersion, </span></span></span><br><span class="line"><span class="function"><span class="params">    JobSplit.SplitMetaInfo[] allSplitMetaInfo)</span> </span></span><br><span class="line"><span class="function"><span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">  <span class="comment">// write the splits meta-info to a file for the job tracker</span></span><br><span class="line">  <span class="comment">// 通过JobSubmissionFiles.getJobSplitMetaFile得到元数据的文件路径job.splitmetainfo</span></span><br><span class="line">  <span class="comment">// 打开数据输出流</span></span><br><span class="line">  FSDataOutputStream out = </span><br><span class="line">    FileSystem.create(fs, filename, p);</span><br><span class="line">  <span class="comment">// 将头信息写入 "META-SPL"</span></span><br><span class="line">  out.write(JobSplit.META_SPLIT_FILE_HEADER);</span><br><span class="line">  <span class="comment">// 和job.split一个版本号</span></span><br><span class="line">  WritableUtils.writeVInt(out, splitMetaInfoVersion);</span><br><span class="line">  <span class="comment">// split元数据的个数也就是split分片的个数</span></span><br><span class="line">  WritableUtils.writeVInt(out, allSplitMetaInfo.length);</span><br><span class="line">  <span class="comment">// 将元数据信息SplitMetaInfo对象写入</span></span><br><span class="line">  <span class="keyword">for</span> (JobSplit.SplitMetaInfo splitMetaInfo : allSplitMetaInfo) &#123;</span><br><span class="line">    splitMetaInfo.write(out);</span><br><span class="line">  &#125;</span><br><span class="line">  out.close();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>split元数据信息写入job.splitmetainfo，数据格式为头信息(<em>META_SPLIT_FILE_HEADER</em> 值为META-SPL、版本号1)、元数据个数和元数据SplitMetaInfo对象。</p>
+<p>文件切分完之后，就是启动task进行处理，也就是job的切分，下面看下job切分。</p>
+<h2 id="job切分"><a href="#job切分" class="headerlink" title="job切分"></a>job切分</h2><p>MR切分的代码在JobImpl.java中，首先由事件<code>JobEventType.JOB_INIT</code>触发调用<code>InitTransition.transition</code>对job进行init(<em>对于yarn的事件调用和状态转换可以看<a href="http://bigdatadecode.club/YARN源码分析之AsyncDispatcher事件调度器.html">AsyncDispatcher事件调度器</a>和<a href="http://bigdatadecode.club/YARN源码分析之StateMachineFactory状态机.html">StateMachineFactory状态机</a>这两篇文章</em>)，transition调用createSplits对job进行切分，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">protected</span> TaskSplitMetaInfo[] createSplits(JobImpl job, JobId jobId) &#123;</span><br><span class="line">  TaskSplitMetaInfo[] allTaskSplitMetaInfo;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">  	<span class="comment">// 读取split的job.split和job.splitmetainfo进行切分</span></span><br><span class="line">    allTaskSplitMetaInfo = SplitMetaInfoReader.readSplitMetaInfo(</span><br><span class="line">        job.oldJobId, job.fs, </span><br><span class="line">        job.conf, </span><br><span class="line">        job.remoteJobSubmitDir);</span><br><span class="line">  &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> YarnRuntimeException(e);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> allTaskSplitMetaInfo;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>通过SplitMetaInfoReader.readSplitMetaInfo读取split的切片信息，对job进行切分，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> JobSplit.TaskSplitMetaInfo[] readSplitMetaInfo(</span><br><span class="line">    JobID jobId, FileSystem fs, Configuration conf, Path jobSubmitDir) </span><br><span class="line"><span class="keyword">throws</span> IOException &#123;</span><br><span class="line">  <span class="keyword">long</span> maxMetaInfoSize = conf.getLong(MRJobConfig.SPLIT_METAINFO_MAXSIZE,</span><br><span class="line">      MRJobConfig.DEFAULT_SPLIT_METAINFO_MAXSIZE);</span><br><span class="line">  <span class="comment">// 得到job.splitmetainfo和job.split的路径</span></span><br><span class="line">  Path metaSplitFile = JobSubmissionFiles.getJobSplitMetaFile(jobSubmitDir);</span><br><span class="line">  String jobSplitFile = JobSubmissionFiles.getJobSplitFile(jobSubmitDir).toString();</span><br><span class="line">  FileStatus fStatus = fs.getFileStatus(metaSplitFile);</span><br><span class="line">  <span class="keyword">if</span> (maxMetaInfoSize &gt; <span class="number">0</span> &amp;&amp; fStatus.getLen() &gt; maxMetaInfoSize) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> IOException(<span class="string">"Split metadata size exceeded "</span> +</span><br><span class="line">        maxMetaInfoSize +<span class="string">". Aborting job "</span> + jobId);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// 打开job.splitmetainfo的读取数据流</span></span><br><span class="line">  FSDataInputStream in = fs.open(metaSplitFile);</span><br><span class="line">  <span class="keyword">byte</span>[] header = <span class="keyword">new</span> <span class="keyword">byte</span>[JobSplit.META_SPLIT_FILE_HEADER.length];</span><br><span class="line">  <span class="comment">// 读取头文件</span></span><br><span class="line">  in.readFully(header);</span><br><span class="line">  <span class="keyword">if</span> (!Arrays.equals(JobSplit.META_SPLIT_FILE_HEADER, header)) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> IOException(<span class="string">"Invalid header on split file"</span>);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// 版本号</span></span><br><span class="line">  <span class="keyword">int</span> vers = WritableUtils.readVInt(in);</span><br><span class="line">  <span class="keyword">if</span> (vers != JobSplit.META_SPLIT_VERSION) &#123;</span><br><span class="line">    in.close();</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> IOException(<span class="string">"Unsupported split version "</span> + vers);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// 切片的个数</span></span><br><span class="line">  <span class="keyword">int</span> numSplits = WritableUtils.readVInt(in); <span class="comment">//<span class="doctag">TODO:</span> check for insane values</span></span><br><span class="line">  JobSplit.TaskSplitMetaInfo[] allSplitMetaInfo = </span><br><span class="line">    <span class="keyword">new</span> JobSplit.TaskSplitMetaInfo[numSplits];</span><br><span class="line">  <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; numSplits; i++) &#123;</span><br><span class="line">    JobSplit.SplitMetaInfo splitMetaInfo = <span class="keyword">new</span> JobSplit.SplitMetaInfo();</span><br><span class="line">    <span class="comment">// 切片的元数据信息</span></span><br><span class="line">    splitMetaInfo.readFields(in);</span><br><span class="line">    <span class="comment">// 根据元数据和split数据信息对job进行切分</span></span><br><span class="line">    JobSplit.TaskSplitIndex splitIndex = <span class="keyword">new</span> JobSplit.TaskSplitIndex(</span><br><span class="line">        jobSplitFile, </span><br><span class="line">        splitMetaInfo.getStartOffset());</span><br><span class="line">    <span class="comment">// 将切分之后的task元数据放入数组</span></span><br><span class="line">    allSplitMetaInfo[i] = <span class="keyword">new</span> JobSplit.TaskSplitMetaInfo(splitIndex, </span><br><span class="line">        splitMetaInfo.getLocations(), </span><br><span class="line">        splitMetaInfo.getInputDataLength());</span><br><span class="line">  &#125;</span><br><span class="line">  in.close();</span><br><span class="line">  <span class="keyword">return</span> allSplitMetaInfo;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>将切分之后的tasks返回，在transtion中调用</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">createMapTasks(job, inputLength, taskSplitMetaInfo);</span><br><span class="line">createReduceTasks(job);</span><br></pre></td></tr></table></figure>
+<p>进行task的创建，先看下createMapTasks的代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">createMapTasks</span><span class="params">(JobImpl job, <span class="keyword">long</span> inputLength,</span></span></span><br><span class="line"><span class="function"><span class="params">                            TaskSplitMetaInfo[] splits)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">for</span> (<span class="keyword">int</span> i=<span class="number">0</span>; i &lt; job.numMapTasks; ++i) &#123;</span><br><span class="line">  	<span class="comment">// 根据task的元数据信息进行TaskImpl的实例化</span></span><br><span class="line">    TaskImpl task =</span><br><span class="line">        <span class="keyword">new</span> MapTaskImpl(job.jobId, i,</span><br><span class="line">            job.eventHandler, </span><br><span class="line">            job.remoteJobConfFile, </span><br><span class="line">            job.conf, splits[i], </span><br><span class="line">            job.taskAttemptListener, </span><br><span class="line">            job.jobToken, job.jobCredentials,</span><br><span class="line">            job.clock,</span><br><span class="line">            job.applicationAttemptId.getAttemptId(),</span><br><span class="line">            job.metrics, job.appContext);</span><br><span class="line">    <span class="comment">// 将task信息保存到jobImpl中</span></span><br><span class="line">    job.addTask(task);</span><br><span class="line">  &#125;</span><br><span class="line">  LOG.info(<span class="string">"Input size for job "</span> + job.jobId + <span class="string">" = "</span> + inputLength</span><br><span class="line">      + <span class="string">". Number of splits = "</span> + splits.length);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>addTask的代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">addTask</span><span class="params">(Task task)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">synchronized</span> (tasksSyncHandle) &#123;</span><br><span class="line">    <span class="keyword">if</span> (lazyTasksCopyNeeded) &#123;</span><br><span class="line">      Map&lt;TaskId, Task&gt; newTasks = <span class="keyword">new</span> LinkedHashMap&lt;TaskId, Task&gt;();</span><br><span class="line">      newTasks.putAll(tasks);</span><br><span class="line">      tasks = newTasks;</span><br><span class="line">      lazyTasksCopyNeeded = <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// 将task和taskID作为映射放入tasks的map中</span></span><br><span class="line">  tasks.put(task.getID(), task);</span><br><span class="line">  <span class="comment">// 将taskID放入set中</span></span><br><span class="line">  <span class="keyword">if</span> (task.getType() == TaskType.MAP) &#123;</span><br><span class="line">    mapTasks.add(task.getID());</span><br><span class="line">  &#125; <span class="keyword">else</span> <span class="keyword">if</span> (task.getType() == TaskType.REDUCE) &#123;</span><br><span class="line">    reduceTasks.add(task.getID());</span><br><span class="line">  &#125;</span><br><span class="line">  metrics.waitingTask(task);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>将task切分好之后就是等待调度了，代码为<code>job.scheduleTasks(job.mapTasks, job.numReduceTasks == 0);</code>，这个也是由事件触发的，这里就不展开了，随后可能会单独介绍。</p>
+<!-- 
+## 疑惑
+可以设置“mapred.min.split.size”参数，使得Split的大小大于一个Block，这时候FileInputFormat会将连续的若干个Block分在一个Split中、也可能会将一个Block分别划在不同的Split中（但是前提是一个Split必须在一个文件中）。Split的Start、Length都好说，都是划分前就定好的。而Split的Location就需要对所有划在其中的Block的Location进行整合，尽量寻找它们共有的Location。而这些Block很可能并没有共同的Location，那么就需要找一个距离这些Block最近的Location作为Split的Location。   
+
+*代码在哪？？？？  切入点   TaskImpl task = new MapTaskImpl*
+-->
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的肯定，是我装逼的最大的动力！</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/path/to/wechat-reward-image/wechatpay.png" alt="混绅士 WeChat Pay">
+          <p>微信打赏</p>
+        </div>
+      
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>本文作者：</strong>
+      混绅士
+    </li>
+    
+    <!--add wordcount and min2 read by szw-->
+    <li class="post-copyright-author">
+      <strong>本文字数：</strong>
+      6,906
+    </li>
+    <li class="post-copyright-author">
+      <strong>阅读时长：</strong>
+      39
+    </li>
+
+    <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="http://bigdatadecode.club/MapReduce源码解析--JobSplit.html" title="MapReduce源码解析--JobSplit">http://bigdatadecode.club/MapReduce源码解析--JobSplit.html</a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>版权声明： </strong>
+      本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0</a> 许可协议。转载请注明出处！
+    </li>
+  </ul>
+
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
+          
+            <a href="/tags/BigData/" rel="tag"># BigData</a>
+          
+            <a href="/tags/MapReduce/" rel="tag"># MapReduce</a>
+          
+            <a href="/tags/JobSplit/" rel="tag"># JobSplit</a>
+          
+        </div>
+      
+
+       
+        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/MapReduce源码解析--Reduce中values的Iterator的生成.html">MapReduce源码解析--Reduce中values的Iterator的生成</a></li><li><a href="/MapReduce源码解析--TotalOrderPartitioner.html">MapReduce源码解析--TotalOrderPartitioner</a></li><li><a href="/MapReduce源码解析--环形缓冲区.html">MapReduce源码解析--环形缓冲区</a></li><li><a href="/MapReduce源码解析--Map解析.html">MapReduce源码解析--Map解析</a></li><li><a href="/MapReduce源码解析--Reduce解析.html">MapReduce源码解析--Reduce解析</a></li><li><a href="/HDFS read解析.html">HDFS read解析(一)之Open文件流</a></li><li><a href="/Hadoop_get_NullPointerException.html">Hadoop get命令返回NullPointerException</a></li><li><a href="/YARNSrcApplicationMasterArch.html">YARN源码分析之ApplicationMaster架构</a></li><li><a href="/[译]HDFS恢复过程2.html">HDFS恢复过程2</a></li><li><a href="/mac下编译Hadoop.html">mac下编译Hadoop</a></li></ul> 
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/mac下自动输入密码登录跳板机脚本.html" rel="next" title="mac/linux下自动输入密码登录服务器/跳板机脚本">
+                <i class="fa fa-chevron-left"></i> mac/linux下自动输入密码登录服务器/跳板机脚本
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/MapReduce源码解析--TotalOrderPartitioner.html" rel="prev" title="MapReduce源码解析--TotalOrderPartitioner">
+                MapReduce源码解析--TotalOrderPartitioner <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+  <div class="bdsharebuttonbox">
+    <a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+    <a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>  
+    <a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>      
+    <a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+    <a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+    <a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a>
+    <a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a>
+    <a href="#" class="bds_more" data-cmd="more"></a>
+    <a class="bds_count" data-cmd="count"></a>
+  </div>
+  <script>
+    window._bd_share_config = {
+      "common": {
+        "bdText": "",
+        "bdMini": "1",
+        "bdMiniList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "bdPic": ""
+      },
+      "image": {
+        "viewList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "viewText": "分享到：",
+        "viewSize": "16"
+      },
+      "slide": {
+        "bdImg": "5",
+        "bdPos": "left",
+        "bdTop": "100"
+      }
+    }
+  </script>
+
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>       
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/uploads/avatar.png" alt="混绅士">
+          <p class="site-author-name" itemprop="name">混绅士</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">97</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">157</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <!-- <i class="fa  fa-fw fa-globe"></i> -->
+              <!-- modify icon to fire by szw -->
+              <i class="fa fa-fire fa-" aria-hidden="true"></i>
+              热文推荐
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                </li>
+              
+            </ul>
+          </div>
+
+
+        
+
+        
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <!-- modify icon to fire by szw -->
+                <i class="fa fa-history fa-" aria-hidden="true"></i>
+                近期文章
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                
+                  <li>
+                    <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                  </li>
+                
+                  <li>
+                    <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+ 
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#文件切分"><span class="nav-number">1.</span> <span class="nav-text">文件切分</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#job切分"><span class="nav-number">2.</span> <span class="nav-text">job切分</span></a></li></ol></div>
+            
+
+          </div>
+
+          <div class="post-toc-wrap sidebar-panel sidebar-panel-active" style="margin: 0 2px; text-align: left;">
+            
+              <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+                <div class="links-of-blogroll-title">
+                  <!-- <i class="fa  fa-fw fa-globe"></i> -->
+                  <!-- modify icon to fire by szw -->
+                  <i class="fa fa-fire fa-" aria-hidden="true"></i>
+                  热文推荐
+                </div>
+                <ul class="links-of-blogroll-list">
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                    </li>
+                  
+                </ul>
+              </div>
+            
+  
+            
+                <div class="links-of-blogroll motion-element links-of-blogroll-block">
+                  <div class="links-of-blogroll-title">
+                    <!-- modify icon to fire by szw -->
+                    <i class="fa fa-history fa-" aria-hidden="true"></i>
+                    近期文章
+                  </div>
+                  <ul class="links-of-blogroll-list">
+                    
+                    
+                      <li>
+                        <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
+                      </li>
+                    
+                  </ul>
+                </div>
+              
+          </div>
+
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+
+  </aside>
+
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">混绅士</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+<!--add total count by szw-->
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共617.7k字</span>
+</div>
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user">本站访客数</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      人次
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye">本站总访问量</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      次
+    </span>
+  
+</div>
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.0"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("nP29Qpe35cHgQTQIFL94dGoW-gzGzoHsz", "eVPY9SfyVH11gSsbPBEcAQM0");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+</body>
+</html>

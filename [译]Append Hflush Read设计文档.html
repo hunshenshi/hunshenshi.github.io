@@ -1,0 +1,1526 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="0hClWroWscvQbyOyRPhAZWjOZJ6g3SFCdO47yYakvdk">
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="27E5EbutCm">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="Hadoop,BigData,HDFS,Append,Hflush,Read,">
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0">
+
+
+
+
+
+
+<meta name="description" content="本篇是一篇译文，主要是翻译下Append/Hflush/Read Design。hdfs的write一直看不太懂，想翻译下此设计文档，希望能有更深入的理解。">
+<meta name="keywords" content="Hadoop,BigData,HDFS,Append,Hflush,Read">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Append&#x2F;Hflush&#x2F;Read设计文档">
+<meta property="og:url" content="http://bigdatadecode.club/[译]Append Hflush Read设计文档.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="本篇是一篇译文，主要是翻译下Append/Hflush/Read Design。hdfs的write一直看不太懂，想翻译下此设计文档，希望能有更深入的理解。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://bigdatadecode.club/blogimgs/appendDesign/writePipeline.png">
+<meta property="og:image" content="http://bigdatadecode.club/blogimgs/appendDesign/packetPipeline.png">
+<meta property="og:image" content="http://bigdatadecode.club/blogimgs/appendDesign/BABR.png">
+<meta property="og:image" content="http://bigdatadecode.club/blogimgs/appendDesign/BCBABR.png">
+<meta property="og:image" content="http://bigdatadecode.club/blogimgs/appendDesign/2BRC.png">
+<meta property="og:image" content="http://bigdatadecode.club/blogimgs/appendDesign/1.png">
+<meta property="og:image" content="http://bigdatadecode.club/blogimgs/appendDesign/2.png">
+<meta property="og:image" content="http://bigdatadecode.club/blogimgs/appendDesign/3.png">
+<meta property="og:image" content="http://bigdatadecode.club/blogimgs/appendDesign/4.png">
+<meta property="og:image" content="http://bigdatadecode.club/blogimgs/appendDesign/ReplicaTransition.png">
+<meta property="og:image" content="http://bigdatadecode.club/blogimgs/appendDesign/BlockTransition.png">
+<meta property="og:updated_time" content="2016-11-23T15:34:11.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Append&#x2F;Hflush&#x2F;Read设计文档">
+<meta name="twitter:description" content="本篇是一篇译文，主要是翻译下Append/Hflush/Read Design。hdfs的write一直看不太懂，想翻译下此设计文档，希望能有更深入的理解。">
+<meta name="twitter:image" content="http://bigdatadecode.club/blogimgs/appendDesign/writePipeline.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    sidebar: {"position":"right","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://bigdatadecode.club/[译]Append Hflush Read设计文档.html">
+
+
+
+
+
+  <title> Append/Hflush/Read设计文档 | big data decode club </title>
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-80813521-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+
+
+
+
+
+
+  <div style="display: none;">
+    <script src="//s95.cnzz.com/z_stat.php?id=1260961002&web_id=1260961002" language="JavaScript"></script>
+  </div>
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">big data decode club</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">hunhun -- Any answers you can find in source code.</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/[译]Append Hflush Read设计文档.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="混绅士">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="big data decode club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                Append/Hflush/Read设计文档
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-11-23T23:34:11+08:00">
+                2016-11-23
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2016-11-23T23:34:11+08:00">
+                2016-11-23
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/[译]Append Hflush Read设计文档.html" class="leancloud_visitors" data-flag-title="Append/Hflush/Read设计文档">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>本篇是一篇译文，主要是翻译下Append/Hflush/Read Design。hdfs的write一直看不太懂，想翻译下此设计文档，希望能有更深入的理解。</p>
+<a id="more"></a>
+<h2 id="Replica-Block-状态"><a href="#Replica-Block-状态" class="headerlink" title="Replica/Block 状态"></a>Replica/Block 状态</h2><p>Block在NameNode和DataNode中有不同的称呼，<em>在NameNode中为block，在DataNode中为Replica</em>。通常说的block的副本数是3，指的就是dn中Replica为3。</p>
+<h3 id="Replica状态"><a href="#Replica状态" class="headerlink" title="Replica状态"></a>Replica状态</h3><p><strong>Finalized</strong>:<br>   <em>finalized Replica已经完成了写入操作</em>。不会再有新的数据写入，除非此Replica被再次打开或者被追加。<br>   finalized Replica的数据和meta数据是匹配的。<br>   <em>当前block id的所有Replica有相同的数据大小</em>。<br>   但是finalized Replica的GS(generation stamp)不是一直不变的，GS可能因为一次错误的recovery而导致其发生变化。<br><strong>RBW(Replica Being Written)</strong>:<br>   <em>创建Replica或者追加Replica时，Replica的状态为RBW</em>。<br>   数据写入RBW状态的Replica。其<em>RBW Replica总是一个未关闭文件的最后一个block的Replica</em>。<br>   同一个block id的RBW状态的Replica的长度不固定。<br>   RBW状态的Replica在磁盘中的数据与meta数据不匹配，<em>也就是说还有一部分数据在内存中没有flush到磁盘</em>。<br>   RBW状态的Replica中的所有数据对readers并<strong>不都是不可见的</strong>，<em>只有接受到queue ack的packet才是可见的</em>。<br>   <em>如果发生故障，RBW状态的Replica中的数据是需要保护的</em>。<br><strong>RWR(Replica Waiting to be Recovered)</strong>:<br>   <em>DataNode挂掉或者重启时，所有RBW状态的Replica变为RWR状态</em>。<br>   RWR状态的Replica不会在pipeline中存在，因此RWR Replica也不能写入数据。<br>   RWR状态下的replica将会变成过期，或者<em>当client死了之后，RWR将出现在租约恢复的过程中(将RBW状态的Replica转为RWR)</em>。<br><strong>RUR(Replica Under Recovery)</strong>:<br>   租约恢复会触发Replica恢复(or Block Recovery)，此时，任何一个非TEMPORARY状态的replica都有可能转换为RUR状态。<br>   <strong>租约恢复会触发Block恢复，此时Replica的状态转为RUR，那么RWR是在哪租约恢复中哪里出现？？</strong><br><strong>TEMPORARY</strong>:<br>   在block复制(由replication monitor或者balancer引起的block复制操作)中会出现temporary状态的replica。<br>   此状态下的replica与RBW状态类似，只是该状态下的数据是不可见的。<br>   如果block复制失败，TEMPORARY状态下的replica会被删除。</p>
+<p>在DataNode磁盘中(也就是存放block的dn磁盘中)，每个data目录都有三个子目录，分别为current、tmp和rbw。其中current中存放finalized replicas，tmp目录存放temporary replicas，rbw目录存放rbw、rwr和rur replicas。</p>
+<p>当replica是由于replica复制或者balance而创建的，则将此replica放入temp目录。一旦一个replica完成，也就是finalized，则将其移动到current目录中。当DataNode重启时，tmp目录下的replicas被删除，rbw目录下的replicas被做为rwr状态进行加载(<strong>rbw目录下存放着rbw、rwr、rur，rur也转换为rwr？？？转换为rwr之后怎么办呢？？</strong>)，在current目录下的replicas被做为finalized状态进行加载。</p>
+<p>在DataNode升级过程中，在current和rbw目录下的所有replicas将被保存在一个快照中。</p>
+<h3 id="Block状态"><a href="#Block状态" class="headerlink" title="Block状态"></a>Block状态</h3><p>Block在NameNode中的状态为：<br><strong>UnderConstruction</strong>:<br>   新建一个block或者打开已存在的block来追加，此时block为UnderConstruction状态。<br>   UnderConstruction状态的block可以写入数据。通常是一个未关闭文件的最后一个block。<br>   由于此状态下的block可以写入数据，则UnderConstruction block的长度和GS是不固定的。<br>   UnderConstruction block中的数据并不是完全可见的。<br>   UnderConstruction block会记录write pipeline的位置，如果client挂了，也会记录rwr replicas的位置。(A block underconstruction keep strack of its write pipeline(i.e.,locations of valid rbw replicas) and the locations of its rwr replicas if the client dies)<br>   <em>对应Replica的状态为RBW</em><br><strong>UnderRecovery</strong>:<br>   当一个文件的租约超期之后，如果此文件的最后一个block是UnderConstruction状态，当block恢复开始时，UnderConstruction变为UnderRecovery状态。<br>   <em>对应Replica的状态为RUR</em><br><strong>Commited</strong>:<br>   <em>Committed block的长度和GS是不变的</em>，除非该block被再次打开来追加。但是<strong>DataNode还没有上报这样的Replica，导致NameNode中找不到与之匹配的finalized replica</strong>，此时block被称为Committed状态。<br>   为了响应读请求，Committed block依然要保留rbw replicas的地址。也要记录finalized replicas的GS和长度。<br>   当client要求nn给未关闭的文件增加一个block或者关闭此文件时，一个UnderConstruction block变为Committed。<br>   如果一个文件的最后一个block或者倒数第二个block是COMMITTED状态，则该文件不能被关闭，client必须进行重试。<br>   Add Block and close will be extended to include the last block’s GS and length.<br><strong>Complete</strong>:<br>   Complete block的长度和GS是不变的，并且NameNode已经发现当前block的finalized replica能够和GS/len匹配。<br>   Complete block只保存finalized replicas的位置。<br>   只有当一个文件的所有block都是Complete时，才能关闭。<br>   <em>对应Replica的状态为Finalized</em></p>
+<p>和Replica的状态不同，block的状态不会在固化到磁盘。当NameNode重启时，未关闭文件的最后一个block的状态为UnderConstruction进行加载，剩下的block都为Complete状态。</p>
+<p>更多的细节包括Replica和Block状态的转换图都将在后面的章节中介绍。</p>
+<p><strong>疑惑Replica与Block的状态是怎么交互的？？？？？</strong></p>
+<h2 id="Write-Hflush"><a href="#Write-Hflush" class="headerlink" title="Write/Hflush"></a>Write/Hflush</h2><h3 id="write-pipeline"><a href="#write-pipeline" class="headerlink" title="write pipeline"></a>write pipeline</h3><p>HDFS文件是由多个block组成。block是通过write pipeline将数据写入的。Bytes数据以packet为单位被推送到pipeline中。如果不发生error，block的构成会经过3个阶段。如图所示。<br><img src="/blogimgs/appendDesign/writePipeline.png" alt="write pipeline" title="write pipeline"><br>此pipeline包含3个DataNode(DN0、DN1和DN2)和一个由5个packet组成的block。<br>图中的粗线表示packet，虚线表示ack messages，细线表示控制信息(setup/close)。<br>t0-t1是pipeline的setup阶段。t1-t2是data streaming阶段(t1发送第一个packet，t2是接收最后一个packet的ack)，<em>在数据传输中需要注意的是packet3之所以要等到接收到packet2的ack之后才发送是因为packet2调用了hflush</em>。t2-t3是pipeline的close阶段。</p>
+<p>下面详细介绍下着3个阶段：</p>
+<blockquote>
+<p>setup：</p>
+</blockquote>
+<p>client沿着pipeline的下游dn发送了一个Write_Block请求。当最后一个dn接收到这个请求，会沿着pipeline的上游dn发送一个ack给client。此时，<em>pipeline中dn的网络连接就被建立，并且每个dn都创建或者打开一个Replica</em>，等待写入数据。</p>
+<blockquote>
+<p>data streaming</p>
+</blockquote>
+<p>数据首先被缓存在client端的buf中，当buf写满之后写入packet中。一个packet写满之后，被发送到pipeline中。下一个packet在接收到之前packet的ack之前就可以发送到pipeline中。未完成packet(未发送和未接收到ack的packet统称未完成的packet，原文是outstanding packets)的个数是由client控制的，代码中是80(是dataQueue和ackQueue中packet的和)，超过了限制则阻塞。<br>如果代码中明确调用<code>hflush</code>，会将当前packet发送到pipeline中(<strong>是把packet发送到dataQueue等待DataStreamer来取还是直接发送到pipeline中？？</strong>)，无论此packet是否已经写满。<em>Hflush是一个同步操作，在接收到此packet的ack之前，不能写入任何数据</em>。</p>
+<blockquote>
+<p>close(finalize a block and shutdown pipeline)</p>
+</blockquote>
+<p>当client收到所有packet的ack之后，发送一个关闭请求。<br>这样保证了如果在data streaming失败了，恢复操作没有必要去处理一些情况，如一些Replicas已经Finalized和一些Replica并没有完整的数据。(This ensures that if data streaming fails, the recovery does not need to handle the case that some replicas have been finalized and some do not have all the data)</p>
+<h3 id="packet在某个DN中是流程"><a href="#packet在某个DN中是流程" class="headerlink" title="packet在某个DN中是流程"></a>packet在某个DN中是流程</h3><p><img src="/blogimgs/appendDesign/packetPipeline.png" alt="packet in pipeline" title="packet in pipeline"><br>对于每个packet，pipeline中的dn会做3件事：</p>
+<ol>
+<li>Stream data<br>a. 从上游的dn或者client接收数据<br>b. 如果下游有dn则向下游发送数据</li>
+<li>将data或者crc写入block文件或者mate文件</li>
+<li>Stream ack<br>a. 如果下游有dn则接收下游dn发送的ack<br>b. 向上游dn或者client发送ack</li>
+</ol>
+<blockquote>
+<p>需要注意的是上面的数字并不代表这三件事的执行顺序。</p>
+</blockquote>
+<p>Stream ack(3)会在Steam data(1)之后执行，但是理论上write data to disk(2)可以发生在1.a之后的任何时间里。<em>代码中在执行1.b之后并且接收到下个packet之前去执行write data to disk(2)</em></p>
+<p><em>pipeline中的DataNode有两个线程</em>。data线程负责data stream和disk writing。对于每个packet，data线程按照顺序执行1.a、1.b和2。<em>packet被flush到磁盘之后，可以从内存中移除</em>。ack线程负责ack streaming。对于每个packet，ack线程按照执行3.a和3.b。<em>由于data线程和ack线程是同时执行的，因此无法保证(2)和(3)的执行顺序</em>。packet的ack可能会在写入磁盘之前发送。</p>
+<p>算法在写性能、数据持久性和算法的简单性做了个权衡。<br>1、尽快的将数据写入磁盘而不是等待接收到ack之后，能够提升数据的持久性，防止数据丢失。<br>2、并发的执行data线程和ack线程<br>3、<strong>在pipeline的内存中最多只存在一个packet</strong>，使buffer管理很简单。<br>(<strong>pipeline是怎么保证内存最多只有一个packet的？？？写入磁盘的packet就从内存删除？？？</strong>)</p>
+<h3 id="一致性"><a href="#一致性" class="headerlink" title="一致性"></a>一致性</h3><ul>
+<li>client从RBW Replica中读数据时，DataNode不会将接收到的所有数据都对client可见。</li>
+<li>RBW Replica维护着两个计数器：<br> 1、BA: 接收到下游ack的bytes数。这些数据对client是可见的。也被称为Replica的可见长度。<br> 2、BR: block已经接收到的bytes数，包括写入磁盘的和在dn内存中的数据。</li>
+<li>假设开始在pipeline中的所有DataNode中RBW Replica的两个计数器(BA, BR)=(a, a)。则当client将一个大小为b bytes的packet发送到pipeline中，在client接收到packet的ack之前没有别的packet发送到pipeline中。<br> 1、某个DN执行完<em>1.a</em>之后，(BA, BR)变为(a, a+b)<br> 2、某个DN执行完<em>3.a</em>之后，(BA, BR)变为(a+b, a+b)<br> 3、当client成功接收packet的ack之后，pipeline中所有dns的RBW Replica的计数器变为(BA, BR)变为(a+b, a+b)</li>
+<li>pipeline中有N个DataNode(DN0、DN1、…DNn)，DN0是pipeline中的第一个，离client最近，则有下面的特性：<br> 在任何给定的时间t，<br> <img src="/blogimgs/appendDesign/BABR.png" alt=""><br> 这个特性保证了一旦数据变为可见的，则pipeline中所有的dn都有此数据。(<em>只要接收到ack的packet就是可见的？一旦数据是可见的，保证所有的dn都有此数据，但不保证该数据在所有的dn上都是可见的？？是这样理解吗？？还是说只有client接收到ack之后数据才是可见的？？我感觉是前者。随后验证</em>)</li>
+<li>假设BSc表示client在时间点t发送到pipeline中的数据长度，BAc是client接收到ack的数据长度。则上面的公式变为如下：<br> <img src="/blogimgs/appendDesign/BCBABR.png" alt=""></li>
+</ul>
+<h2 id="Read"><a href="#Read" class="headerlink" title="Read"></a>Read</h2><p>读一个未关闭的文件时，存在的挑战是如果最后一个block是UnderConstruction，那么如果保证一致性。解决思路是保证在DNi上读到的数据也能在DNj上读取，尽管BAi&gt;BAj。</p>
+<blockquote>
+<p>第一种解决方案：</p>
+</blockquote>
+<ul>
+<li>当client读一个UnderConstruction block时，先向DN发送一个请求得到这个Replica的BA</li>
+<li>如果要读的长度超过了UnderConstruction block的BA，那么抛出一个EOFException异常</li>
+<li>只有当read请求的<em>起始偏移地址小于最后一个block的可见长度时</em>(是起始位置小于可见长度，即off小于BA。<strong>那么只要off大于BA，即使len小于BR，也不会发送给DN？？</strong>)，才会发送给DN。当DN收到一个read请求，读取的长度小于BR，则返回此区间的数据。</li>
+<li>假设read请求是一个三元组(blck, off, len)，其中blck包含blockId和GS，off是读取的起始位置，len要读取数据的长度</li>
+<li>如果DN有个Replica的GS等于blck的GS或者比blck的GS新，则可以响应当前read请求。</li>
+<li><em>假设client从DNj上得到了block的length，则off和len的和必须小于等于BAj</em>。</li>
+<li>假设read请求发送给了DNi(<em>能发送个DNi，则off一定小于BAi</em>)，DNi上的一个Replica的状态是(BAi, BRi)，则<br> 1、如果off+len&lt;=BAi，DNi能从off处发送len长度的bytes给client<br> 2、如果off+len&gt;BAi，并且off+len&lt;=BAj(<em>由上一条假设得知</em>)，BAj&gt;=BAi，则DNi在pipeline中一定是DNj的上游，也就是离client的距离比DNj要近。则BRi&gt;=BRj&gt;=BAj。BRi&gt;BAj,所以BRi&gt;off+len。也就是说DNi有client想要读取的数据，则DNi发送数据给client<br> 3、off+len一定不能比BRi大，如果发送了这种情况，DN记录下error并拒绝这次请求。</li>
+<li>如果正在响应read请求的DNi挂掉了，client能在该block的其它Replica所在的DN中任意切换。</li>
+<li>这个解决方案比较简单，<em>但是需要重新打开一个文件去取数据，因为最后一个block的可见长度是在client read之前从DN上得到的</em>(也就是说client要先跟从一个DN上得到可见数据的长度，然后再去打开一个文件去读数)，而且client读取的数据的长度不能超过最后一个block的长度。</li>
+</ul>
+<blockquote>
+<p>概括下这种方案的读取流程：<br>读操作分为两次请求：<br>第一次向block的Replica所在的某一个DN(该DN记为DNi)发送一个请求，<em>得到block的可见长度BAi，如果off+len大于BAi，则抛出EOFException</em>；<br>第二次请求是向Replica所在的某个DN发送读请求，<em>发送时要判断off是否小于该DN的BA，只有小于BA才向该DN发送读请求</em>。(发送给DN，DN是否响应，其判断标准为DN有个<em>Replica的GS等于blck的GS或者比blck的GS新，则可以响应当前read请求</em>)</p>
+</blockquote>
+<blockquote>
+<p>第二种解决方案</p>
+</blockquote>
+<ul>
+<li>此种方案是让client控制一致性，DN只负责发送数据。</li>
+<li>假设read请求是一个三元组(blck, off, len)，其中blck包含blockId和GS，off是读取的起始位置，len要读取数据的长度</li>
+<li>如果DN有个Replica的GS等于blck的GS或者比blck的GS新，则可以响应当前read请求。</li>
+<li>假设DNi中某个Replica的状态是(BAi, BRi)，则DNi能发送的数据为[off, min(off+len, BRi)]，并将BAi一起发送给client</li>
+<li>client接收这些数据，并去查找当前Replica最大的BA</li>
+<li>如果DNi读失败，client能去任何一台包含此Replica的DN上读取</li>
+<li>如何保证一致性的呢？<br> 假设有一个由N个DN组成的pipeline，DN0是pipeline中的第一个。<br> 假设client在时间t能够提供给application的长度是BRc，则<br> <img src="/blogimgs/appendDesign/2BRC.png" alt=""><br> 因此无论从那个DN上读取数据，DN都能够满足。</li>
+<li>此方法需要改变下读协议，由于client端要控制读的一致性则会变的较复杂。但是此方法不用请求再次打开一个文件去读数据。</li>
+</ul>
+<p><em>代码中应该用的是第一种，有时间验证下</em></p>
+<h2 id="Append"><a href="#Append" class="headerlink" title="Append"></a>Append</h2><h3 id="Append-API"><a href="#Append-API" class="headerlink" title="Append API"></a>Append API</h3><ol>
+<li>client向NN发送一个append请求</li>
+<li>NN首先确认此文件已被关闭，然后检查这个文件的最后一个block，<br>如果<em>此block没有写满并且没有Replica，则append操作失败</em>。否则将block改为UnderConstruction状态。<br>如果最后一个block写满了，则NN分配一个新的block作为最后一个block。<br>如果最后一个block没有写满，NN改变这个block的状态为UnderConstruction，并用该block的Finalized Replicas来初始化pipeline(If the last block is not full, NN changes this block to be an underconstruction block, <em>with its finalized replicas as its initial pipeline</em>)<br>返回blockId、GS、length和locations。如果最后一个block未满，也需要返回一个新的GS。</li>
+<li>如果最后一个block不满，则为append建立一个pipeline。否则为create建立一个pipeline。</li>
+<li>如果最后一个block最后一个chunk没有达到chunk边界，则读取最后一部分的crc chunk，读取它是为了重写计算chunksum</li>
+<li>剩下的和正常写的流程一样</li>
+</ol>
+<h3 id="持久化-Durability"><a href="#持久化-Durability" class="headerlink" title="持久化(Durability)"></a>持久化(Durability)</h3><ul>
+<li>NN保证包含append之前数据的Complete block的副本数满足该文件的副本数。</li>
+<li>包含append之前数据的UnderConstruction block的持久化在此版本中没设计</li>
+</ul>
+<h2 id="故障处理"><a href="#故障处理" class="headerlink" title="故障处理"></a>故障处理</h2><h3 id="pipeline-Recovery"><a href="#pipeline-Recovery" class="headerlink" title="pipeline Recovery"></a>pipeline Recovery</h3><p>当一个block是UnderConstruction状态时，可能在stage1、stage2和stage3发生错误。stage1是指pipeline setup，stage2是指data streaming，stage3是指pipeline close。<em>pipeline recovery处理pipeline中的DNs发生的error</em>。</p>
+<h4 id="stage1发生故障"><a href="#stage1发生故障" class="headerlink" title="stage1发生故障"></a>stage1发生故障</h4><p>在pipeline setup时，某个DN发生了故障，这个DN发送一个故障的ack到上游DN之后，关闭block文件和所有的tcp/ip连接。一旦client检测到这个故障，client会根据建立pipeline的目的而进行不同的操作：</p>
+<ul>
+<li>如果新建一个pipeline是为了创建一个新block，则client只是放弃这个block，重新向NN申请一个新的block。然后为这个新的block建立pipeline</li>
+<li>如果新建一个pipeline是为了append一个block，则client会用<em>剩下的DNs(不添加新的DN到pipeline中？？)</em>重建一个pipeline并更新block的GS。</li>
+</ul>
+<p>访问token错误在pipeline setup中是一个特殊的故障。如果由于access token过期而导致pipeline setup失败时，client会继续用之前的DNs重建pipeline。</p>
+<h4 id="stage2发生故障"><a href="#stage2发生故障" class="headerlink" title="stage2发生故障"></a>stage2发生故障</h4><ul>
+<li>DN的故障可能发生在1.a、1.b、2、3.a和3.b中的任何一个阶段。无论何阶段，当故障发生时，发生故障的DN会退出pipeline(关闭所有的tcp/ip连接，如果故障不是发生在3.a和3.b则将内存中的数据写入磁盘，关闭磁盘上的文件)。</li>
+<li>当client检测到故障时，停止发送数据到pipeline</li>
+<li>client利用剩下的DNs重构一个pipeline，该block的所有Replica都会产生一个新的GS</li>
+<li>client从BAc处重新发送数据，此时GS已经更新。这里有个可以优化的地方就是client从min(BRi, i是pipeline中DN的索引)处重新发送数据。</li>
+<li>当DN接收到一个packet时，如果当前DN上已经存在，则data stream直接将其packet发送到下游而不再次写入磁盘。</li>
+</ul>
+<p>此recovery策略有个很好的特性：只要在old pipeline中数据是可见的，则在重新建立的pipeline中依然是可见的，即使在old pipeline中存放最大长度BA的DN挂掉了。这是因为在pipeline recovery中不会减少任何DN的BA和BR。</p>
+<h4 id="stage3发生故障"><a href="#stage3发生故障" class="headerlink" title="stage3发生故障"></a>stage3发生故障</h4><p>client检测到故障，会利用剩下的DNs重建一个pipeline。每个DN会更新block的GS和将未finalized的replica变为finalized。发送一个ack之后关闭所有的网络连接。</p>
+<h3 id="DataNode-Restart"><a href="#DataNode-Restart" class="headerlink" title="DataNode Restart"></a>DataNode Restart</h3><ul>
+<li>DataNode重启时，会将data目录下rbw子目录下的所有replica的状态变为RWR状态加载到内存，这些Replica的长度是有crc记录的最大值。</li>
+<li>RWR Replica是不可见的，也不会出现在pipeline recovery中，也是不可写的(只有在pipeline中的replica才是可写的)。</li>
+<li>RWR Replica的client如果存在，则该Replica可能会过时而被NN删掉，如果client不存在，则通过lease recovery将状态变为finalized。</li>
+</ul>
+<h3 id="NameNode-Restart"><a href="#NameNode-Restart" class="headerlink" title="NameNode Restart"></a>NameNode Restart</h3><ul>
+<li>NameNode上不会将block的状态固化到磁盘。因此当NN重启时，需要重新存储block的状态。对于未关闭文件的最后一个block不管该block之前是什么状态都变为UnderConstruction状态，其它的block都是Complete状态。</li>
+<li>要求每个DN注册并发送block report。block report中包括除了TEMPORARY状态的所有状态的Replica(finalized、rbw、rwr、rur、)。</li>
+<li>当NameNode接收到<em>最少一个副本的Complete状态的block和UnderConstruction状态的block的个数</em>达到之前设置的阈值时，才退出safemode模式。(NameNode does exit safemode unless the number of complete and under construction blocks that have received at least one replica reaches the pre-defined threshold)</li>
+</ul>
+<h3 id="Lease-Recovery"><a href="#Lease-Recovery" class="headerlink" title="Lease Recovery"></a>Lease Recovery</h3><p>当问及的租约超期之后，NN要为客户端关闭这个文件。这里有两个问题：(1)并行控制，要是在pipeline setup、data steam、pipeline close或者pipeline recovery阶段中，并且client依然存活的时候进行lease recovery会怎样？如果存在多个并行的lease recovery怎么办？(2)一致性保证，当最后一个block是UnderConstruction状态时，其block的所有Replica需要保持一致的状态，也就是说所有的Replica在磁盘上应该记录相同的长度和一样的GS。</p>
+<ol>
+<li>NN续约时(<em>NN renews lease, 是不是翻译成NN恢复租约时，更加合适</em>)，<em>改变这个文件的租约所有者为dfs</em>并将操作记录在editlog。因此如果client依然活着，任何一个与写相关的请求如生成一个新的GS、增加一个新的block或者关闭这个文件，将被拒绝。之所以被拒绝是因为client此时已经不再拥有此文件的lease。这就阻止了client并发的改变一个未关闭的文件。</li>
+<li>NN检查这个文件的最后一个block状态。其它的block应该是Complete状态。下表展示了所有可能的组合和相应组合所采取了动作：</li>
+</ol>
+<p><img src="/blogimgs/appendDesign/1.png" alt=""></p>
+<h3 id="Block-Recovery"><a href="#Block-Recovery" class="headerlink" title="Block Recovery"></a>Block Recovery</h3><ol>
+<li>NN选择从Replica所在的DNs中选择一个primary DataNode(PD)作为NN的代理来执行block recovery。如果block没有Replicas则放弃block recovery。</li>
+<li>NN得到一个新GS。GS用来标识这个block在recovery成功之后的版本。Block recovery改变最后一个block的状态，如果它是UnderConstruction，则改为UnderRecovery状态(<em>not RUR</em>)。UnderRecovery block由唯一的recovery id标识和新的GS。<em>PD和NN的任何一次通信，都需要匹配recovery id。这就是怎样并发处理block recovery的</em>。<strong>最基础的规则就是最近要提交的recovery的优先级高于之前提交的</strong>。</li>
+<li>随后NN要求PD recovery block。NN发送给PD新的GS、block id和所有Replica的locations(包括finalized replica、RBW replica和RWB replica)。</li>
+<li>PD执行block recovery：<br>a. PD要求Replica存在的每一个DN去执行replica recovery。<br>   i. PD将recovery id、block id和GS发送给每个DN<br>   ii. DN检查各自Replica的状态：<pre><code>  1、 检查是否存在：如果DN没有这个replica，或者这个replica的GS比请求中的GS要老，更或者是比recovery id要新，则抛出ReplicaNotExistsException
+  2、检查是否停止写入：如果一个replica正在写入和一个正在写入的线程，则中断写线程，等待写线程退出。如果写线程正在接受packet时被中断，则停止写线程并放弃这个写入一半的packet。在线程退出之前，确认磁盘上记录的长度与BR相同，然后关闭block文件和crc文件。*这样控制了client write和block recovery在DNs上的并发*。Block recovery抢占client write，导致pipeline失败。随后的pipeline recovery会失败，因为dfs client从NN得到一个UnderRecovery状态block的GS。
+  3、停止之前的block recovery：当某个Replica已经是RUR状态时，如果此Replica的recovery id大于等于刚收到此Replica的recovery id，则抛出 RecoveryInProgressException。如果刚收到的GS大，则表示RUR replica的recovery id设置为刚收到的recovery id。
+  4、状态改变：将Replica的状态变为RUR。设置recovery id为一个新的recovery id和原来状态的一个引用(Set its recovery id to be the new recovery id and a reference to its old state.)。任何一次PD和它的通信都需要匹配recovery id。*Note3和4在DNs的block recovery并发的问题*。最后一个recovery总是优先于之前的recovery，并且没有两个recovery会有所交叉。
+  5、检查crc：对block文件进行一次crc检查。如果Replica的状态是finalized或者RBW时，crc不匹配则抛出CorruptedReplicaException 。然而如果Replica的状态是RWR时，对block文件进行裁剪，将不匹配的部分减掉，保留上次匹配的长度。
+</code></pre>   iii. 如果没有任何异常抛出，每个DN将Replica的状态(Replica id、GS、on-disk len、pre-recovery state)返回给PD。<br>b. 从DN收到响应之后，PD来决定block的长度。<br>   i. 如果有一个DN抛出RecoveryInProgressException，则PD放弃block recovery。<br>   ii. 如果所有的DN抛出一个exception(<em>所有的DN抛出的exception必须相同还是？？？</em>)，则放弃block recovery。<br>   iii. 如果NN接收到的所有最大Replica的长度为0，则NN删除这个block<br>   iv. 否则，检查长度非0的Replica返回的状态。下表是两个Replica的可能组合情况:</li>
+</ol>
+<p><img src="/blogimgs/appendDesign/2.png" alt=""></p>
+<p>   c. Recovery Replica的长度设置参考b.iv<br>      i. PD要求每个DN去恢复Replica，由PD发送block id、GS和长度<br>      ii. 如果DN中不存在RUR状态的Replica或者Recovery id和新的GS不匹配，则失败<br>      iii. 否则DN改变这个Replica的GS为新的GS。随后在内存中更新此Replica的长度为新的长度，裁剪这个block file(磁盘中的文件)的长度并改变crc file(may casuse truncation and/or modification of last 4 crcbytes)。如果该Replica不是Finalized状态则变为Finalized状态。此时Replica Recovery成功<br>   d. PD检查c的结果。<br>   如果没有DN成功，则block recovery失败。<br>   如果一些成功一些失败，PD从NN处得到一个新的GS，让成功的DN重复block recovery。<br>   如果所有的DN都成功了，PD将新的GS和长度告知NN。<br>   NN finalizes the block，并且如果这个文件的所有block都是Complete状态，则关闭文件。在超过了尝试关闭文件的次数之后，NN强制关闭文件</p>
+<p>pipeline流中至少有一个DN是正常的并且写入流没有被中断，则lease recovery就能够保证在恢复之后对client可见的数据不会丢失。这是因为：</p>
+<ol>
+<li>在case1、2和3中有一个Replica是Finalized状态。则client在block构建过程中的stage1和或者stage3肯定已经挂了。这个算法不会移除任何数据。</li>
+<li>在case4和5中，所有recovery的Replica都有RBW状态(<em>all replicas to be recovered are in rbw state</em>)。client肯定在block构建过程中的stage2时已经死去。假设recovery之前的pipeline有n个DN(DN0、DN1..DNn)，DNi在4.a.ii返回的长度一定等于BRi。假设在pipeline中DN的一个子集DNs(<em>Assume that a subset of the DataNodes S in the pipeline participates the length agreement</em>)，则长度为<em>min(BRi, i为DNs中的索引)&gt;=BRn-1&gt;=BAn-1&gt;=…&gt;=BA0</em>。这就保证了lease recovery不会移除已经对client可见的数据。</li>
+<li>在case6中，这个算法没有任何保证，因为在recovery之前的pipeline中的所有DN都已经重启了。</li>
+</ol>
+<h2 id="Pipeline-Set-Up"><a href="#Pipeline-Set-Up" class="headerlink" title="Pipeline Set Up"></a>Pipeline Set Up</h2><h3 id="pipeline-setup的原因"><a href="#pipeline-setup的原因" class="headerlink" title="pipeline setup的原因"></a>pipeline setup的原因</h3><ol>
+<li>Create: 当一个新的block被创建时，pipeline需要在数据传输到DN之前被创建</li>
+<li>Append: 当一个文件需要追加时，并且最后一个block没有写满。由最后一个block的所有Replica所在的DN组成的pipeline需要在传输数据到DN之前被建立。</li>
+<li>Append Recovery: 当第2种情况失败时，包含剩下DN的pipeline需要被创建。</li>
+<li>Data Streaming Recovery: 如果Data Streaming失败，剩下DN组成的pipeline需要在Data Streaming resumes之前被建立。</li>
+<li>Close Recovery: 如果pipeline关闭失败，剩下的DN组成的pipeline为了finalize block而需要被建立。</li>
+</ol>
+<h3 id="pipeline-setup-步骤"><a href="#pipeline-setup-步骤" class="headerlink" title="pipeline setup 步骤"></a>pipeline setup 步骤</h3><p>1、case2、3、4和5都是在已经存在的block上创建pipeline，因此block的GS需要随着pipeline的创建而更新。dfs client向NN请求一个新的GS。</p>
+<p>2、dfs client向pipeline中的DN发送一个写block的请求，请求所带的参数有老版本GS的block id、block长度(Replica的长度一定大于等于此长度)、最大的Replica长度、flags、新的GS等。如下表所示：</p>
+<p><img src="/blogimgs/appendDesign/3.png" alt=""></p>
+<p>3、下表记录了DN在接收到pipeline setup请求之后的行为。需要注意的是，<em>RWR Replica不参与pipeline recovery</em>。通过对RWR Replica进行一些特殊的处理从而放宽这个限制。但是由于这种情况很少见，我们暂时选择什么也不做。</p>
+<p><img src="/blogimgs/appendDesign/4.png" alt=""></p>
+<p>4、在case2、3和4中，当pipeline setup成功之后，dfs client将new GS、min length和新pipeline中的DN通知给NN。NN随后更新UnderConstruction block的GS、len和locations。</p>
+<p>5、当pipeline创建失败时，如果pipeline中还有DN存活，则返回到第一步并且设置flags为recovery。如果pipeline中没有DN存活，表示此次pipeline失败。<br>如果user application在hflush或者write中blocked，则unblocked并抛出EmptyPipelineException。否则在下次write/hflush/close会得到EmptyPipelineException。</p>
+<h2 id="向NN报告Replica-Block状态、元数据信息"><a href="#向NN报告Replica-Block状态、元数据信息" class="headerlink" title="向NN报告Replica/Block状态、元数据信息"></a>向NN报告Replica/Block状态、元数据信息</h2><h3 id="client-reports"><a href="#client-reports" class="headerlink" title="client reports"></a>client reports</h3><p>client通知NN更改UnderConstruction block的元数据信息或者状态。</p>
+<p>在pipeline set up章节介绍的<em>case2(append)、case3(append recovery)和case4(data streaming recovery)中，一个新的pipeline建立之后，client向NN汇报block的GS和pipeline中的DN</em>。NN随后更新UnderConstruction block的GS、length和locations。</p>
+<p><em>需要注意的是，假如pipeline是因为create block而建立的，则client不向NN汇报这个新的block和locations。相反当client通过addBlock/append申请一个新的block时，NN先将这个新block和locations放入blocksMap，然后将block和locations返回给client</em>。这种设计有瑕疵。如果一个读请求去读最后一个block，<em>而这个时间点正好发生在这个block在NN端放入blocksMap后，这个block的一个Replica在DN上创建之前</em>，则这个读请求可能会得到”block dose not exit”的错。由于这种情况很少，我们有意的这样设计已换取性能。当新建block时，pipeline setup 之后，client没有必要向NN发送一个通知。</p>
+<p><em>当client请求addBlock或者close文件时，NN会finalize最后一个block的GS和length。如果最后一个block已经存在一个与其GS/len相同的Replica，则将最后一个block的状态可能会变为Complete。否则将最后一个block的状态变为Committed</em>。另外，如果最后一个block的Replica个数小于副本因子，则NN复制这个block使其达满足副本因子。</p>
+<h3 id="DataNode-Reports"><a href="#DataNode-Reports" class="headerlink" title="DataNode Reports"></a>DataNode Reports</h3><p>DN周期性的向NN汇报Replica的元数据信息或者状态的改变。当RBW Replica变为Finalized时向NN发送一个blockReceived信息。</p>
+<h3 id="Block-Reports"><a href="#Block-Reports" class="headerlink" title="Block Reports"></a>Block Reports</h3><ul>
+<li><em>block汇报的内容包括两种，一种是针对Finalized Replica，另一种是针对RBW Replica</em>。Finalized Replica时汇报的内容包括Finalized的Replica和之前状态是Finalized而现在是RUR状态的Replica。RBW Replica时汇报的内容包括RBW Replica、RWR Replicas和之前状态不是Finalized而现在的状态是RUR的Replica。<em>RBW Replica的长度是已经接收到的长度(BR)</em>。RWR的长度是一个负数。</li>
+<li>Replica汇报的状态是一个四元组(DataNode, blck_id, blck_GS, blck_len, isRbw)</li>
+<li>NN收到block report之后，和内存中的状态进行对比，对比的结果如下：(在内存中保存着4个list)<br> 1、如果blck_id无效则放入deleteList中，例如blocksMap中不存在blck_id的Entry或者不属于任何一个文件<br> 2、如果NN没有这个Replica(DataNode, blck_id)但是block report中有，则加入addStoredBlockList<br> 3、如果NN有这个Replica(DataNode, blck_id)但是block report中没有，则加入rmStoredBlockList<br> 4、如果Replica在NN中的状态是RBW，而block report中是Finalized，则加入updateStateList。(<strong>RBW应该是DN的状态，怎么会在NN中记录呢？？</strong>)<br>避免client report和DataNode report竞争条件，则RBW Replica只加入deleteList或者addStoredBlockList。</li>
+<li>添加一个新的Replica<br> 1、Block在NN中的状态是Complete<br> 当汇报的Replica的状态是Finalized时，如果它的GS和length和NN记录的值不一样，则将它加入blocksMap但要标记为corrupt。否则add the replica(<strong>??????</strong>)。<br> 当汇报的Replica的状态是RBW时，如果这个文件已经关闭，如果Replica的GS/length和NN中记录的值不一样或者这个block已经达到了副本因子的个数，则命令它的DataNode将其Replica删除。否则do nothing。<br> 2、Block在NN中的状态是Committed<br> 这个处理的流程和上面的情况类似，除非汇报的Replica的状态是Finalized并且和NN中记录的GS和length相同，则NN将这个block的状态改为Complete。<br> 3、Block在NN中的状态是UnderConstruction或者UnderRecovery<br> 如果汇报的Replica的状态是Finalized并且此Replica的GS与NN中记录的GS相同或者比NN中记录的值新，则add the replica。同时标记这个replica为Finalized和保持对它的长度和GS的跟踪。<br> 如果汇报的Replica的状态是RBW并且此Replica是有效的(GS不老，length不短)，add the replica。如果Replica是RBW，则标记为RBW，否则标记为RWR。<br> 否则忽略它(Otherwise ignore it)。</li>
+<li>更新Replica的状态<br>当block report的内容是Replica从RBW变为Finalized状态时，<br>如果这个block是UnderConstruction状态，NN标记NN存储这个Replica为Finalized并且记录这个Finalized Replica的GS和length(NN marks the NN stored replica as finalized and keeps track of the finalized replica’s GS and length)。<br>如果这个block是Committed状态，如果这个Finalized Replica的GS和length和block的GS和length相匹配，则NN改变这个block的状态为Complete。<br>否则从NN上移除该Replica。</li>
+</ul>
+<h3 id="blockReceived"><a href="#blockReceived" class="headerlink" title="blockReceived"></a>blockReceived</h3><p>DataNode向NN发送blockReceived通知NN一个Replica已经完成。<br>当NN接收到blockReceived通知后，<br>如果(DataNode, blck_id)在NN中不存在，则add a new replica。<br>如果replica记录的状态是RBW，则更新replica的状态。<br>如果block是无效的，则要求DataNode删除这个replica。</p>
+<h2 id="Replica-Block-State-Transition"><a href="#Replica-Block-State-Transition" class="headerlink" title="Replica/Block State Transition"></a>Replica/Block State Transition</h2><h3 id="Replica-State-Transition"><a href="#Replica-State-Transition" class="headerlink" title="Replica State Transition"></a>Replica State Transition</h3><p>下图总结了Replica在DataNode上所有可能的状态转移。<br><img src="/blogimgs/appendDesign/ReplicaTransition.png" alt="Replica State Transition" title="Replica State Transition"></p>
+<ul>
+<li>新的Replica被创建<br> 如果新的Replica是被client创建，则Replica的状态是RBW。<br> 如果是由于NN发送的一个复制(复制副本或者balance)的指令，则Replica的状态是Temporary。</li>
+<li>当DN重启时，RBW Replica改变状态为RWR。</li>
+<li>当lease到期而引起的Replica recovery时，Replica的状态变为RUR</li>
+<li>当client关闭文件、Replica recovery成功或者复制成功时，Replica的状态是Finalized。</li>
+<li>recovery发生错误，总是会更新Replica的GS</li>
+</ul>
+<h3 id="Block-State-Transition"><a href="#Block-State-Transition" class="headerlink" title="Block State Transition"></a>Block State Transition</h3><p>下图总结了Block在NN上所有可能的状态转移。<br><img src="/blogimgs/appendDesign/BlockTransition.png" alt="Block State Transition" title="Block State Transition"></p>
+<ul>
+<li>Block被创建<br> 如果client调用addBlock给一个文件添加一个新的block时，创建Block<br> 如果client调用append并且文件的最后一个block已经写满，则创建Block<br>新创建的Block的状态是UnderConstruction   </li>
+<li>如果最后一个block没有写满，则append会将最后一个block由Complete状态变为UnderConstruction。</li>
+<li>当addBlock或者close时，<br> 最后一个Block的状态可能是Complete(Block的GS和len已经有Replica与之相匹配)也可能是Committed(不匹配则为Committed)。<br> addBlock会一直等到直到倒数第二个Block变为Complete。<br> 直到最后两个block变为Complete时，文件才会关闭</li>
+<li>当lease到期时，lease recovery将UnderConstruction状态的block变为UnderRecovery<br> block recovery会将UnderRecovery变为：<br> 1、如果Replica的长度为0则移除。<br> 2、如果recovery成功并且没有与GS和len相匹配的Finalized Replica存在，则变为Committed。<br> 3、如果recovery成功并且有与GS和len相匹配的Finalized Replica存在，则变为Complete。<br> <strong>lease recovery会强制将Committed block变为Complete</strong>。</li>
+<li>Block的状态不会存储在磁盘。当NN重启时，未关闭文件的最后一个block变为UnderConstruction，<em>其余的block为Complete(倒数第二个block是Committed也会强制变为Complete)</em>。<br> 如果这个block是文件的最后一个block，当NN重启时，最后一个block可能会从Complete或者Committed状态变为UnderConstruction。如果client依然存在，client会再次将此block finalize。否则当lease超期时，block recovery会再次finalize。</li>
+<li>一旦一个block变成Complete或者Committed，该block的所有Replicas应该有相同的GS和长度。<em>当一个block是UnderConstruction，它可能有多个版本的block混合存在集群中</em>。</li>
+</ul>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的肯定，是我装逼的最大的动力！</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/path/to/wechat-reward-image/wechatpay.png" alt="混绅士 WeChat Pay">
+          <p>微信打赏</p>
+        </div>
+      
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>本文作者：</strong>
+      混绅士
+    </li>
+    
+    <!--add wordcount and min2 read by szw-->
+    <li class="post-copyright-author">
+      <strong>本文字数：</strong>
+      10,236
+    </li>
+    <li class="post-copyright-author">
+      <strong>阅读时长：</strong>
+      43
+    </li>
+
+    <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="http://bigdatadecode.club/[译]Append Hflush Read设计文档.html" title="Append/Hflush/Read设计文档">http://bigdatadecode.club/[译]Append Hflush Read设计文档.html</a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>版权声明： </strong>
+      本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0</a> 许可协议。转载请注明出处！
+    </li>
+  </ul>
+
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
+          
+            <a href="/tags/BigData/" rel="tag"># BigData</a>
+          
+            <a href="/tags/HDFS/" rel="tag"># HDFS</a>
+          
+            <a href="/tags/Append/" rel="tag"># Append</a>
+          
+            <a href="/tags/Hflush/" rel="tag"># Hflush</a>
+          
+            <a href="/tags/Read/" rel="tag"># Read</a>
+          
+        </div>
+      
+
+       
+        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/HDFS中LightWeightGSet与HashMap结构解析.html">HDFS中LightWeightGSet与HashMap结构解析</a></li><li><a href="/HDFS ReplicationMonitor副本监控线程解析.html">HDFS ReplicationMonitor副本监控线程解析</a></li><li><a href="/HDFSCannotObtainBlockLengthForLocatedBlock.html">HDFS之Cannot obtain block length for LocatedBlock异常</a></li><li><a href="/HDFS中atime和mtime.html">HDFS中atime与mtime解析</a></li><li><a href="/HDFS权限.html">HDFS权限</a></li><li><a href="/Hadoop_get_NullPointerException.html">Hadoop get命令返回NullPointerException</a></li><li><a href="/[译]HDFS恢复过程2.html">HDFS恢复过程2</a></li><li><a href="/常用Hadoop命令.html">常用Hadoop命令</a></li><li><a href="/Hadoop-Ozone.html">Hadoop小文件利器Ozone调研</a></li><li><a href="/[译]HDFS恢复过程1.html">HDFS恢复过程1</a></li></ul> 
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/Java NIO.html" rel="next" title="Java NIO">
+                <i class="fa fa-chevron-left"></i> Java NIO
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/HDFS write解析.html" rel="prev" title="HDFS write解析">
+                HDFS write解析 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+  <div class="bdsharebuttonbox">
+    <a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+    <a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>  
+    <a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>      
+    <a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+    <a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+    <a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a>
+    <a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a>
+    <a href="#" class="bds_more" data-cmd="more"></a>
+    <a class="bds_count" data-cmd="count"></a>
+  </div>
+  <script>
+    window._bd_share_config = {
+      "common": {
+        "bdText": "",
+        "bdMini": "1",
+        "bdMiniList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "bdPic": ""
+      },
+      "image": {
+        "viewList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "viewText": "分享到：",
+        "viewSize": "16"
+      },
+      "slide": {
+        "bdImg": "5",
+        "bdPos": "left",
+        "bdTop": "100"
+      }
+    }
+  </script>
+
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>       
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/uploads/avatar.png" alt="混绅士">
+          <p class="site-author-name" itemprop="name">混绅士</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">97</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">157</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <!-- <i class="fa  fa-fw fa-globe"></i> -->
+              <!-- modify icon to fire by szw -->
+              <i class="fa fa-fire fa-" aria-hidden="true"></i>
+              热文推荐
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                </li>
+              
+            </ul>
+          </div>
+
+
+        
+
+        
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <!-- modify icon to fire by szw -->
+                <i class="fa fa-history fa-" aria-hidden="true"></i>
+                近期文章
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                
+                  <li>
+                    <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                  </li>
+                
+                  <li>
+                    <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+ 
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Replica-Block-状态"><span class="nav-number">1.</span> <span class="nav-text">Replica/Block 状态</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Replica状态"><span class="nav-number">1.1.</span> <span class="nav-text">Replica状态</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Block状态"><span class="nav-number">1.2.</span> <span class="nav-text">Block状态</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Write-Hflush"><span class="nav-number">2.</span> <span class="nav-text">Write/Hflush</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#write-pipeline"><span class="nav-number">2.1.</span> <span class="nav-text">write pipeline</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#packet在某个DN中是流程"><span class="nav-number">2.2.</span> <span class="nav-text">packet在某个DN中是流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#一致性"><span class="nav-number">2.3.</span> <span class="nav-text">一致性</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Read"><span class="nav-number">3.</span> <span class="nav-text">Read</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Append"><span class="nav-number">4.</span> <span class="nav-text">Append</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Append-API"><span class="nav-number">4.1.</span> <span class="nav-text">Append API</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#持久化-Durability"><span class="nav-number">4.2.</span> <span class="nav-text">持久化(Durability)</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#故障处理"><span class="nav-number">5.</span> <span class="nav-text">故障处理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#pipeline-Recovery"><span class="nav-number">5.1.</span> <span class="nav-text">pipeline Recovery</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#stage1发生故障"><span class="nav-number">5.1.1.</span> <span class="nav-text">stage1发生故障</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#stage2发生故障"><span class="nav-number">5.1.2.</span> <span class="nav-text">stage2发生故障</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#stage3发生故障"><span class="nav-number">5.1.3.</span> <span class="nav-text">stage3发生故障</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#DataNode-Restart"><span class="nav-number">5.2.</span> <span class="nav-text">DataNode Restart</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#NameNode-Restart"><span class="nav-number">5.3.</span> <span class="nav-text">NameNode Restart</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Lease-Recovery"><span class="nav-number">5.4.</span> <span class="nav-text">Lease Recovery</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Block-Recovery"><span class="nav-number">5.5.</span> <span class="nav-text">Block Recovery</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Pipeline-Set-Up"><span class="nav-number">6.</span> <span class="nav-text">Pipeline Set Up</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#pipeline-setup的原因"><span class="nav-number">6.1.</span> <span class="nav-text">pipeline setup的原因</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#pipeline-setup-步骤"><span class="nav-number">6.2.</span> <span class="nav-text">pipeline setup 步骤</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#向NN报告Replica-Block状态、元数据信息"><span class="nav-number">7.</span> <span class="nav-text">向NN报告Replica/Block状态、元数据信息</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#client-reports"><span class="nav-number">7.1.</span> <span class="nav-text">client reports</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#DataNode-Reports"><span class="nav-number">7.2.</span> <span class="nav-text">DataNode Reports</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Block-Reports"><span class="nav-number">7.3.</span> <span class="nav-text">Block Reports</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#blockReceived"><span class="nav-number">7.4.</span> <span class="nav-text">blockReceived</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Replica-Block-State-Transition"><span class="nav-number">8.</span> <span class="nav-text">Replica/Block State Transition</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Replica-State-Transition"><span class="nav-number">8.1.</span> <span class="nav-text">Replica State Transition</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Block-State-Transition"><span class="nav-number">8.2.</span> <span class="nav-text">Block State Transition</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+
+          <div class="post-toc-wrap sidebar-panel sidebar-panel-active" style="margin: 0 2px; text-align: left;">
+            
+              <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+                <div class="links-of-blogroll-title">
+                  <!-- <i class="fa  fa-fw fa-globe"></i> -->
+                  <!-- modify icon to fire by szw -->
+                  <i class="fa fa-fire fa-" aria-hidden="true"></i>
+                  热文推荐
+                </div>
+                <ul class="links-of-blogroll-list">
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                    </li>
+                  
+                </ul>
+              </div>
+            
+  
+            
+                <div class="links-of-blogroll motion-element links-of-blogroll-block">
+                  <div class="links-of-blogroll-title">
+                    <!-- modify icon to fire by szw -->
+                    <i class="fa fa-history fa-" aria-hidden="true"></i>
+                    近期文章
+                  </div>
+                  <ul class="links-of-blogroll-list">
+                    
+                    
+                      <li>
+                        <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
+                      </li>
+                    
+                  </ul>
+                </div>
+              
+          </div>
+
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+
+  </aside>
+
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">混绅士</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+<!--add total count by szw-->
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共617.7k字</span>
+</div>
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user">本站访客数</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      人次
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye">本站总访问量</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      次
+    </span>
+  
+</div>
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.0"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("nP29Qpe35cHgQTQIFL94dGoW-gzGzoHsz", "eVPY9SfyVH11gSsbPBEcAQM0");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+</body>
+</html>

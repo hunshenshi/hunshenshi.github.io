@@ -1,0 +1,1405 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="0hClWroWscvQbyOyRPhAZWjOZJ6g3SFCdO47yYakvdk">
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="27E5EbutCm">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="BlockChain,Ethereum,">
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0">
+
+
+
+
+
+
+<meta name="description" content="以太坊的环境容易部署，执行一些命令就OK了。那就开始搞吧。。。">
+<meta name="keywords" content="BlockChain,Ethereum">
+<meta property="og:type" content="article">
+<meta property="og:title" content="以太坊环境部署">
+<meta property="og:url" content="http://bigdatadecode.club/Ethereum-deploy.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="以太坊的环境容易部署，执行一些命令就OK了。那就开始搞吧。。。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-02-12T09:23:37.654Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="以太坊环境部署">
+<meta name="twitter:description" content="以太坊的环境容易部署，执行一些命令就OK了。那就开始搞吧。。。">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    sidebar: {"position":"right","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://bigdatadecode.club/Ethereum-deploy.html">
+
+
+
+
+
+  <title> 以太坊环境部署 | big data decode club </title>
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-80813521-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+
+
+
+
+
+
+  <div style="display: none;">
+    <script src="//s95.cnzz.com/z_stat.php?id=1260961002&web_id=1260961002" language="JavaScript"></script>
+  </div>
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">big data decode club</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">hunhun -- Any answers you can find in source code.</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/Ethereum-deploy.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="混绅士">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="big data decode club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                以太坊环境部署
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-08-08T00:19:04+08:00">
+                2018-08-08
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-02-12T17:23:37+08:00">
+                2019-02-12
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/BlockChain/" itemprop="url" rel="index">
+                    <span itemprop="name">BlockChain</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/Ethereum-deploy.html" class="leancloud_visitors" data-flag-title="以太坊环境部署">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>以太坊的环境容易部署，执行一些命令就OK了。<br>那就开始搞吧。。。</p>
+<a id="more"></a>
+<h2 id="以太坊环境部署"><a href="#以太坊环境部署" class="headerlink" title="以太坊环境部署"></a>以太坊环境部署</h2><p>在安装以太坊之前要先安装下go，go的安装类似jdk，下载tar包，解压然后配置下环境变量。</p>
+<p>安装以太坊：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">sudo add-apt-repository -y ppa:ethereum/ethereum</span><br><span class="line">sudo add-apt-repository -y ppa:ethereum/ethereum-dev</span><br><span class="line">sudo add-apt-repository ppa:ethereum/ethereum-qt</span><br><span class="line">sudo apt-get update</span><br><span class="line"><span class="comment"># 安装以太坊</span></span><br><span class="line">sudo apt-get install ethereum</span><br><span class="line"><span class="comment"># 安装solc编译器</span></span><br><span class="line">sudo apt-get install cpp-ethereum  <span class="comment"># 并没有solc命令</span></span><br><span class="line">sudo apt-get install solc  <span class="comment"># 安装solc，进行本地编译合约</span></span><br></pre></td></tr></table></figure>
+<p>安装结束之后的版本是<code>Geth/v1.8.13-stable-225171a4/linux-amd64/go1.10</code></p>
+<h2 id="认识以太坊"><a href="#认识以太坊" class="headerlink" title="认识以太坊"></a>认识以太坊</h2><p>完成以上操作之后，就可以操作以太坊了，可以进行挖矿了。这里先来熟悉下以太坊的客户端geth。</p>
+<p>geth的全称是go-ethereum,是一个以太坊客户端，用go语言编写。</p>
+<p>进入geth客户端有两种比较方式，一种是<em>以开发方式登录</em>,另一种是以<em>私链方式登录</em>。其中以开发方式登录相对比较简单，我们先来简单的。</p>
+<p>输入命令<code>geth --dev --dev.period 1  console 2&gt;&gt; geth-log</code>(<strong>此命令，默认就会挖矿，执行miner.stop()停止</strong>)进入客户端。</p>
+<p>执行上述命令会在当前目录生成一个geth-log的文件，可在其中查看运行情况。</p>
+<h3 id="挖矿"><a href="#挖矿" class="headerlink" title="挖矿"></a>挖矿</h3><p>我们接触到以太坊或者比特币的第一想法就是，自己在测试环境挖个矿，感受下，对这些虚拟的东西来个直观的认识。</p>
+<p>在挖矿之前我们先熟悉几个常用的命令，感受下geth。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">eth <span class="comment"># 全局环境变量</span></span><br><span class="line">eth.accounts <span class="comment"># 查看系统已有的用户</span></span><br><span class="line">personal.newAccount(<span class="string">'bigdatadecode'</span>) <span class="comment"># 新增用户，bigdatadecode为密码</span></span><br><span class="line">personal.newAccount(<span class="string">'bigdatadecode.club'</span>) <span class="comment"># 可以多建几个，观察下效果</span></span><br><span class="line">eth.accounts <span class="comment"># 建完之后，再查看系统已有的用户</span></span><br><span class="line"><span class="comment"># 对用户赋值，方便使用</span></span><br><span class="line">user1 =  eth.accounts[0]</span><br><span class="line">user2 =  eth.accounts[1]</span><br><span class="line">eth.getBalance(user1) <span class="comment"># 账户余额</span></span><br></pre></td></tr></table></figure>
+<p>发现这些账户的余额是0，那么重点就来了，开始挖矿了，</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">miner.start() <span class="comment"># 开始挖矿</span></span><br><span class="line">miner.stop() <span class="comment"># 停止挖矿</span></span><br><span class="line">eth.getBalcance(user1) <span class="comment"># 挖矿一段时间，观察下账户余额</span></span><br><span class="line">eth.sendTransaction(&#123;from:user1,to:user2,value:8&#125;) <span class="comment"># 转账</span></span><br><span class="line">eth.getBalance(user2)  <span class="comment"># 此时为0，还没有被确认， 需重新开启挖矿，然后再查看余额，此时为8</span></span><br><span class="line">web3.fromWei(eth.getBalance(eth.accounts[0]), <span class="string">"ether"</span>)</span><br><span class="line">personal.unlockAccount(user3, <span class="string">'bigdatadecode.club'</span>) <span class="comment"># 解锁</span></span><br><span class="line">eth.blockNumber <span class="comment"># 查看区块高度</span></span><br><span class="line">eth.getBlock(8) <span class="comment"># 得到区块8的信息</span></span><br><span class="line"></span><br><span class="line">eth.coinbase  <span class="comment"># 查看coinbase</span></span><br><span class="line">miner.setEtherbase(eth.coinbase) <span class="comment"># 设置miner账号</span></span><br><span class="line">eth.blockNumber <span class="comment"># 查看区块高度</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>Note: 如果你进入geth的命令是<code>geth --dev console 2&gt;&gt; geth-log</code>，当执行<code>miner.start()</code>时，会返回null，<br>原因在于geth版本更新之后，–dev模式下新增了一个参数项，加上<code>--dev.period 1</code></p>
+</blockquote>
+<p><a href="https://blog.csdn.net/wo541075754/article/details/79260040" target="_blank" rel="noopener">返回null，解决方案原文</a></p>
+<h2 id="HelloWorld"><a href="#HelloWorld" class="headerlink" title="HelloWorld"></a>HelloWorld</h2><p>上一节操作了挖矿转账等流程，这节整个智能合约的HelloWorld。直接上合约代码：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">contract Mortal &#123;</span><br><span class="line">    <span class="comment">/* Define variable owner of the type address */</span></span><br><span class="line">    address owner;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* This function is executed at initialization and sets the owner of the contract */</span></span><br><span class="line">    <span class="function"><span class="keyword">function</span> <span class="title">Mortal</span>(<span class="params"></span>) </span>&#123; owner = msg.sender; &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Function to recover the funds on the contract */</span></span><br><span class="line">    <span class="function"><span class="keyword">function</span> <span class="title">kill</span>(<span class="params"></span>) </span>&#123; <span class="keyword">if</span> (msg.sender == owner) selfdestruct(owner); &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">contract Greeter is Mortal &#123;</span><br><span class="line">    <span class="comment">/* Define variable greeting of the type string */</span></span><br><span class="line">    string greeting;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* This runs when the contract is executed */</span></span><br><span class="line">    <span class="function"><span class="keyword">function</span> <span class="title">Greeter</span>(<span class="params">string _greeting</span>) <span class="title">public</span> </span>&#123;</span><br><span class="line">        greeting = _greeting;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* Main function */</span></span><br><span class="line">    <span class="function"><span class="keyword">function</span> <span class="title">greet</span>(<span class="params"></span>) <span class="title">constant</span> <span class="title">returns</span> (<span class="params">string</span>) </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> greeting;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>合约greeter是一个简单的智能合约，你可以使用这个合约来和其他人交流，它的回复会同你的输入完全一样，当输入为“Hello World!”的时候，合约也会回复“Hello World!”。</p>
+<p>将上述代码写入greeter.sol中。</p>
+<h3 id="编译智能合约"><a href="#编译智能合约" class="headerlink" title="编译智能合约"></a>编译智能合约</h3><p>编译智能合约可以使用<a href="https://ethereum.github.io/browser-solidity" target="_blank" rel="noopener">Browser-Solidity</a>在线编译，也可以使用solc命令本地编译，此处使用solc命令本地编译。<br>1、生成bytecode<br>执行<code>solc --bin greeter.sol</code>生成code，如下：<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">======= greeter.sol:Greeter =======</span><br><span class="line">Binary:</span><br><span class="line">608060405234801561001057600080fd5b5060405161039b38038061039b83398101806040528101908080518201929190505050336000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055508060019080519060200190610089929190610090565b5050610135565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f106100d157805160ff19168380011785556100ff565b828001600101855582156100ff579182015b828111156100fe5782518255916020019190600101906100e3565b5b50905061010c9190610110565b5090565b61013291905b8082111561012e576000816000905550600101610116565b5090565b90565b610257806101446000396000f30060806040526004361061004c576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806341c0e1b514610051578063cfae321714610068575b600080fd5b34801561005d57600080fd5b506100666100f8565b005b34801561007457600080fd5b5061007d610189565b6040518080602001828103825283818151815260200191508051906020019080838360005b838110156100bd5780820151818401526020810190506100a2565b50505050905090810190601f1680156100ea5780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff161415610187576000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16ff5b565b606060018054600181600116156101000203166002900480601f0160208091040260200160405190810160405280929190818152602001828054600181600116156101000203166002900480156102215780601f106101f657610100808354040283529160200191610221565b820191906000526020600020905b81548152906001019060200180831161020457829003601f168201915b50505050509050905600a165627a7a723058203f4430a961037d5e7c4870ac4cc8f97d329171e862ae297fd0046255bec602490029</span><br><span class="line"></span><br><span class="line">======= greeter.sol:Mortal =======</span><br><span class="line">Binary:</span><br><span class="line">608060405234801561001057600080fd5b50336000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff160217905550610114806100606000396000f300608060405260043610603f576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806341c0e1b5146044575b600080fd5b348015604f57600080fd5b5060566058565b005b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff16141560e6576000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16ff5b5600a165627a7a723058206554007d7824c95b6473134490ff9f84381627c8c29d43da39ce468e740abeda0029</span><br></pre></td></tr></table></figure></p>
+<p>2、生成ABI<br>执行<code>solc --abi greeter.sol</code>生成ABI，如下：<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">======= greeter.sol:Greeter =======</span><br><span class="line">Contract JSON ABI</span><br><span class="line">[&#123;<span class="string">"constant"</span>:<span class="literal">false</span>,<span class="string">"inputs"</span>:[],<span class="string">"name"</span>:<span class="string">"kill"</span>,<span class="string">"outputs"</span>:[],<span class="string">"payable"</span>:<span class="literal">false</span>,<span class="string">"stateMutability"</span>:<span class="string">"nonpayable"</span>,<span class="string">"type"</span>:<span class="string">"function"</span>&#125;,&#123;<span class="string">"constant"</span>:<span class="literal">true</span>,<span class="string">"inputs"</span>:[],<span class="string">"name"</span>:<span class="string">"greet"</span>,<span class="string">"outputs"</span>:[&#123;<span class="string">"name"</span>:<span class="string">""</span>,<span class="string">"type"</span>:<span class="string">"string"</span>&#125;],<span class="string">"payable"</span>:<span class="literal">false</span>,<span class="string">"stateMutability"</span>:<span class="string">"view"</span>,<span class="string">"type"</span>:<span class="string">"function"</span>&#125;,&#123;<span class="string">"inputs"</span>:[&#123;<span class="string">"name"</span>:<span class="string">"_greeting"</span>,<span class="string">"type"</span>:<span class="string">"string"</span>&#125;],<span class="string">"payable"</span>:<span class="literal">false</span>,<span class="string">"stateMutability"</span>:<span class="string">"nonpayable"</span>,<span class="string">"type"</span>:<span class="string">"constructor"</span>&#125;]</span><br><span class="line"></span><br><span class="line">======= greeter.sol:Mortal =======</span><br><span class="line">Contract JSON ABI</span><br><span class="line">[&#123;<span class="string">"constant"</span>:<span class="literal">false</span>,<span class="string">"inputs"</span>:[],<span class="string">"name"</span>:<span class="string">"kill"</span>,<span class="string">"outputs"</span>:[],<span class="string">"payable"</span>:<span class="literal">false</span>,<span class="string">"stateMutability"</span>:<span class="string">"nonpayable"</span>,<span class="string">"type"</span>:<span class="string">"function"</span>&#125;,&#123;<span class="string">"inputs"</span>:[],<span class="string">"payable"</span>:<span class="literal">false</span>,<span class="string">"stateMutability"</span>:<span class="string">"nonpayable"</span>,<span class="string">"type"</span>:<span class="string">"constructor"</span>&#125;]</span><br></pre></td></tr></table></figure></p>
+<blockquote>
+<p>ABI(Application Binary Interface)其实就是一个有序的用户手册，描述了所有方法的名字和如何调用它们</p>
+</blockquote>
+<!-- solc --combined-json abi,bin sample.sol > sample.json -->
+<h3 id="设置希望返回的字符串"><a href="#设置希望返回的字符串" class="headerlink" title="设置希望返回的字符串"></a>设置希望返回的字符串</h3><p>进入geth命令行，执行<code>var _greeting = &quot;Hello World!&quot;</code></p>
+<h3 id="部署合约"><a href="#部署合约" class="headerlink" title="部署合约"></a>部署合约</h3><p>1、用ABI来创建一个javascript环境中的合约对象<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> greeterContract = web3.eth.contract([&#123;<span class="string">"constant"</span>:<span class="literal">false</span>,<span class="string">"inputs"</span>:[],<span class="string">"name"</span>:<span class="string">"kill"</span>,<span class="string">"outputs"</span>:[],<span class="string">"payable"</span>:<span class="literal">false</span>,<span class="string">"stateMutability"</span>:<span class="string">"nonpayable"</span>,<span class="string">"type"</span>:<span class="string">"function"</span>&#125;,&#123;<span class="string">"constant"</span>:<span class="literal">true</span>,<span class="string">"inputs"</span>:[],<span class="string">"name"</span>:<span class="string">"greet"</span>,<span class="string">"outputs"</span>:[&#123;<span class="string">"name"</span>:<span class="string">""</span>,<span class="string">"type"</span>:<span class="string">"string"</span>&#125;],<span class="string">"payable"</span>:<span class="literal">false</span>,<span class="string">"stateMutability"</span>:<span class="string">"view"</span>,<span class="string">"type"</span>:<span class="string">"function"</span>&#125;,&#123;<span class="string">"inputs"</span>:[&#123;<span class="string">"name"</span>:<span class="string">"_greeting"</span>,<span class="string">"type"</span>:<span class="string">"string"</span>&#125;],<span class="string">"payable"</span>:<span class="literal">false</span>,<span class="string">"stateMutability"</span>:<span class="string">"nonpayable"</span>,<span class="string">"type"</span>:<span class="string">"constructor"</span>&#125;]);</span><br></pre></td></tr></table></figure></p>
+<p>2、通过合约对象来部署合约<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> greeter = greeterContract.new(</span><br><span class="line">   _greeting,</span><br><span class="line">   &#123;</span><br><span class="line">     <span class="keyword">from</span>: web3.eth.accounts[<span class="number">0</span>],</span><br><span class="line">     data: <span class="string">'0x608060405234801561001057600080fd5b5060405161039b38038061039b83398101806040528101908080518201929190505050336000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055508060019080519060200190610089929190610090565b5050610135565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f106100d157805160ff19168380011785556100ff565b828001600101855582156100ff579182015b828111156100fe5782518255916020019190600101906100e3565b5b50905061010c9190610110565b5090565b61013291905b8082111561012e576000816000905550600101610116565b5090565b90565b610257806101446000396000f30060806040526004361061004c576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806341c0e1b514610051578063cfae321714610068575b600080fd5b34801561005d57600080fd5b506100666100f8565b005b34801561007457600080fd5b5061007d610189565b6040518080602001828103825283818151815260200191508051906020019080838360005b838110156100bd5780820151818401526020810190506100a2565b50505050905090810190601f1680156100ea5780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff161415610187576000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16ff5b565b606060018054600181600116156101000203166002900480601f0160208091040260200160405190810160405280929190818152602001828054600181600116156101000203166002900480156102215780601f106101f657610100808354040283529160200191610221565b820191906000526020600020905b81548152906001019060200180831161020457829003601f168201915b50505050509050905600a165627a7a723058203f4430a961037d5e7c4870ac4cc8f97d329171e862ae297fd0046255bec602490029'</span>,</span><br><span class="line">     gas: <span class="string">'4700000'</span></span><br><span class="line">   &#125;, <span class="function"><span class="keyword">function</span> (<span class="params">e, contract</span>)</span>&#123;</span><br><span class="line">    <span class="built_in">console</span>.log(e, contract);</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">typeof</span> contract.address !== <span class="string">'undefined'</span>) &#123;</span><br><span class="line">         <span class="built_in">console</span>.log(<span class="string">'Contract mined! address: '</span> + contract.address + <span class="string">' transactionHash: '</span> + contract.transactionHash);</span><br><span class="line">    &#125;</span><br><span class="line"> &#125;)</span><br></pre></td></tr></table></figure></p>
+<h3 id="挖矿-1"><a href="#挖矿-1" class="headerlink" title="挖矿"></a>挖矿</h3><p>1、执行<code>miner.start(1)</code>开启挖矿<br>2、有块产生之后，执行<code>miner.stop()</code>停止挖矿</p>
+<h3 id="运行合约"><a href="#运行合约" class="headerlink" title="运行合约"></a>运行合约</h3><p>执行命令<code>greeter.greet();</code>，正常命令行上会出现如下返回结果:<code>Hello World!</code></p>
+<p>OK，我们的第一个智能合约程序 “Hello World!” 已经完成了,但是目前它只有一个节点!</p>
+<h3 id="部署在其它节点"><a href="#部署在其它节点" class="headerlink" title="部署在其它节点"></a>部署在其它节点</h3><p>为了使得其他人可以运行你的智能合约，你需要两个信息：</p>
+<ol>
+<li>智能合约地址Address</li>
+<li>智能合约ABI</li>
+</ol>
+<p>ABI在上文中已得到，智能合约的地址可以执行<code>greeter.address</code>得到。</p>
+<p>然后你可以实例化一个JavaScript对象，该对象可以用来在任意联网机器上调用该合约，此处ABI和Address是上述代码返回值。<br><code>var greeter = eth.contract(ABI).at(Address);</code></p>
+<h3 id="自毁程序"><a href="#自毁程序" class="headerlink" title="自毁程序"></a>自毁程序</h3><p>一个交易需要被发送到网络需要支付费用，自毁程序是对网络的补充，花费的费用远小于一次常用交易。<br>你可以通过以下代码来检验是否成功，如果自毁程序运行成功以下代码会返回0：<br><code>greeter.kill.sendTransaction({from:eth.accounts[0]})</code></p>
+<p>我执行完上述命令返回的貌似是一个地址，如下：<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&gt; greeter.kill.sendTransaction(&#123;from:eth.accounts[0]&#125;)</span><br><span class="line"><span class="string">"0x117d2066fae468a16077286573b0e3470b20e9ac5bb87291f7733dd453027441"</span></span><br></pre></td></tr></table></figure></p>
+<p>此时再次执行<code>greeter.greet();</code>依然能返回<code>Hello World!</code>，我再次开启挖矿，一段时间后停止挖矿，再执行<code>greeter.greet();</code>，报错<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">&gt; greeter.greet()</span><br><span class="line"><span class="built_in">Error</span>: <span class="keyword">new</span> BigNumber() not a base <span class="number">16</span> number:</span><br><span class="line">    at L (bignumber.js:<span class="number">3</span>:<span class="number">2876</span>)</span><br><span class="line">    at bignumber.js:<span class="number">3</span>:<span class="number">8435</span></span><br><span class="line">    at a (bignumber.js:<span class="number">3</span>:<span class="number">389</span>)</span><br><span class="line">    at web3.js:<span class="number">1110</span>:<span class="number">23</span></span><br><span class="line">    at web3.js:<span class="number">1634</span>:<span class="number">20</span></span><br><span class="line">    at web3.js:<span class="number">826</span>:<span class="number">16</span></span><br><span class="line">    at map (<span class="xml"><span class="tag">&lt;<span class="name">native</span> <span class="attr">code</span>&gt;</span>)</span></span><br><span class="line"><span class="xml">    at web3.js:825:12</span></span><br><span class="line"><span class="xml">    at web3.js:4080:18</span></span><br></pre></td></tr></table></figure></p>
+<!--
+##
+是否设置miner地址
+启动节点挖矿之前，需要查看当前节点中是否已经存在账号，可执行以下命令，查看当前节点下面是否有账号存在。
+
+>personal.listAccounts
+
+["0xc040cbd8a189d36f580fa83c2ffe3a26fb3e6a7e", "0xe0d1de6c934049fe4847b64becff5885bdb83fa4"]
+
+当确认账户已经存在时，可以设置Etherbase。先查看以下coinbase账户：
+
+>eth.coinbase
+
+"0xc040cbd8a189d36f580fa83c2ffe3a26fb3e6a7e"
+
+通过上面的命令，可以看到coinbase的账户地址，也就是上面查看地址查到第一个地址。
+
+执行设置miner地址：
+
+>miner.setEtherbase(eth.coinbase)
+true
+
+也可以执行执行以下命令进行设置：
+
+>miner.setEtherbase(eth.accounts[0])
+true
+
+然后，可以再执行挖矿命令，查看是否问题是否解决。
+
+节点误报
+另外一种情况就是其实miner.start()命令已经执行成功，只不过节点返回null。如果是dev模式，可以使用eth.blockNumber查看一下区块高度是否增加。
+
+节点版本问题
+本人安装的geth-1.7.3版本的节点，在dev环境下验证发现，当执行miner.start()时，返回null。但其实miner已经执行，只不过它在等待你发送交易之后才会生成新的区块。也就是说执行了miner.start(),它一直在等待，这是发送一笔交易，再查看区块高度发现已经增加一块。
+-->
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的肯定，是我装逼的最大的动力！</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/path/to/wechat-reward-image/wechatpay.png" alt="混绅士 WeChat Pay">
+          <p>微信打赏</p>
+        </div>
+      
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>本文作者：</strong>
+      混绅士
+    </li>
+    
+    <!--add wordcount and min2 read by szw-->
+    <li class="post-copyright-author">
+      <strong>本文字数：</strong>
+      4,438
+    </li>
+    <li class="post-copyright-author">
+      <strong>阅读时长：</strong>
+      23
+    </li>
+
+    <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="http://bigdatadecode.club/Ethereum-deploy.html" title="以太坊环境部署">http://bigdatadecode.club/Ethereum-deploy.html</a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>版权声明： </strong>
+      本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0</a> 许可协议。转载请注明出处！
+    </li>
+  </ul>
+
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/BlockChain/" rel="tag"># BlockChain</a>
+          
+            <a href="/tags/Ethereum/" rel="tag"># Ethereum</a>
+          
+        </div>
+      
+
+       
+        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/Ethereum-private-chain.html">以太坊测试环境部署</a></li><li><a href="/Solidity_Voting解析.html">Solidity Voting解析</a></li><li><a href="/Voting-Dapp-Demo.html">全栈Voting Dapp Demo</a></li><li><a href="/Merkle-Patricia-Tree.html">Merkle Patricia Tree(MPT)</a></li><li><a href="/bitcoin源码环境.html">Ubuntu搭建Bitcoin源码阅读环境</a></li></ul> 
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/Hadoop_get_NullPointerException.html" rel="next" title="Hadoop get命令返回NullPointerException">
+                <i class="fa fa-chevron-left"></i> Hadoop get命令返回NullPointerException
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/Ethereum-private-chain.html" rel="prev" title="以太坊测试环境部署">
+                以太坊测试环境部署 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+  <div class="bdsharebuttonbox">
+    <a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+    <a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>  
+    <a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>      
+    <a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+    <a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+    <a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a>
+    <a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a>
+    <a href="#" class="bds_more" data-cmd="more"></a>
+    <a class="bds_count" data-cmd="count"></a>
+  </div>
+  <script>
+    window._bd_share_config = {
+      "common": {
+        "bdText": "",
+        "bdMini": "1",
+        "bdMiniList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "bdPic": ""
+      },
+      "image": {
+        "viewList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "viewText": "分享到：",
+        "viewSize": "16"
+      },
+      "slide": {
+        "bdImg": "5",
+        "bdPos": "left",
+        "bdTop": "100"
+      }
+    }
+  </script>
+
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>       
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/uploads/avatar.png" alt="混绅士">
+          <p class="site-author-name" itemprop="name">混绅士</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">97</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">157</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <!-- <i class="fa  fa-fw fa-globe"></i> -->
+              <!-- modify icon to fire by szw -->
+              <i class="fa fa-fire fa-" aria-hidden="true"></i>
+              热文推荐
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                </li>
+              
+            </ul>
+          </div>
+
+
+        
+
+        
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <!-- modify icon to fire by szw -->
+                <i class="fa fa-history fa-" aria-hidden="true"></i>
+                近期文章
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                
+                  <li>
+                    <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                  </li>
+                
+                  <li>
+                    <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+ 
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#以太坊环境部署"><span class="nav-number">1.</span> <span class="nav-text">以太坊环境部署</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#认识以太坊"><span class="nav-number">2.</span> <span class="nav-text">认识以太坊</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#挖矿"><span class="nav-number">2.1.</span> <span class="nav-text">挖矿</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#HelloWorld"><span class="nav-number">3.</span> <span class="nav-text">HelloWorld</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#编译智能合约"><span class="nav-number">3.1.</span> <span class="nav-text">编译智能合约</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#设置希望返回的字符串"><span class="nav-number">3.2.</span> <span class="nav-text">设置希望返回的字符串</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#部署合约"><span class="nav-number">3.3.</span> <span class="nav-text">部署合约</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#挖矿-1"><span class="nav-number">3.4.</span> <span class="nav-text">挖矿</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#运行合约"><span class="nav-number">3.5.</span> <span class="nav-text">运行合约</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#部署在其它节点"><span class="nav-number">3.6.</span> <span class="nav-text">部署在其它节点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#自毁程序"><span class="nav-number">3.7.</span> <span class="nav-text">自毁程序</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+
+          <div class="post-toc-wrap sidebar-panel sidebar-panel-active" style="margin: 0 2px; text-align: left;">
+            
+              <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+                <div class="links-of-blogroll-title">
+                  <!-- <i class="fa  fa-fw fa-globe"></i> -->
+                  <!-- modify icon to fire by szw -->
+                  <i class="fa fa-fire fa-" aria-hidden="true"></i>
+                  热文推荐
+                </div>
+                <ul class="links-of-blogroll-list">
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                    </li>
+                  
+                </ul>
+              </div>
+            
+  
+            
+                <div class="links-of-blogroll motion-element links-of-blogroll-block">
+                  <div class="links-of-blogroll-title">
+                    <!-- modify icon to fire by szw -->
+                    <i class="fa fa-history fa-" aria-hidden="true"></i>
+                    近期文章
+                  </div>
+                  <ul class="links-of-blogroll-list">
+                    
+                    
+                      <li>
+                        <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
+                      </li>
+                    
+                  </ul>
+                </div>
+              
+          </div>
+
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+
+  </aside>
+
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">混绅士</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+<!--add total count by szw-->
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共617.7k字</span>
+</div>
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user">本站访客数</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      人次
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye">本站总访问量</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      次
+    </span>
+  
+</div>
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.0"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("nP29Qpe35cHgQTQIFL94dGoW-gzGzoHsz", "eVPY9SfyVH11gSsbPBEcAQM0");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+</body>
+</html>

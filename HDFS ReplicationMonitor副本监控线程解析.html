@@ -1,0 +1,1372 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="0hClWroWscvQbyOyRPhAZWjOZJ6g3SFCdO47yYakvdk">
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="27E5EbutCm">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="Hadoop,BigData,HDFS,ReplicationMonitor,">
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0">
+
+
+
+
+
+
+<meta name="description" content="上篇文章介绍了HDFS中副本数的维持，当某个block的副本数大于期望的副本数时，通过BlockManager.processOverReplicatedBlock，对副本进行处理，根据规则选择要删除副本的dn，将dn和block放入invalidateBlocks中，然后ReplicationMonitor线程会从中取出block副本进行删除。当某个block的副本数少于期望的副本数时，通过Bl">
+<meta name="keywords" content="Hadoop,BigData,HDFS,ReplicationMonitor">
+<meta property="og:type" content="article">
+<meta property="og:title" content="HDFS ReplicationMonitor副本监控线程解析">
+<meta property="og:url" content="http://bigdatadecode.club/HDFS ReplicationMonitor副本监控线程解析.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="上篇文章介绍了HDFS中副本数的维持，当某个block的副本数大于期望的副本数时，通过BlockManager.processOverReplicatedBlock，对副本进行处理，根据规则选择要删除副本的dn，将dn和block放入invalidateBlocks中，然后ReplicationMonitor线程会从中取出block副本进行删除。当某个block的副本数少于期望的副本数时，通过Bl">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2016-08-01T14:55:02.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="HDFS ReplicationMonitor副本监控线程解析">
+<meta name="twitter:description" content="上篇文章介绍了HDFS中副本数的维持，当某个block的副本数大于期望的副本数时，通过BlockManager.processOverReplicatedBlock，对副本进行处理，根据规则选择要删除副本的dn，将dn和block放入invalidateBlocks中，然后ReplicationMonitor线程会从中取出block副本进行删除。当某个block的副本数少于期望的副本数时，通过Bl">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    sidebar: {"position":"right","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://bigdatadecode.club/HDFS ReplicationMonitor副本监控线程解析.html">
+
+
+
+
+
+  <title> HDFS ReplicationMonitor副本监控线程解析 | big data decode club </title>
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-80813521-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+
+
+
+
+
+
+  <div style="display: none;">
+    <script src="//s95.cnzz.com/z_stat.php?id=1260961002&web_id=1260961002" language="JavaScript"></script>
+  </div>
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">big data decode club</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">hunhun -- Any answers you can find in source code.</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/HDFS ReplicationMonitor副本监控线程解析.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="混绅士">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="big data decode club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                HDFS ReplicationMonitor副本监控线程解析
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-08-01T22:55:02+08:00">
+                2016-08-01
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2016-08-01T22:55:02+08:00">
+                2016-08-01
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/HDFS ReplicationMonitor副本监控线程解析.html" class="leancloud_visitors" data-flag-title="HDFS ReplicationMonitor副本监控线程解析">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p><a href="http://bigdatadecode.club/HDFS维持副本平衡的流程.html">上篇</a>文章介绍了HDFS中副本数的维持，当某个block的副本数大于期望的副本数时，通过<code>BlockManager.processOverReplicatedBlock</code>，对副本进行处理，根据规则选择要删除副本的dn，将dn和block放入<em>invalidateBlocks</em>中，然后ReplicationMonitor线程会从中取出block副本进行删除。当某个block的副本数少于期望的副本数时，通过<code>BlockManager.processMisReplicatedBlock</code>，对副本根据其复制优先级进行划分，放入<em>neededReplications</em>，然后ReplicationMonitor线程会从中取出block副本进行复制。</p>
+<a id="more"></a>
+<h2 id="ReplicationMonitor线程"><a href="#ReplicationMonitor线程" class="headerlink" title="ReplicationMonitor线程"></a>ReplicationMonitor线程</h2><p>ReplicationMonitor实现了Runnable接口，通过<code>FSNameSystem.startCommonServices -&gt; blockManager.activate(conf) -&gt; this.replicationThread.start()</code>被启动，主要作用就是计算DataNode工作，并将复制请求超时的块重新加入到待调度队列。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">while</span> (namesystem.isRunning()) &#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="comment">// Process replication work only when active NN is out of safe mode.</span></span><br><span class="line">      <span class="keyword">if</span> (namesystem.isPopulatingReplQueues()) &#123;</span><br><span class="line">        computeDatanodeWork();</span><br><span class="line">        processPendingReplications();</span><br><span class="line">      &#125;</span><br><span class="line">      Thread.sleep(replicationRecheckInterval);</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">      ...</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>线程中通过<code>computeDatanodeWork</code>计算DataNode的工作，通过<code>processPendingReplications</code>将超时的请求放入<em>neededReplication</em>队列。</p>
+<p>Datanode的工作包括复制和删除，看下<code>computeDatanodeWork</code>的代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Compute block replication and block invalidation work that can be scheduled</span></span><br><span class="line"><span class="comment"> * on data-nodes. The datanode will be informed of this work at the next</span></span><br><span class="line"><span class="comment"> * heartbeat.</span></span><br><span class="line"><span class="comment"> * </span></span><br><span class="line"><span class="comment"> * <span class="doctag">@return</span> number of blocks scheduled for replication or removal.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">computeDatanodeWork</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="comment">// Blocks should not be replicated or removed if in safe mode.</span></span><br><span class="line">  <span class="comment">// It's OK to check safe mode here w/o holding lock, in the worst</span></span><br><span class="line">  <span class="comment">// case extra replications will be scheduled, and these will get</span></span><br><span class="line">  <span class="comment">// fixed up later.</span></span><br><span class="line">  <span class="keyword">if</span> (namesystem.isInSafeMode()) &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">int</span> numlive = heartbeatManager.getLiveDatanodeCount();</span><br><span class="line">  <span class="comment">// dfs.namenode.replication.work.multiplier.per.iteration 默认为2</span></span><br><span class="line">  <span class="comment">// 一次心跳总共有多少个block进行转移</span></span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">int</span> blocksToProcess = numlive</span><br><span class="line">      * <span class="keyword">this</span>.blocksReplWorkMultiplier;</span><br><span class="line">  <span class="comment">// 一次心跳删除多个dn上的invalidate block，计数单位是x个dn</span></span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">int</span> nodesToProcess = (<span class="keyword">int</span>) Math.ceil(numlive</span><br><span class="line">      * <span class="keyword">this</span>.blocksInvalidateWorkPct);</span><br><span class="line">  <span class="comment">// 计算复制的工作量</span></span><br><span class="line">  <span class="keyword">int</span> workFound = <span class="keyword">this</span>.computeReplicationWork(blocksToProcess);</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Update counters</span></span><br><span class="line">  namesystem.writeLock();</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="keyword">this</span>.updateState();</span><br><span class="line">    <span class="keyword">this</span>.scheduledReplicationBlocksCount = workFound;</span><br><span class="line">  &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    namesystem.writeUnlock();</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// 计算删除的工作量</span></span><br><span class="line">  workFound += <span class="keyword">this</span>.computeInvalidateWork(nodesToProcess);</span><br><span class="line">  <span class="keyword">return</span> workFound;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>computeDatanodeWork通过numLive得到一次心跳需要复制副本的期望个数<em>blocksToProcess</em>和一次心跳需要删除副本的期望个数<em>nodesToProcess</em>，然后分别有<em>computeReplicationWork</em>和<em>computeInvalidateWork</em>分别进行复制和删除。</p>
+<h2 id="复制"><a href="#复制" class="headerlink" title="复制"></a>复制</h2><p>下面先来看下复制工作<code>computeReplicationWork</code></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">computeReplicationWork</span><span class="params">(<span class="keyword">int</span> blocksToProcess)</span> </span>&#123;</span><br><span class="line">  List&lt;List&lt;Block&gt;&gt; blocksToReplicate = <span class="keyword">null</span>;</span><br><span class="line">  namesystem.writeLock();</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="comment">// Choose the blocks to be replicated</span></span><br><span class="line">    <span class="comment">// 从neededReplications中按照优先级挑选出block</span></span><br><span class="line">    blocksToReplicate = neededReplications</span><br><span class="line">        .chooseUnderReplicatedBlocks(blocksToProcess);</span><br><span class="line">  &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    namesystem.writeUnlock();</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// 对选中的block list进行复制</span></span><br><span class="line">  <span class="keyword">return</span> computeReplicationWorkForBlocks(blocksToReplicate);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>computeReplicationWork的功能是从<em>neededReplications</em>中按照优先级选取blocksToProcess个block，然后调用<em>computeReplicationWorkForBlocks</em>进行复制。<em>neededReplications.chooseUnderReplicatedBlocks</em>的选取规则如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">synchronized</span> List&lt;List&lt;Block&gt;&gt; chooseUnderReplicatedBlocks(</span><br><span class="line">    <span class="keyword">int</span> blocksToProcess) &#123;</span><br><span class="line">  <span class="comment">// initialize data structure for the return value</span></span><br><span class="line">  List&lt;List&lt;Block&gt;&gt; blocksToReplicate = <span class="keyword">new</span> ArrayList&lt;List&lt;Block&gt;&gt;(LEVEL);</span><br><span class="line">  <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; LEVEL; i++) &#123;</span><br><span class="line">    blocksToReplicate.add(<span class="keyword">new</span> ArrayList&lt;Block&gt;());</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (size() == <span class="number">0</span>) &#123; <span class="comment">// There are no blocks to collect.</span></span><br><span class="line">    <span class="keyword">return</span> blocksToReplicate;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  <span class="keyword">int</span> blockCount = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">for</span> (<span class="keyword">int</span> priority = <span class="number">0</span>; priority &lt; LEVEL; priority++) &#123; </span><br><span class="line">    <span class="comment">// Go through all blocks that need replications with current priority.</span></span><br><span class="line">    <span class="comment">// 从priorityQueues中取出对应优先级的list，并转换为iterator</span></span><br><span class="line">    BlockIterator neededReplicationsIterator = iterator(priority);</span><br><span class="line">    <span class="comment">// priorityToReplIdx是一个map，存放各个优先级中需要复制副本在list中的index</span></span><br><span class="line">    <span class="comment">// 得到priority开始复制的index</span></span><br><span class="line">    Integer replIndex = priorityToReplIdx.get(priority);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// skip to the first unprocessed block, which is at replIndex</span></span><br><span class="line">    <span class="comment">// 从neededReplicationsIterator中跳过找到replIndex对应的block</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; replIndex &amp;&amp; neededReplicationsIterator.hasNext(); i++) &#123;</span><br><span class="line">      neededReplicationsIterator.next();</span><br><span class="line">    &#125;</span><br><span class="line">    blocksToProcess = Math.min(blocksToProcess, size());</span><br><span class="line">    <span class="comment">// blockCount统计复制了多个block，达到blocksToProcess则跳出循环</span></span><br><span class="line">    <span class="keyword">if</span> (blockCount == blocksToProcess) &#123;</span><br><span class="line">      <span class="keyword">break</span>;  <span class="comment">// break if already expected blocks are obtained</span></span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// Loop through all remaining blocks in the list.</span></span><br><span class="line">    <span class="comment">// 将block添加到blocksToReplicate对应的优先级list中</span></span><br><span class="line">    <span class="keyword">while</span> (blockCount &lt; blocksToProcess</span><br><span class="line">        &amp;&amp; neededReplicationsIterator.hasNext()) &#123;</span><br><span class="line">      Block block = neededReplicationsIterator.next();</span><br><span class="line">      blocksToReplicate.get(priority).add(block);</span><br><span class="line">      replIndex++;</span><br><span class="line">      blockCount++;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 如果neededReplicationsIterator中没有block，并且此时的优先级为4，即最低优先级</span></span><br><span class="line">    <span class="comment">// 则说明block已被复制结束，priorityToReplIdx进行重新赋值</span></span><br><span class="line">    <span class="keyword">if</span> (!neededReplicationsIterator.hasNext()</span><br><span class="line">        &amp;&amp; neededReplicationsIterator.getPriority() == LEVEL - <span class="number">1</span>) &#123;</span><br><span class="line">      <span class="comment">// reset all priorities replication index to 0 because there is no</span></span><br><span class="line">      <span class="comment">// recently added blocks in any list.</span></span><br><span class="line">      <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; LEVEL; i++) &#123;</span><br><span class="line">        priorityToReplIdx.put(i, <span class="number">0</span>);</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">break</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 如果neededReplicationsIterator中没有block，则进行下一次循环，取出下优先级的list</span></span><br><span class="line">    <span class="comment">// 将当前优先级复制的index写入priorityToReplIdx</span></span><br><span class="line">    priorityToReplIdx.put(priority, replIndex); </span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> blocksToReplicate;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><em>chooseUnderReplicatedBlocks</em>负责选取<em>blocksToProcess</em>个block，先从priorityQueues中按照优先级取出对应的block list，利用blockCount进行计数，如果达到blocksToProcess，则跳出for，返回blocksToReplicate，否则取下一优先级的block list，接着计数，直到blocksToProcess为止。</p>
+<p>选出blocksToReplicate，则调用<code>computeReplicationWorkForBlocks</code>进行复制</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">computeReplicationWorkForBlocks</span><span class="params">(List&lt;List&lt;Block&gt;&gt; blocksToReplicate)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">int</span> requiredReplication, numEffectiveReplicas;</span><br><span class="line">  List&lt;DatanodeDescriptor&gt; containingNodes;</span><br><span class="line">  DatanodeDescriptor srcNode;</span><br><span class="line">  BlockCollection bc = <span class="keyword">null</span>;</span><br><span class="line">  <span class="keyword">int</span> additionalReplRequired;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">int</span> scheduledWork = <span class="number">0</span>;</span><br><span class="line">  <span class="comment">// 存放需要copy的block列表</span></span><br><span class="line">  List&lt;ReplicationWork&gt; work = <span class="keyword">new</span> LinkedList&lt;ReplicationWork&gt;();</span><br><span class="line">  namesystem.writeLock();</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="keyword">synchronized</span> (neededReplications) &#123;</span><br><span class="line">    	<span class="comment">// 按照优先级进行复制，先复制高优先级的</span></span><br><span class="line">      <span class="keyword">for</span> (<span class="keyword">int</span> priority = <span class="number">0</span>; priority &lt; blocksToReplicate.size(); priority++) &#123;</span><br><span class="line">      	<span class="comment">// 得到对应优先级的block list</span></span><br><span class="line">        <span class="keyword">for</span> (Block block : blocksToReplicate.get(priority)) &#123;</span><br><span class="line">          <span class="comment">// block should belong to a file</span></span><br><span class="line">          bc = blocksMap.getBlockCollection(block);</span><br><span class="line">          <span class="comment">// abandoned block or block reopened for append</span></span><br><span class="line">          <span class="comment">// 如果block被遗弃(该block没有对应的文件)或者该block正在被追加，则不复制</span></span><br><span class="line">          <span class="keyword">if</span>(bc == <span class="keyword">null</span> || (bc.isUnderConstruction() &amp;&amp; block.equals(bc.getLastBlock()))) &#123;</span><br><span class="line">            neededReplications.remove(block, priority); <span class="comment">// remove from neededReplications</span></span><br><span class="line">            neededReplications.decrementReplicationIndex(priority);</span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">          &#125;</span><br><span class="line">          <span class="comment">// 得到expect replication</span></span><br><span class="line">          requiredReplication = bc.getBlockReplication();</span><br><span class="line">          <span class="comment">// get a source data-node</span></span><br><span class="line">          <span class="comment">// 存放该block所有副本(包括live、corrupt、excess)的datanode</span></span><br><span class="line">          <span class="comment">// 在chooseSourceDatanode中赋值</span></span><br><span class="line">          containingNodes = <span class="keyword">new</span> ArrayList&lt;DatanodeDescriptor&gt;();</span><br><span class="line">          List&lt;DatanodeStorageInfo&gt; liveReplicaNodes = <span class="keyword">new</span> ArrayList&lt;DatanodeStorageInfo&gt;();</span><br><span class="line">          NumberReplicas numReplicas = <span class="keyword">new</span> NumberReplicas();</span><br><span class="line">          <span class="comment">// 选择一个复制源点srcDode，</span></span><br><span class="line">          srcNode = chooseSourceDatanode(</span><br><span class="line">              block, containingNodes, liveReplicaNodes, numReplicas,</span><br><span class="line">              priority);</span><br><span class="line">          <span class="keyword">if</span>(srcNode == <span class="keyword">null</span>) &#123; <span class="comment">// block can not be replicated from any node</span></span><br><span class="line">            LOG.debug(<span class="string">"Block "</span> + block + <span class="string">" cannot be repl from any node"</span>);</span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">          &#125;</span><br><span class="line"></span><br><span class="line">          <span class="comment">// liveReplicaNodes can include READ_ONLY_SHARED replicas which are </span></span><br><span class="line">          <span class="comment">// not included in the numReplicas.liveReplicas() count</span></span><br><span class="line">          <span class="keyword">assert</span> liveReplicaNodes.size() &gt;= numReplicas.liveReplicas();</span><br><span class="line">          <span class="comment">// do not schedule more if enough replicas is already pending</span></span><br><span class="line">          <span class="comment">// 有效副本的个数由live的个数+pending的个数(准备复制的个数)</span></span><br><span class="line">          numEffectiveReplicas = numReplicas.liveReplicas() +</span><br><span class="line">                                  pendingReplications.getNumReplicas(block);</span><br><span class="line">          <span class="comment">// live+准备复制的个数达到了requiredReplication，不进行再次复制</span></span><br><span class="line">          <span class="keyword">if</span> (numEffectiveReplicas &gt;= requiredReplication) &#123;</span><br><span class="line">            <span class="keyword">if</span> ( (pendingReplications.getNumReplicas(block) &gt; <span class="number">0</span>) ||</span><br><span class="line">                 (blockHasEnoughRacks(block)) ) &#123;</span><br><span class="line">              neededReplications.remove(block, priority); <span class="comment">// remove from neededReplications</span></span><br><span class="line">              neededReplications.decrementReplicationIndex(priority);</span><br><span class="line">              blockLog.info(<span class="string">"BLOCK* Removing "</span> + block</span><br><span class="line">                  + <span class="string">" from neededReplications as it has enough replicas"</span>);</span><br><span class="line">              <span class="keyword">continue</span>;</span><br><span class="line">            &#125;</span><br><span class="line">          &#125;</span><br><span class="line">          <span class="comment">// additionalReplRequired表示准备要复制的个数</span></span><br><span class="line">          <span class="keyword">if</span> (numReplicas.liveReplicas() &lt; requiredReplication) &#123;</span><br><span class="line">            additionalReplRequired = requiredReplication</span><br><span class="line">                - numEffectiveReplicas;</span><br><span class="line">          &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            additionalReplRequired = <span class="number">1</span>; <span class="comment">// Needed on a new rack</span></span><br><span class="line">          &#125;</span><br><span class="line">          <span class="comment">// 将block、srcDode等信息包装成ReplicationWork，放入work的list中</span></span><br><span class="line">          work.add(<span class="keyword">new</span> ReplicationWork(block, bc, srcNode,</span><br><span class="line">              containingNodes, liveReplicaNodes, additionalReplRequired,</span><br><span class="line">              priority));</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    namesystem.writeUnlock();</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// 用于存放block副本所在dn集合，避免选target时选到已有副本的dn</span></span><br><span class="line">  <span class="keyword">final</span> Set&lt;Node&gt; excludedNodes = <span class="keyword">new</span> HashSet&lt;Node&gt;();</span><br><span class="line">  <span class="keyword">for</span>(ReplicationWork rw : work)&#123;</span><br><span class="line">    <span class="comment">// Exclude all of the containing nodes from being targets.</span></span><br><span class="line">    <span class="comment">// This list includes decommissioning or corrupt nodes.</span></span><br><span class="line">    excludedNodes.clear();</span><br><span class="line">    <span class="keyword">for</span> (DatanodeDescriptor dn : rw.containingNodes) &#123;</span><br><span class="line">      excludedNodes.add(dn);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// choose replication targets: NOT HOLDING THE GLOBAL LOCK</span></span><br><span class="line">    <span class="comment">// It is costly to extract the filename for which chooseTargets is called,</span></span><br><span class="line">    <span class="comment">// so for now we pass in the block collection itself.</span></span><br><span class="line">    rw.chooseTargets(blockplacement, storagePolicySuite, excludedNodes);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  namesystem.writeLock();</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="keyword">for</span>(ReplicationWork rw : work)&#123;</span><br><span class="line">      <span class="keyword">final</span> DatanodeStorageInfo[] targets = rw.targets;</span><br><span class="line">      <span class="keyword">if</span>(targets == <span class="keyword">null</span> || targets.length == <span class="number">0</span>)&#123;</span><br><span class="line">        rw.targets = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">continue</span>;</span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line">      <span class="keyword">synchronized</span> (neededReplications) &#123;</span><br><span class="line">        Block block = rw.block;</span><br><span class="line">        <span class="keyword">int</span> priority = rw.priority;</span><br><span class="line">        <span class="comment">// Recheck since global lock was released</span></span><br><span class="line">        <span class="comment">// block should belong to a file</span></span><br><span class="line">        bc = blocksMap.getBlockCollection(block);</span><br><span class="line">        <span class="comment">// abandoned block or block reopened for append</span></span><br><span class="line">        <span class="keyword">if</span>(bc == <span class="keyword">null</span> || (bc.isUnderConstruction() &amp;&amp; block.equals(bc.getLastBlock()))) &#123;</span><br><span class="line">          neededReplications.remove(block, priority); <span class="comment">// remove from neededReplications</span></span><br><span class="line">          rw.targets = <span class="keyword">null</span>;</span><br><span class="line">          neededReplications.decrementReplicationIndex(priority);</span><br><span class="line">          <span class="keyword">continue</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        requiredReplication = bc.getBlockReplication();</span><br><span class="line"></span><br><span class="line">        <span class="comment">// do not schedule more if enough replicas is already pending</span></span><br><span class="line">        NumberReplicas numReplicas = countNodes(block);</span><br><span class="line">        numEffectiveReplicas = numReplicas.liveReplicas() +</span><br><span class="line">          pendingReplications.getNumReplicas(block);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (numEffectiveReplicas &gt;= requiredReplication) &#123;</span><br><span class="line">          <span class="keyword">if</span> ( (pendingReplications.getNumReplicas(block) &gt; <span class="number">0</span>) ||</span><br><span class="line">               (blockHasEnoughRacks(block)) ) &#123;</span><br><span class="line">            neededReplications.remove(block, priority); <span class="comment">// remove from neededReplications</span></span><br><span class="line">            neededReplications.decrementReplicationIndex(priority);</span><br><span class="line">            rw.targets = <span class="keyword">null</span>;</span><br><span class="line">            blockLog.info(<span class="string">"BLOCK* Removing "</span> + block</span><br><span class="line">                + <span class="string">" from neededReplications as it has enough replicas"</span>);</span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> ( (numReplicas.liveReplicas() &gt;= requiredReplication) &amp;&amp;</span><br><span class="line">             (!blockHasEnoughRacks(block)) ) &#123;</span><br><span class="line">          <span class="keyword">if</span> (rw.srcNode.getNetworkLocation().equals(</span><br><span class="line">              targets[<span class="number">0</span>].getDatanodeDescriptor().getNetworkLocation())) &#123;</span><br><span class="line">            <span class="comment">//No use continuing, unless a new rack in this case</span></span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Add block to the to be replicated list</span></span><br><span class="line">        <span class="comment">// 将复制block的个数放入dn中，用于统计dn上有多少个副本要复制，是否达到上限</span></span><br><span class="line">        rw.srcNode.addBlockToBeReplicated(block, targets);</span><br><span class="line">        scheduledWork++;</span><br><span class="line">        DatanodeStorageInfo.incrementBlocksScheduled(targets);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Move the block-replication into a "pending" state.</span></span><br><span class="line">        <span class="comment">// The reason we use 'pending' is so we can retry</span></span><br><span class="line">        <span class="comment">// replications that fail after an appropriate amount of time.</span></span><br><span class="line">        <span class="comment">// 放入pending队列等待调度</span></span><br><span class="line">        pendingReplications.increment(block,</span><br><span class="line">            DatanodeStorageInfo.toDatanodeDescriptors(targets));</span><br><span class="line">        <span class="keyword">if</span>(blockLog.isDebugEnabled()) &#123;</span><br><span class="line">          blockLog.debug(</span><br><span class="line">              <span class="string">"BLOCK* block "</span> + block</span><br><span class="line">              + <span class="string">" is moved from neededReplications to pendingReplications"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// remove from neededReplications</span></span><br><span class="line">        <span class="keyword">if</span>(numEffectiveReplicas + targets.length &gt;= requiredReplication) &#123;</span><br><span class="line">          neededReplications.remove(block, priority); <span class="comment">// remove from neededReplications</span></span><br><span class="line">          neededReplications.decrementReplicationIndex(priority);</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    namesystem.writeUnlock();</span><br><span class="line">  &#125;</span><br><span class="line">  ...</span><br><span class="line">  <span class="keyword">return</span> scheduledWork;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>computeReplicationWorkForBlocks代码比较长，差不多200行，看的时候可以把代码逻辑写在纸上，慢慢分析。主要包括3个大for循环，第一个for循环是找到各个block的srcNode，第二个for循环是找到个人block的targets，第三个for循环则是把各个block放入pending队列，等待调度。</p>
+<h3 id="第一个for循环"><a href="#第一个for循环" class="headerlink" title="第一个for循环"></a>第一个for循环</h3><p>第一个for循环中的srcNode是在<code>chooseSourceDatanode</code>中选取的，选取规则为，<strong>优先选择正在下线的节点，然后随机选择一个没有达到复制上限的节点，如果复制的优先级最高并且所以的节点都达到了上限，则随机选一个</strong>。下面看下代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br></pre></td><td class="code"><pre><span class="line"> <span class="function">DatanodeDescriptor <span class="title">chooseSourceDatanode</span><span class="params">(Block block,</span></span></span><br><span class="line"><span class="function"><span class="params">     List&lt;DatanodeDescriptor&gt; containingNodes,</span></span></span><br><span class="line"><span class="function"><span class="params">     List&lt;DatanodeStorageInfo&gt;  nodesContainingLiveReplicas,</span></span></span><br><span class="line"><span class="function"><span class="params">     NumberReplicas numReplicas,</span></span></span><br><span class="line"><span class="function"><span class="params">     <span class="keyword">int</span> priority)</span> </span>&#123;</span><br><span class="line">  containingNodes.clear();</span><br><span class="line">  nodesContainingLiveReplicas.clear();</span><br><span class="line">  DatanodeDescriptor srcNode = <span class="keyword">null</span>;</span><br><span class="line">  <span class="keyword">int</span> live = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">int</span> decommissioned = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">int</span> corrupt = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">int</span> excess = <span class="number">0</span>;</span><br><span class="line">  </span><br><span class="line">  Collection&lt;DatanodeDescriptor&gt; nodesCorrupt = corruptReplicas.getNodes(block);</span><br><span class="line">  <span class="keyword">for</span>(DatanodeStorageInfo storage : blocksMap.getStorages(block)) &#123;</span><br><span class="line">    <span class="keyword">final</span> DatanodeDescriptor node = storage.getDatanodeDescriptor();</span><br><span class="line">    LightWeightLinkedSet&lt;Block&gt; excessBlocks =</span><br><span class="line">      excessReplicateMap.get(node.getDatanodeUuid());</span><br><span class="line">    <span class="comment">// 统计的前提是当前磁盘正常</span></span><br><span class="line">    <span class="keyword">int</span> countableReplica = storage.getState() == State.NORMAL ? <span class="number">1</span> : <span class="number">0</span>; </span><br><span class="line">    <span class="keyword">if</span> ((nodesCorrupt != <span class="keyword">null</span>) &amp;&amp; (nodesCorrupt.contains(node)))</span><br><span class="line">      corrupt += countableReplica;</span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span> (node.isDecommissionInProgress() || node.isDecommissioned())</span><br><span class="line">      decommissioned += countableReplica;</span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span> (excessBlocks != <span class="keyword">null</span> &amp;&amp; excessBlocks.contains(block)) &#123;</span><br><span class="line">      excess += countableReplica;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="comment">// 统计包含read only的情况</span></span><br><span class="line">      <span class="comment">// 当State为read only时，countableReplica为0，live没有统计read only的情况</span></span><br><span class="line">      nodesContainingLiveReplicas.add(storage);</span><br><span class="line">      live += countableReplica;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 将block的副本所在dn都放入containingNodes中</span></span><br><span class="line">    containingNodes.add(node);</span><br><span class="line">    <span class="comment">// Check if this replica is corrupt</span></span><br><span class="line">    <span class="comment">// If so, do not select the node as src node</span></span><br><span class="line">    <span class="keyword">if</span> ((nodesCorrupt != <span class="keyword">null</span>) &amp;&amp; nodesCorrupt.contains(node))</span><br><span class="line">      <span class="keyword">continue</span>;</span><br><span class="line">    <span class="comment">// 如果priority是最高优先级，则可以忽略是否达到复制的上线</span></span><br><span class="line">    <span class="keyword">if</span>(priority != UnderReplicatedBlocks.QUEUE_HIGHEST_PRIORITY</span><br><span class="line">        &amp;&amp; node.getNumberOfBlocksToBeReplicated() &gt;= maxReplicationStreams)</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="keyword">continue</span>; <span class="comment">// already reached replication limit</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 但是如果当前node的复制个数超过了replicationStreamsHardLimit，不管什么优先级都跳过</span></span><br><span class="line">    <span class="keyword">if</span> (node.getNumberOfBlocksToBeReplicated() &gt;= replicationStreamsHardLimit)</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="keyword">continue</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// the block must not be scheduled for removal on srcNode</span></span><br><span class="line">    <span class="keyword">if</span>(excessBlocks != <span class="keyword">null</span> &amp;&amp; excessBlocks.contains(block))</span><br><span class="line">      <span class="keyword">continue</span>;</span><br><span class="line">    <span class="comment">// never use already decommissioned nodes</span></span><br><span class="line">    <span class="keyword">if</span>(node.isDecommissioned())</span><br><span class="line">      <span class="keyword">continue</span>;</span><br><span class="line">    <span class="comment">// we prefer nodes that are in DECOMMISSION_INPROGRESS state</span></span><br><span class="line">    <span class="comment">// 优先选择正在下线的dn</span></span><br><span class="line">    <span class="keyword">if</span>(node.isDecommissionInProgress() || srcNode == <span class="keyword">null</span>) &#123;</span><br><span class="line">      srcNode = node;</span><br><span class="line">      <span class="keyword">continue</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span>(srcNode.isDecommissionInProgress())</span><br><span class="line">      <span class="keyword">continue</span>;</span><br><span class="line">    <span class="comment">// switch to a different node randomly</span></span><br><span class="line">    <span class="comment">// this to prevent from deterministically selecting the same node even</span></span><br><span class="line">    <span class="comment">// if the node failed to replicate the block on previous iterations</span></span><br><span class="line">    <span class="comment">// 没有正在下线的，则随机选一个</span></span><br><span class="line">    <span class="keyword">if</span>(DFSUtil.getRandom().nextBoolean())</span><br><span class="line">      srcNode = node;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">if</span>(numReplicas != <span class="keyword">null</span>)</span><br><span class="line">    numReplicas.initialize(live, decommissioned, corrupt, excess, <span class="number">0</span>);</span><br><span class="line">  <span class="keyword">return</span> srcNode;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>chooseSourceDatanode中主要是选择srcNode，选取规则上面已经介绍，这里介绍两个<em>限制值</em>：</p>
+<ol>
+<li>maxReplicationStreams：一个给定节点<em>除最高优先级复制外复制流的最大数目</em>，取参数dfs.namenode.replication.max-streams，参数未配置默认为2；</li>
+<li>replicationStreamsHardLimit：一个给定节点<em>全部优先级复制复制流的最大数目</em>，取参数dfs.namenode.replication.max-streams-hard-limit，参数未配置默认为4。针对所有的优先级，算是一个硬性指标吧，所有为hard limit吧。</li>
+</ol>
+<h3 id="第二个for循环"><a href="#第二个for循环" class="headerlink" title="第二个for循环"></a>第二个for循环</h3><p>第二个for循环是调用<code>ReplicationWork.chooseTargets</code>为每个block选取targets，chooseTargets代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">chooseTargets</span><span class="params">(BlockPlacementPolicy blockplacement,</span></span></span><br><span class="line"><span class="function"><span class="params">    BlockStoragePolicySuite storagePolicySuite,</span></span></span><br><span class="line"><span class="function"><span class="params">    Set&lt;Node&gt; excludedNodes)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    targets = blockplacement.chooseTarget(bc.getName(),</span><br><span class="line">        additionalReplRequired, srcNode, liveReplicaStorages, <span class="keyword">false</span>,</span><br><span class="line">        excludedNodes, block.getNumBytes(),</span><br><span class="line">        storagePolicySuite.getPolicy(bc.getStoragePolicyID()));</span><br><span class="line">  &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    srcNode.decrementPendingReplicationWithoutTargets();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>然后调用BlockPlacementPolicy的chooseTarget进行选取，这里<code>BlockPlacementPolicyDefault</code>对chooseTarget进行了重写，如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> DatanodeStorageInfo[] chooseTarget(<span class="keyword">int</span> numOfReplicas,</span><br><span class="line">                                  Node writer,</span><br><span class="line">                                  List&lt;DatanodeStorageInfo&gt; chosenStorage,</span><br><span class="line">                                  <span class="keyword">boolean</span> returnChosenNodes,</span><br><span class="line">                                  Set&lt;Node&gt; excludedNodes,</span><br><span class="line">                                  <span class="keyword">long</span> blocksize,</span><br><span class="line">                                  <span class="keyword">final</span> BlockStoragePolicy storagePolicy) &#123;</span><br><span class="line">  ...</span><br><span class="line">   <span class="comment">// 相同block的副本在每个机架上最多的个数</span></span><br><span class="line">  <span class="keyword">int</span>[] result = getMaxNodesPerRack(chosenStorage.size(), numOfReplicas);</span><br><span class="line">  numOfReplicas = result[<span class="number">0</span>];</span><br><span class="line">  <span class="keyword">int</span> maxNodesPerRack = result[<span class="number">1</span>];</span><br><span class="line">  <span class="comment">// chosenStorage副本所在节点的list，这里的副本只包括正常的和read only</span></span><br><span class="line">  <span class="comment">// results为</span></span><br><span class="line">  <span class="keyword">final</span> List&lt;DatanodeStorageInfo&gt; results = <span class="keyword">new</span> ArrayList&lt;DatanodeStorageInfo&gt;(chosenStorage);</span><br><span class="line">  <span class="comment">// 将副本所在的节点加入excludeNodes中，避免其选为target</span></span><br><span class="line">  <span class="keyword">for</span> (DatanodeStorageInfo storage : chosenStorage) &#123;</span><br><span class="line">    <span class="comment">// add localMachine and related nodes to excludedNodes</span></span><br><span class="line">    addToExcludedNodes(storage.getDatanodeDescriptor(), excludedNodes);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">boolean</span> avoidStaleNodes = (stats != <span class="keyword">null</span></span><br><span class="line">      &amp;&amp; stats.isAvoidingStaleDataNodesForWrite());</span><br><span class="line">  <span class="comment">// 根据需要复制的副本数选择targets，将targets放入results中，返回srcNode</span></span><br><span class="line">  <span class="keyword">final</span> Node localNode = chooseTarget(numOfReplicas, writer, excludedNodes,</span><br><span class="line">      blocksize, maxNodesPerRack, results, avoidStaleNodes, storagePolicy,</span><br><span class="line">      EnumSet.noneOf(StorageType.class), results.isEmpty());</span><br><span class="line">  <span class="keyword">if</span> (!returnChosenNodes) &#123;  </span><br><span class="line">    results.removeAll(chosenStorage);</span><br><span class="line">  &#125;</span><br><span class="line">    </span><br><span class="line">  <span class="comment">// sorting nodes to form a pipeline</span></span><br><span class="line">  <span class="comment">// 对targets进行排序，得到pipeline</span></span><br><span class="line">  <span class="keyword">return</span> getPipeline(</span><br><span class="line">      (writer != <span class="keyword">null</span> &amp;&amp; writer <span class="keyword">instanceof</span> DatanodeDescriptor) ? writer</span><br><span class="line">          : localNode,</span><br><span class="line">      results.toArray(<span class="keyword">new</span> DatanodeStorageInfo[results.size()]));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>chooseTarget中又调用了一个同名函数<em>chooseTarget</em>来进行targets选取，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> Node <span class="title">chooseTarget</span><span class="params">(<span class="keyword">int</span> numOfReplicas,</span></span></span><br><span class="line"><span class="function"><span class="params">                          Node writer,</span></span></span><br><span class="line"><span class="function"><span class="params">                          <span class="keyword">final</span> Set&lt;Node&gt; excludedNodes,</span></span></span><br><span class="line"><span class="function"><span class="params">                          <span class="keyword">final</span> <span class="keyword">long</span> blocksize,</span></span></span><br><span class="line"><span class="function"><span class="params">                          <span class="keyword">final</span> <span class="keyword">int</span> maxNodesPerRack,</span></span></span><br><span class="line"><span class="function"><span class="params">                          <span class="keyword">final</span> List&lt;DatanodeStorageInfo&gt; results,</span></span></span><br><span class="line"><span class="function"><span class="params">                          <span class="keyword">final</span> <span class="keyword">boolean</span> avoidStaleNodes,</span></span></span><br><span class="line"><span class="function"><span class="params">                          <span class="keyword">final</span> BlockStoragePolicy storagePolicy,</span></span></span><br><span class="line"><span class="function"><span class="params">                          <span class="keyword">final</span> EnumSet&lt;StorageType&gt; unavailableStorages,</span></span></span><br><span class="line"><span class="function"><span class="params">                          <span class="keyword">final</span> <span class="keyword">boolean</span> newBlock)</span> </span>&#123;</span><br><span class="line">  ...</span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">int</span> numOfResults = results.size();</span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">int</span> totalReplicasExpected = numOfReplicas + numOfResults;</span><br><span class="line">  <span class="keyword">if</span> ((writer == <span class="keyword">null</span> || !(writer <span class="keyword">instanceof</span> DatanodeDescriptor)) &amp;&amp; !newBlock) &#123;</span><br><span class="line">    writer = results.get(<span class="number">0</span>).getDatanodeDescriptor();</span><br><span class="line">  &#125;</span><br><span class="line">  ...</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> ((numOfReplicas = requiredStorageTypes.size()) == <span class="number">0</span>) &#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> NotEnoughReplicasException(</span><br><span class="line">          <span class="string">"All required storage types are unavailable: "</span></span><br><span class="line">          + <span class="string">" unavailableStorages="</span> + unavailableStorages</span><br><span class="line">          + <span class="string">", storagePolicy="</span> + storagePolicy);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// munOfResults为0是说results中没有数据，也就是当前block没有副本</span></span><br><span class="line">    <span class="keyword">if</span> (numOfResults == <span class="number">0</span>) &#123;</span><br><span class="line">      writer = chooseLocalStorage(writer, excludedNodes, blocksize,</span><br><span class="line">          maxNodesPerRack, results, avoidStaleNodes, storageTypes, <span class="keyword">true</span>)</span><br><span class="line">              .getDatanodeDescriptor();</span><br><span class="line">      <span class="keyword">if</span> (--numOfReplicas == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> writer;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 从results中取出第一个副本所在节点</span></span><br><span class="line">    <span class="keyword">final</span> DatanodeDescriptor dn0 = results.get(<span class="number">0</span>).getDatanodeDescriptor();</span><br><span class="line">    <span class="comment">// numOfResults&lt;=1则当前block只有一个副本，则从别的机架上选一个节点放第二个副本</span></span><br><span class="line">    <span class="keyword">if</span> (numOfResults &lt;= <span class="number">1</span>) &#123;</span><br><span class="line">      chooseRemoteRack(<span class="number">1</span>, dn0, excludedNodes, blocksize, maxNodesPerRack,</span><br><span class="line">          results, avoidStaleNodes, storageTypes);</span><br><span class="line">      <span class="keyword">if</span> (--numOfReplicas == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> writer;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// numOfResults&lt;=2则当前block有两个副本，则要判断当前两个副本是否在同一机架</span></span><br><span class="line">    <span class="keyword">if</span> (numOfResults &lt;= <span class="number">2</span>) &#123;</span><br><span class="line">      <span class="keyword">final</span> DatanodeDescriptor dn1 = results.get(<span class="number">1</span>).getDatanodeDescriptor();</span><br><span class="line">      <span class="keyword">if</span> (clusterMap.isOnSameRack(dn0, dn1)) &#123;</span><br><span class="line">      	<span class="comment">// 在同一机架则从别的机架上选一个节点存放第三个副本</span></span><br><span class="line">        chooseRemoteRack(<span class="number">1</span>, dn0, excludedNodes, blocksize, maxNodesPerRack,</span><br><span class="line">            results, avoidStaleNodes, storageTypes);</span><br><span class="line">      &#125; <span class="keyword">else</span> <span class="keyword">if</span> (newBlock)&#123;</span><br><span class="line">      	<span class="comment">// 如果是新block则从dn1所在的机架上选择一个节点放第三个副本</span></span><br><span class="line">      	<span class="comment">// results.isEmpty则为newBlock</span></span><br><span class="line">        chooseLocalRack(dn1, excludedNodes, blocksize, maxNodesPerRack,</span><br><span class="line">            results, avoidStaleNodes, storageTypes);</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      	<span class="comment">// 不在同一机架则从writer所在机架上选一个节点放第三个副本</span></span><br><span class="line">        chooseLocalRack(writer, excludedNodes, blocksize, maxNodesPerRack,</span><br><span class="line">            results, avoidStaleNodes, storageTypes);</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">if</span> (--numOfReplicas == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> writer;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 超过3副本的话，剩余副本则随机选择</span></span><br><span class="line">    chooseRandom(numOfReplicas, NodeBase.ROOT, excludedNodes, blocksize,</span><br><span class="line">        maxNodesPerRack, results, avoidStaleNodes, storageTypes);</span><br><span class="line">  &#125; <span class="keyword">catch</span> (NotEnoughReplicasException e) &#123;</span><br><span class="line">    ...</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> writer;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>选完targets之后，还要调用<code>getPipeline</code>对targets进行排序，排序问题是个旅行家问题。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> DatanodeStorageInfo[] getPipeline(Node writer,</span><br><span class="line">    DatanodeStorageInfo[] storages) &#123;</span><br><span class="line">  ...</span><br><span class="line">  <span class="keyword">synchronized</span>(clusterMap) &#123;</span><br><span class="line">    <span class="keyword">int</span> index=<span class="number">0</span>;</span><br><span class="line">    <span class="keyword">if</span> (writer == <span class="keyword">null</span> || !clusterMap.contains(writer)) &#123;</span><br><span class="line">      writer = storages[<span class="number">0</span>].getDatanodeDescriptor();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">for</span>(; index &lt; storages.length; index++) &#123;</span><br><span class="line">      DatanodeStorageInfo shortestStorage = storages[index];</span><br><span class="line">      <span class="keyword">int</span> shortestDistance = clusterMap.getDistance(writer,</span><br><span class="line">          shortestStorage.getDatanodeDescriptor());</span><br><span class="line">      <span class="keyword">int</span> shortestIndex = index;</span><br><span class="line">      <span class="keyword">for</span>(<span class="keyword">int</span> i = index + <span class="number">1</span>; i &lt; storages.length; i++) &#123;</span><br><span class="line">        <span class="keyword">int</span> currentDistance = clusterMap.getDistance(writer,</span><br><span class="line">            storages[i].getDatanodeDescriptor());</span><br><span class="line">        <span class="keyword">if</span> (shortestDistance&gt;currentDistance) &#123;</span><br><span class="line">          shortestDistance = currentDistance;</span><br><span class="line">          shortestStorage = storages[i];</span><br><span class="line">          shortestIndex = i;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">//switch position index &amp; shortestIndex</span></span><br><span class="line">      <span class="keyword">if</span> (index != shortestIndex) &#123;</span><br><span class="line">        storages[shortestIndex] = storages[index];</span><br><span class="line">        storages[index] = shortestStorage;</span><br><span class="line">      &#125;</span><br><span class="line">      writer = shortestStorage.getDatanodeDescriptor();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> storages;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="第三个for循环"><a href="#第三个for循环" class="headerlink" title="第三个for循环"></a>第三个for循环</h3><p>第三个for循环只是调用<code>pendingReplications.increment(block, DatanodeStorageInfo.toDatanodeDescriptors(targets))</code>，将block放入<code>PendingReplicationBlocks.pendingReplications</code>中</p>
+<blockquote>
+<p>pendingReplications 在哪被消费   PendingReplicationBlocks线程中？？？</p>
+</blockquote>
+<h2 id="删除"><a href="#删除" class="headerlink" title="删除"></a>删除</h2><p>回到<em>computeDatanodeWork</em>中，复制结束之后，对<em>pendingReplicationBlocksCount</em>、<em>underReplicatedBlocksCount</em>、<em>corruptReplicaBlocksCount</em>和<em>scheduledReplicationBlocksCount</em>进行状态更新之后，就开始进行计算删除工作<code>computeInvalidateWork</code></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">computeInvalidateWork</span><span class="params">(<span class="keyword">int</span> nodesToProcess)</span> </span>&#123;</span><br><span class="line">  <span class="comment">// 得到含有无效block的dn</span></span><br><span class="line">  <span class="keyword">final</span> List&lt;DatanodeInfo&gt; nodes = invalidateBlocks.getDatanodes();</span><br><span class="line">  Collections.shuffle(nodes);</span><br><span class="line">  nodesToProcess = Math.min(nodes.size(), nodesToProcess);</span><br><span class="line">  <span class="keyword">int</span> blockCnt = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">for</span> (DatanodeInfo dnInfo : nodes) &#123;</span><br><span class="line">  	<span class="comment">// 删除dn上的无效block</span></span><br><span class="line">    <span class="keyword">int</span> blocks = invalidateWorkForOneNode(dnInfo);</span><br><span class="line">    <span class="keyword">if</span> (blocks &gt; <span class="number">0</span>) &#123;</span><br><span class="line">      blockCnt += blocks;</span><br><span class="line">      <span class="keyword">if</span> (--nodesToProcess == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> blockCnt;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>computeInvalidateWork传进去的参数是节点的个数，而不是要删除block的个数，并且删除block时没有优先级，则直接从<em>invalidateBlocks</em>中拿到所有含有无效block的dn，进行for循环判断nodesToProcess是否满足，由blockCnt统计删除的工作量。</p>
+<p>具体的删除工作在<code>invalidateWorkForOneNode</code>中完成。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">int</span> <span class="title">invalidateWorkForOneNode</span><span class="params">(DatanodeInfo dn)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">final</span> List&lt;Block&gt; toInvalidate;</span><br><span class="line">  namesystem.writeLock();</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="comment">// blocks should not be replicated or removed if safe mode is on</span></span><br><span class="line">    <span class="keyword">if</span> (namesystem.isInSafeMode()) &#123;</span><br><span class="line">      LOG.debug(<span class="string">"In safemode, not computing replication work"</span>);</span><br><span class="line">      <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">    	<span class="comment">// 从InvalidateBlocks.node2blocks中拿到dn对应的block副本</span></span><br><span class="line">      toInvalidate = invalidateBlocks.invalidateWork(datanodeManager.getDatanode(dn));</span><br><span class="line">      </span><br><span class="line">      <span class="keyword">if</span> (toInvalidate == <span class="keyword">null</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125; <span class="keyword">catch</span>(UnregisteredNodeException une) &#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    namesystem.writeUnlock();</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">if</span> (NameNode.stateChangeLog.isInfoEnabled()) &#123;</span><br><span class="line">    NameNode.stateChangeLog.info(<span class="string">"BLOCK* "</span> + getClass().getSimpleName()</span><br><span class="line">        + <span class="string">": ask "</span> + dn + <span class="string">" to delete "</span> + toInvalidate);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> toInvalidate.size();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>invalidateWork代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// InvalidateBlocks.class</span></span><br><span class="line"><span class="function"><span class="keyword">synchronized</span> List&lt;Block&gt; <span class="title">invalidateWork</span><span class="params">(<span class="keyword">final</span> DatanodeDescriptor dn)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">long</span> delay = getInvalidationDelay();</span><br><span class="line">  <span class="keyword">if</span> (delay &gt; <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="keyword">if</span> (BlockManager.LOG.isDebugEnabled()) &#123;</span><br><span class="line">      BlockManager.LOG</span><br><span class="line">          .debug(<span class="string">"Block deletion is delayed during NameNode startup. "</span></span><br><span class="line">                     + <span class="string">"The deletion will start after "</span> + delay + <span class="string">" ms."</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">final</span> LightWeightHashSet&lt;Block&gt; set = node2blocks.get(dn);</span><br><span class="line">  <span class="keyword">if</span> (set == <span class="keyword">null</span>) &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// # blocks that can be sent in one message is limited</span></span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">int</span> limit = blockInvalidateLimit;</span><br><span class="line">  <span class="keyword">final</span> List&lt;Block&gt; toInvalidate = set.pollN(limit);</span><br><span class="line"></span><br><span class="line">  <span class="comment">// If we send everything in this message, remove this node entry</span></span><br><span class="line">  <span class="keyword">if</span> (set.isEmpty()) &#123;</span><br><span class="line">    remove(dn);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="comment">// 将要删除的block放入dn中</span></span><br><span class="line">  dn.addBlocksToBeInvalidated(toInvalidate);</span><br><span class="line">  numBlocks -= toInvalidate.size();</span><br><span class="line">  <span class="keyword">return</span> toInvalidate;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>删除应该是在dn上被删除，通过<code>dn.addBlocksToBeInvalidated</code>将副本放入DatanodeDescriptor.invalidateBlocks中。</p>
+<p>还是没有找到具体的删除操作，复制是等待调度，删除呢？只返回要删除的block个数？具体的删除操作应该在dn上，代码还没有去跟踪，有时间再跟踪验证想法</p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的肯定，是我装逼的最大的动力！</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/path/to/wechat-reward-image/wechatpay.png" alt="混绅士 WeChat Pay">
+          <p>微信打赏</p>
+        </div>
+      
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>本文作者：</strong>
+      混绅士
+    </li>
+    
+    <!--add wordcount and min2 read by szw-->
+    <li class="post-copyright-author">
+      <strong>本文字数：</strong>
+      13,114
+    </li>
+    <li class="post-copyright-author">
+      <strong>阅读时长：</strong>
+      77
+    </li>
+
+    <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="http://bigdatadecode.club/HDFS ReplicationMonitor副本监控线程解析.html" title="HDFS ReplicationMonitor副本监控线程解析">http://bigdatadecode.club/HDFS ReplicationMonitor副本监控线程解析.html</a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>版权声明： </strong>
+      本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0</a> 许可协议。转载请注明出处！
+    </li>
+  </ul>
+
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
+          
+            <a href="/tags/BigData/" rel="tag"># BigData</a>
+          
+            <a href="/tags/HDFS/" rel="tag"># HDFS</a>
+          
+            <a href="/tags/ReplicationMonitor/" rel="tag"># ReplicationMonitor</a>
+          
+        </div>
+      
+
+       
+        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/HDFS中LightWeightGSet与HashMap结构解析.html">HDFS中LightWeightGSet与HashMap结构解析</a></li><li><a href="/HDFS read解析.html">HDFS read解析(一)之Open文件流</a></li><li><a href="/HDFSCannotObtainBlockLengthForLocatedBlock.html">HDFS之Cannot obtain block length for LocatedBlock异常</a></li><li><a href="/HDFS中atime和mtime.html">HDFS中atime与mtime解析</a></li><li><a href="/HDFS权限.html">HDFS权限</a></li><li><a href="/Hadoop_get_NullPointerException.html">Hadoop get命令返回NullPointerException</a></li><li><a href="/[译]HDFS恢复过程2.html">HDFS恢复过程2</a></li><li><a href="/常用Hadoop命令.html">常用Hadoop命令</a></li><li><a href="/Hadoop-Ozone.html">Hadoop小文件利器Ozone调研</a></li><li><a href="/[译]HDFS恢复过程1.html">HDFS恢复过程1</a></li></ul> 
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/HDFS HA机制解析.html" rel="next" title="HDFS HA机制解析">
+                <i class="fa fa-chevron-left"></i> HDFS HA机制解析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/NameNode元数据及checkpoint分析.html" rel="prev" title="NameNode元数据及checkpoint分析">
+                NameNode元数据及checkpoint分析 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+  <div class="bdsharebuttonbox">
+    <a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+    <a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>  
+    <a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>      
+    <a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+    <a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+    <a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a>
+    <a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a>
+    <a href="#" class="bds_more" data-cmd="more"></a>
+    <a class="bds_count" data-cmd="count"></a>
+  </div>
+  <script>
+    window._bd_share_config = {
+      "common": {
+        "bdText": "",
+        "bdMini": "1",
+        "bdMiniList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "bdPic": ""
+      },
+      "image": {
+        "viewList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "viewText": "分享到：",
+        "viewSize": "16"
+      },
+      "slide": {
+        "bdImg": "5",
+        "bdPos": "left",
+        "bdTop": "100"
+      }
+    }
+  </script>
+
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>       
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/uploads/avatar.png" alt="混绅士">
+          <p class="site-author-name" itemprop="name">混绅士</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">97</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">157</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <!-- <i class="fa  fa-fw fa-globe"></i> -->
+              <!-- modify icon to fire by szw -->
+              <i class="fa fa-fire fa-" aria-hidden="true"></i>
+              热文推荐
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                </li>
+              
+            </ul>
+          </div>
+
+
+        
+
+        
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <!-- modify icon to fire by szw -->
+                <i class="fa fa-history fa-" aria-hidden="true"></i>
+                近期文章
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                
+                  <li>
+                    <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                  </li>
+                
+                  <li>
+                    <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+ 
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#ReplicationMonitor线程"><span class="nav-number">1.</span> <span class="nav-text">ReplicationMonitor线程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#复制"><span class="nav-number">2.</span> <span class="nav-text">复制</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#第一个for循环"><span class="nav-number">2.1.</span> <span class="nav-text">第一个for循环</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#第二个for循环"><span class="nav-number">2.2.</span> <span class="nav-text">第二个for循环</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#第三个for循环"><span class="nav-number">2.3.</span> <span class="nav-text">第三个for循环</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#删除"><span class="nav-number">3.</span> <span class="nav-text">删除</span></a></li></ol></div>
+            
+
+          </div>
+
+          <div class="post-toc-wrap sidebar-panel sidebar-panel-active" style="margin: 0 2px; text-align: left;">
+            
+              <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+                <div class="links-of-blogroll-title">
+                  <!-- <i class="fa  fa-fw fa-globe"></i> -->
+                  <!-- modify icon to fire by szw -->
+                  <i class="fa fa-fire fa-" aria-hidden="true"></i>
+                  热文推荐
+                </div>
+                <ul class="links-of-blogroll-list">
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                    </li>
+                  
+                </ul>
+              </div>
+            
+  
+            
+                <div class="links-of-blogroll motion-element links-of-blogroll-block">
+                  <div class="links-of-blogroll-title">
+                    <!-- modify icon to fire by szw -->
+                    <i class="fa fa-history fa-" aria-hidden="true"></i>
+                    近期文章
+                  </div>
+                  <ul class="links-of-blogroll-list">
+                    
+                    
+                      <li>
+                        <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
+                      </li>
+                    
+                  </ul>
+                </div>
+              
+          </div>
+
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+
+  </aside>
+
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">混绅士</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+<!--add total count by szw-->
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共617.7k字</span>
+</div>
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user">本站访客数</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      人次
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye">本站总访问量</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      次
+    </span>
+  
+</div>
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.0"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("nP29Qpe35cHgQTQIFL94dGoW-gzGzoHsz", "eVPY9SfyVH11gSsbPBEcAQM0");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+</body>
+</html>
