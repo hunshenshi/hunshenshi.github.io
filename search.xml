@@ -6,7 +6,7 @@
     <entry>
       <title><![CDATA[cryptozombies源码解析二]]></title>
       <url>http://bigdatadecode.club/cryptozombies-src-parse-2.html</url>
-      <content type="html"><![CDATA[<p><a href="">cryptozombies源码解析一</a>中对以太坊开发中的<em>事件</em>与<em>合约交互</em>进行了介绍，看过这篇文章的同学我相信对Dapp开发也有了一个初步的了解，下面我们继续学习一些智能合约开发中特性。</p>
+      <content type="html"><![CDATA[<p><a href="http://bigdatadecode.club/cryptozombies-src-parse.html">cryptozombies源码解析一</a>中对以太坊开发中的<em>事件</em>与<em>合约交互</em>进行了介绍，看过这篇文章的同学我相信对Dapp开发也有了一个初步的了解，下面我们继续学习一些智能合约开发中特性。</p>
 <a id="more"></a>
 <h2 id="如何减少gas"><a href="#如何减少gas" class="headerlink" title="如何减少gas"></a>如何减少gas</h2><p>gas是EVM中代码执行所消耗资源的计量单位，gas是需要用以太币购买的，现在你是不是已经get到了为什么要减少gas了，嘿嘿。。。</p>
 <h3 id="使用合适的数据结构"><a href="#使用合适的数据结构" class="headerlink" title="使用合适的数据结构"></a>使用合适的数据结构</h3><p>这里以uint为例，在Solidity中除了有基本版的uint外，还有其他变种uint：uint8，uint16，uint32等。通常情况下我们不会考虑使用uint变种，<em>因为无论如何定义 uint的大小，Solidity为它保留256位的存储空间</em>。例如，使用uint8而不使用uint(uint256)，并不会为你节省任何gas，因为Solidity始终保留了256的空间。</p>
@@ -51,7 +51,7 @@
 <p>游戏中的随机函数应用在与其它僵尸打架的场景上，用来决定是否取胜，代码如下：</p>
 <figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">pragma solidity ^<span class="number">0.4</span><span class="number">.19</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> <span class="string">"./zombiehelper.sol"</span>;</span><br><span class="line"></span><br><span class="line">contract ZombieBattle is ZombieHelper &#123;</span><br><span class="line">  uint randNonce = <span class="number">0</span>;</span><br><span class="line">  uint attackVictoryProbability = <span class="number">70</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">function</span> <span class="title">randMod</span>(<span class="params">uint _modulus</span>) <span class="title">internal</span> <span class="title">returns</span>(<span class="params">uint</span>) </span>&#123;</span><br><span class="line">    randNonce++;</span><br><span class="line">    <span class="keyword">return</span> uint(keccak256(now, msg.sender, randNonce)) % _modulus;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">function</span> <span class="title">attack</span>(<span class="params">uint _zombieId, uint _targetId</span>) <span class="title">external</span> <span class="title">ownerOf</span>(<span class="params">_zombieId</span>) </span>&#123;</span><br><span class="line">    Zombie storage myZombie = zombies[_zombieId];</span><br><span class="line">    Zombie storage enemyZombie = zombies[_targetId];</span><br><span class="line">    uint rand = randMod(<span class="number">100</span>);</span><br><span class="line">    <span class="keyword">if</span> (rand &lt;= attackVictoryProbability) &#123;</span><br><span class="line">      myZombie.winCount++;</span><br><span class="line">      myZombie.level++;</span><br><span class="line">      enemyZombie.lossCount++;</span><br><span class="line">      feedAndMultiply(_zombieId, enemyZombie.dna, <span class="string">"zombie"</span>);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      myZombie.lossCount++;</span><br><span class="line">      enemyZombie.winCount++;</span><br><span class="line">      _triggerCooldown(myZombie);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <h2 id="订阅事件"><a href="#订阅事件" class="headerlink" title="订阅事件"></a>订阅事件</h2><p>一个完整可用的DApp除了智能合约必然也会包括前端应用，这样才能够更方便的让用户使用，那么前端应用如何及时的感知合约上的变化呢？答案是通过<em>订阅事件</em>。</p>
-<p><a href="">cryptozombies源码解析一</a>中zombiefactory.sol有个事件<code>NewZombie</code>，每次新建一个僵尸之后，都会触发这个时间，那么我们可以在前端中通过Web3.js订阅一个事件，这样Web3提供者就可以在每次事件发生后触发一些代码逻辑，如下：</p>
+<p><a href="http://bigdatadecode.club/cryptozombies-src-parse.html">cryptozombies源码解析一</a>中zombiefactory.sol有个事件<code>NewZombie</code>，每次新建一个僵尸之后，都会触发这个时间，那么我们可以在前端中通过Web3.js订阅一个事件，这样Web3提供者就可以在每次事件发生后触发一些代码逻辑，如下：</p>
 <figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">cryptoZombies.events.NewZombie()</span><br><span class="line">.on(<span class="string">"data"</span>, <span class="function"><span class="keyword">function</span>(<span class="params">event</span>) </span>&#123;</span><br><span class="line">  <span class="keyword">let</span> zombie = event.returnValues;</span><br><span class="line">  <span class="built_in">console</span>.log(<span class="string">"一个新僵尸诞生了！"</span>, zombie.zombieId, zombie.name, zombie.dna);</span><br><span class="line">&#125;).on(<span class="string">'error'</span>, <span class="built_in">console</span>.error);</span><br></pre></td></tr></table></figure>
 <p><code>NewZombie</code>事件在每个新建僵尸的时候都会调用，而上述代码是监听<code>NewZombie</code>的每次触发，所以无论谁的僵尸新建我都会收到一次弹窗信息，这对我可很不友好，我只关心我当自己的僵尸军团增加成员时提醒我，这个怎么实现呢？</p>
 <blockquote>
@@ -171,9 +171,9 @@ https://issues.apache.org/jira/secure/attachment/12895963/HDFS%20Scalability%20a
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -292,9 +292,9 @@ This is a harder problem to solve. Unlike the namespace, the block map does not 
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -350,9 +350,9 @@ This is a harder problem to solve. Unlike the namespace, the block map does not 
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -622,9 +622,9 @@ This is a harder problem to solve. Unlike the namespace, the block map does not 
         
         <tags>
             
-            <tag> Docker </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Docker </tag>
             
             <tag> log </tag>
             
@@ -786,9 +786,9 @@ print sum
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -946,9 +946,9 @@ INodeWithAdditionalFields.modificationTime accessTime
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -1018,9 +1018,9 @@ INodeWithAdditionalFields.modificationTime accessTime
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -1237,9 +1237,9 @@ Caused by: java.io.IOException: error=13, Permission denied
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -1294,9 +1294,9 @@ Caused by: java.io.IOException: error=13, Permission denied
         
         <tags>
             
-            <tag> Docker </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Docker </tag>
             
             <tag> log </tag>
             
@@ -1466,9 +1466,9 @@ Caused by: java.io.IOException: error=13, Permission denied
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -1859,9 +1859,9 @@ Caused by: java.io.IOException: error=13, Permission denied
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -1927,9 +1927,9 @@ maps存放attemptID与request映射，待执行的map集合
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -1995,9 +1995,9 @@ maps存放attemptID与request映射，待执行的map集合
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -2097,9 +2097,9 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -2137,9 +2137,9 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -2496,9 +2496,9 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -2559,9 +2559,9 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -2903,9 +2903,9 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> MapReduce应用实例 </tag>
             
@@ -2976,9 +2976,9 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> MapReduce </tag>
             
@@ -3051,9 +3051,9 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> MapReduce </tag>
             
@@ -3156,9 +3156,9 @@ mapred.text.key.partitioner.options=-k2,3 #用第二和第三个field进行分�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> MapReduce </tag>
             
@@ -3220,9 +3220,9 @@ mapred.text.key.partitioner.options=-k2,3 #用第二和第三个field进行分�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> MapReduce </tag>
             
@@ -3456,9 +3456,9 @@ Exception in thread "main" java.lang.AssertionError: Missing tools.jar at: /Libr
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> build </tag>
             
@@ -3689,9 +3689,9 @@ iptables restart
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> MapReduce应用实例 </tag>
             
@@ -4404,9 +4404,9 @@ iptables restart
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -4461,9 +4461,9 @@ iptables restart
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> MapReduce </tag>
             
@@ -4537,9 +4537,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> MapReduce </tag>
             
@@ -5040,9 +5040,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -5170,9 +5170,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -5378,9 +5378,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -5548,9 +5548,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -5632,9 +5632,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -5687,9 +5687,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -5738,9 +5738,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -5852,9 +5852,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -5951,9 +5951,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -6095,9 +6095,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -6216,9 +6216,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -6479,9 +6479,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -6734,9 +6734,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -6830,9 +6830,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -6891,9 +6891,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -7013,9 +7013,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> RPC </tag>
             
@@ -7118,9 +7118,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> Checkpoint </tag>
             
@@ -7190,9 +7190,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -7287,9 +7287,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -7408,9 +7408,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -7727,9 +7727,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             

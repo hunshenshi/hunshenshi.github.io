@@ -75,7 +75,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
 
 
-  <meta name="keywords" content="BigData,Hadoop,MapReduce,Reduce,Iterator,">
+  <meta name="keywords" content="Hadoop,BigData,MapReduce,Reduce,Iterator,">
 
 
 
@@ -92,7 +92,7 @@
 
 
 <meta name="description" content="众所周知Reduce中的values是一个Iterator，但是value的数据并不是一下全部加载到这个Iterator(也就是对value根据key进行分组，这个分组比较器可以重写，二次排序中可能会需要重写，默认是按照key进行分组)，那么values的Iterator是怎么形成的，是怎么被加载的呢？ 下面从源码的角度去探秘一下吧，因为源码才是最好的教科书。">
-<meta name="keywords" content="BigData,Hadoop,MapReduce,Reduce,Iterator">
+<meta name="keywords" content="Hadoop,BigData,MapReduce,Reduce,Iterator">
 <meta property="og:type" content="article">
 <meta property="og:title" content="MapReduce源码解析--Reduce中values的Iterator的生成">
 <meta property="og:url" content="http://bigdatadecode.club/MapReduce源码解析--Reduce中values的Iterator的生成.html">
@@ -541,9 +541,9 @@
       
         <div class="post-tags">
           
-            <a href="/tags/BigData/" rel="tag"># BigData</a>
-          
             <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
+          
+            <a href="/tags/BigData/" rel="tag"># BigData</a>
           
             <a href="/tags/MapReduce/" rel="tag"># MapReduce</a>
           
@@ -555,7 +555,7 @@
       
 
        
-        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/MapReduce源码解析--Reduce解析.html">MapReduce源码解析--Reduce解析</a></li><li><a href="/MapReduce源码解析--Map解析.html">MapReduce源码解析--Map解析</a></li><li><a href="/MapReduce源码解析--环形缓冲区.html">MapReduce源码解析--环形缓冲区</a></li><li><a href="/MapReduce源码解析--JobSplit.html">MapReduce源码解析--JobSplit</a></li><li><a href="/MapReduce源码解析--TotalOrderPartitioner.html">MapReduce源码解析--TotalOrderPartitioner</a></li><li><a href="/MapReduce应用实例--二次排序之reduce内有序.html">MapReduce应用实例--二次排序之reduce内有序</a></li><li><a href="/HDFS中atime和mtime.html">HDFS中atime与mtime解析</a></li><li><a href="/Hadoop_get_NullPointerException.html">Hadoop get命令返回NullPointerException</a></li><li><a href="/再议HDFS写流程之pipeline.html">再议HDFS写流程之pipeline</a></li><li><a href="/Ozone感悟.html">Ozone感悟</a></li></ul> 
+        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/MapReduce源码解析--Reduce解析.html">MapReduce源码解析--Reduce解析</a></li><li><a href="/MapReduce源码解析--JobSplit.html">MapReduce源码解析--JobSplit</a></li><li><a href="/MapReduce源码解析--TotalOrderPartitioner.html">MapReduce源码解析--TotalOrderPartitioner</a></li><li><a href="/MapReduce源码解析--环形缓冲区.html">MapReduce源码解析--环形缓冲区</a></li><li><a href="/MapReduce源码解析--Map解析.html">MapReduce源码解析--Map解析</a></li><li><a href="/HDFS ReplicationMonitor副本监控线程解析.html">HDFS ReplicationMonitor副本监控线程解析</a></li><li><a href="/Hadoop_get_NullPointerException.html">Hadoop get命令返回NullPointerException</a></li><li><a href="/Ozone感悟.html">Ozone感悟</a></li><li><a href="/YARNSrcApplicationMasterArch.html">YARN源码分析之ApplicationMaster架构</a></li><li><a href="/[译]HDFS恢复过程2.html">HDFS恢复过程2</a></li></ul> 
       
 
       
