@@ -469,6 +469,11 @@
 <p>.gitignore配置完之后，向git仓库push代码时，.idea中的文件可能会发生冲突，则将本地.idea的内容从git缓存中删除，</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git rm --cached &lt;文件名&gt; 删除文件的缓存</span><br><span class="line">git rm --cached -r &lt;目录名&gt; 删除目录下的所有文件的缓存</span><br></pre></td></tr></table></figure>
 <p>然后将代码进行提交</p>
+<h2 id="fork分支同步源分支"><a href="#fork分支同步源分支" class="headerlink" title="fork分支同步源分支"></a>fork分支同步源分支</h2><ol>
+<li>Clone your fork:<br>git clone <a href="mailto:git@github.com" target="_blank" rel="noopener">git@github.com</a>:YOUR-USERNAME/YOUR-FORKED-REPO.git</li>
+<li>Add remote from original repository in your forked repository:<br>cd into/cloned/fork-repo<br>git remote add upstream git://github.com/ORIGINAL-DEV-USERNAME/REPO-YOU-FORKED-FROM.git<br>git fetch upstream</li>
+<li>Updating your fork from original repo to keep up with their changes:<br>git pull upstream master</li>
+</ol>
 <h2 id="error-解决"><a href="#error-解决" class="headerlink" title="error 解决"></a>error 解决</h2><p>出现Non-fast-forward时，可以强制提交<code>git push -f</code></p>
 <ul>
 <li>Pull is not possible because you have unmerged files.(或者在进行其它操作时，提示xx have unmerged files.）<br>应该是因为local文件冲突了，解决方法有两种：</li>
@@ -523,11 +528,11 @@
     <!--add wordcount and min2 read by szw-->
     <li class="post-copyright-author">
       <strong>本文字数：</strong>
-      2,098
+      2,222
     </li>
     <li class="post-copyright-author">
       <strong>阅读时长：</strong>
-      10
+      11
     </li>
 
     <li class="post-copyright-link">
@@ -685,7 +690,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">97</span>
+                <span class="site-state-item-count">100</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -707,7 +712,7 @@
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">157</span>
+                <span class="site-state-item-count">159</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
@@ -782,23 +787,23 @@
                 
                 
                   <li>
+                    <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
+                  </li>
+                
+                  <li>
+                    <a href="/cryptozombies-src-parse.html" title="cryptozombies源码解析一" target="_blank">cryptozombies源码解析一</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Ozone感悟.html" title="Ozone感悟" target="_blank">Ozone感悟</a>
+                  </li>
+                
+                  <li>
                     <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
                   </li>
                 
                   <li>
                     <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
-                  </li>
-                
-                  <li>
-                    <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
-                  </li>
-                
-                  <li>
-                    <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
-                  </li>
-                
-                  <li>
-                    <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
                   </li>
                 
               </ul>
@@ -821,7 +826,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#开发本地分支同步到远程dev"><span class="nav-number">1.</span> <span class="nav-text">开发本地分支同步到远程dev</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#本地与远程代码冲突"><span class="nav-number">2.</span> <span class="nav-text">本地与远程代码冲突</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#版本回滚"><span class="nav-number">3.</span> <span class="nav-text">版本回滚</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#gitignore-文件的配置"><span class="nav-number">4.</span> <span class="nav-text">.gitignore 文件的配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#error-解决"><span class="nav-number">5.</span> <span class="nav-text">error 解决</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#开发本地分支同步到远程dev"><span class="nav-number">1.</span> <span class="nav-text">开发本地分支同步到远程dev</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#本地与远程代码冲突"><span class="nav-number">2.</span> <span class="nav-text">本地与远程代码冲突</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#版本回滚"><span class="nav-number">3.</span> <span class="nav-text">版本回滚</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#gitignore-文件的配置"><span class="nav-number">4.</span> <span class="nav-text">.gitignore 文件的配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#fork分支同步源分支"><span class="nav-number">5.</span> <span class="nav-text">fork分支同步源分支</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#error-解决"><span class="nav-number">6.</span> <span class="nav-text">error 解决</span></a></li></ol></div>
             
 
           </div>
@@ -882,23 +887,23 @@
                     
                     
                       <li>
+                        <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/cryptozombies-src-parse.html" title="cryptozombies源码解析一" target="_blank">cryptozombies源码解析一</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Ozone感悟.html" title="Ozone感悟" target="_blank">Ozone感悟</a>
+                      </li>
+                    
+                      <li>
                         <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
                       </li>
                     
                       <li>
                         <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
-                      </li>
-                    
-                      <li>
-                        <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
-                      </li>
-                    
-                      <li>
-                        <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
-                      </li>
-                    
-                      <li>
-                        <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
                       </li>
                     
                   </ul>
@@ -950,7 +955,7 @@
 <!--add total count by szw-->
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共617.7k字</span>
+  <span class="post-count">博客全站共628.6k字</span>
 </div>
         
 <div class="busuanzi-count">

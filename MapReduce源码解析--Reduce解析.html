@@ -75,7 +75,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
 
 
-  <meta name="keywords" content="Hadoop,BigData,MapReduce,Reduce,">
+  <meta name="keywords" content="BigData,Hadoop,MapReduce,Reduce,">
 
 
 
@@ -92,14 +92,14 @@
 
 
 <meta name="description" content="MapReduce–Reduce上篇主要扒了下Map阶段的代码，并根据代码把Map阶段的流程串了下，本篇主要扒下Reduce阶段的代码，顺便串下Reduce阶段的流程。Reduce大致分为copy、sort、reduce三个阶段，重点在前两个阶段。Reduce Task和Map Task一样，同样也有四中任务类型，分别为job setup、job cleanup、reduce task、task">
-<meta name="keywords" content="Hadoop,BigData,MapReduce,Reduce">
+<meta name="keywords" content="BigData,Hadoop,MapReduce,Reduce">
 <meta property="og:type" content="article">
 <meta property="og:title" content="MapReduce源码解析--Reduce解析">
 <meta property="og:url" content="http://bigdatadecode.club/MapReduce源码解析--Reduce解析.html">
 <meta property="og:site_name" content="big data decode club">
 <meta property="og:description" content="MapReduce–Reduce上篇主要扒了下Map阶段的代码，并根据代码把Map阶段的流程串了下，本篇主要扒下Reduce阶段的代码，顺便串下Reduce阶段的流程。Reduce大致分为copy、sort、reduce三个阶段，重点在前两个阶段。Reduce Task和Map Task一样，同样也有四中任务类型，分别为job setup、job cleanup、reduce task、task">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2019-02-12T09:23:37.661Z">
+<meta property="og:updated_time" content="2019-02-12T09:44:14.913Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="MapReduce源码解析--Reduce解析">
 <meta name="twitter:description" content="MapReduce–Reduce上篇主要扒了下Map阶段的代码，并根据代码把Map阶段的流程串了下，本篇主要扒下Reduce阶段的代码，顺便串下Reduce阶段的流程。Reduce大致分为copy、sort、reduce三个阶段，重点在前两个阶段。Reduce Task和Map Task一样，同样也有四中任务类型，分别为job setup、job cleanup、reduce task、task">
@@ -374,7 +374,7 @@
               
                 <span class="post-meta-item-text">更新于</span>
               
-              <time title="更新于" itemprop="dateModified" datetime="2019-02-12T17:23:37+08:00">
+              <time title="更新于" itemprop="dateModified" datetime="2019-02-12T17:44:14+08:00">
                 2019-02-12
               </time>
             
@@ -558,9 +558,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
       
         <div class="post-tags">
           
-            <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
-          
             <a href="/tags/BigData/" rel="tag"># BigData</a>
+          
+            <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
           
             <a href="/tags/MapReduce/" rel="tag"># MapReduce</a>
           
@@ -570,7 +570,7 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
       
 
        
-        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/MapReduce源码解析--Reduce中values的Iterator的生成.html">MapReduce源码解析--Reduce中values的Iterator的生成</a></li><li><a href="/MapReduce源码解析--JobSplit.html">MapReduce源码解析--JobSplit</a></li><li><a href="/MapReduce源码解析--TotalOrderPartitioner.html">MapReduce源码解析--TotalOrderPartitioner</a></li><li><a href="/MapReduce源码解析--环形缓冲区.html">MapReduce源码解析--环形缓冲区</a></li><li><a href="/MapReduce源码解析--Map解析.html">MapReduce源码解析--Map解析</a></li><li><a href="/HDFS ReplicationMonitor副本监控线程解析.html">HDFS ReplicationMonitor副本监控线程解析</a></li><li><a href="/Hadoop_get_NullPointerException.html">Hadoop get命令返回NullPointerException</a></li><li><a href="/YARNSrcApplicationMasterArch.html">YARN源码分析之ApplicationMaster架构</a></li><li><a href="/[译]HDFS恢复过程2.html">HDFS恢复过程2</a></li><li><a href="/mac下编译Hadoop.html">mac下编译Hadoop</a></li></ul> 
+        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/MapReduce源码解析--Reduce中values的Iterator的生成.html">MapReduce源码解析--Reduce中values的Iterator的生成</a></li><li><a href="/MapReduce源码解析--Map解析.html">MapReduce源码解析--Map解析</a></li><li><a href="/MapReduce源码解析--环形缓冲区.html">MapReduce源码解析--环形缓冲区</a></li><li><a href="/MapReduce源码解析--JobSplit.html">MapReduce源码解析--JobSplit</a></li><li><a href="/MapReduce源码解析--TotalOrderPartitioner.html">MapReduce源码解析--TotalOrderPartitioner</a></li><li><a href="/MapReduce应用实例--二次排序之全局有序.html">MapReduce应用实例--二次排序之全局有序</a></li><li><a href="/HDFS中atime和mtime.html">HDFS中atime与mtime解析</a></li><li><a href="/Hadoop_get_NullPointerException.html">Hadoop get命令返回NullPointerException</a></li><li><a href="/再议HDFS写流程之pipeline.html">再议HDFS写流程之pipeline</a></li><li><a href="/Ozone感悟.html">Ozone感悟</a></li></ul> 
       
 
       
@@ -701,7 +701,7 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">97</span>
+                <span class="site-state-item-count">100</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -723,7 +723,7 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">157</span>
+                <span class="site-state-item-count">159</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
@@ -798,23 +798,23 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
                 
                 
                   <li>
+                    <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
+                  </li>
+                
+                  <li>
+                    <a href="/cryptozombies-src-parse.html" title="cryptozombies源码解析一" target="_blank">cryptozombies源码解析一</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Ozone感悟.html" title="Ozone感悟" target="_blank">Ozone感悟</a>
+                  </li>
+                
+                  <li>
                     <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
                   </li>
                 
                   <li>
                     <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
-                  </li>
-                
-                  <li>
-                    <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
-                  </li>
-                
-                  <li>
-                    <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
-                  </li>
-                
-                  <li>
-                    <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
                   </li>
                 
               </ul>
@@ -898,23 +898,23 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
                     
                     
                       <li>
+                        <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/cryptozombies-src-parse.html" title="cryptozombies源码解析一" target="_blank">cryptozombies源码解析一</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Ozone感悟.html" title="Ozone感悟" target="_blank">Ozone感悟</a>
+                      </li>
+                    
+                      <li>
                         <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
                       </li>
                     
                       <li>
                         <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
-                      </li>
-                    
-                      <li>
-                        <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
-                      </li>
-                    
-                      <li>
-                        <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
-                      </li>
-                    
-                      <li>
-                        <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
                       </li>
                     
                   </ul>
@@ -966,7 +966,7 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
 <!--add total count by szw-->
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共617.7k字</span>
+  <span class="post-count">博客全站共628.6k字</span>
 </div>
         
 <div class="busuanzi-count">

@@ -75,7 +75,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
 
 
-  <meta name="keywords" content="Hadoop,BigData,MapReduce,全局排序,TotalOrderPartitioner,">
+  <meta name="keywords" content="BigData,Hadoop,MapReduce,全局排序,TotalOrderPartitioner,">
 
 
 
@@ -92,7 +92,7 @@
 
 
 <meta name="description" content="MR本身就具有排序功能，但是其分布式的特性使其无法较理想的进行全局排序。难道要想使用MR进行全局排序时只能将其结果都输入到一个reduce中？那这不就违背了其分布式的特性了嘛。于是大牛们想到了在map分区时保证分区的有序性，使其分配到第一个reduce中的key一定小于分配到第二个reduce中的key，此功能就是本篇要解析的分区类TotalOrderPartitioner。 上篇从应用的角度展示">
-<meta name="keywords" content="Hadoop,BigData,MapReduce,全局排序,TotalOrderPartitioner">
+<meta name="keywords" content="BigData,Hadoop,MapReduce,全局排序,TotalOrderPartitioner">
 <meta property="og:type" content="article">
 <meta property="og:title" content="MapReduce源码解析--TotalOrderPartitioner">
 <meta property="og:url" content="http://bigdatadecode.club/MapReduce源码解析--TotalOrderPartitioner.html">
@@ -591,9 +591,9 @@ mapred.text.key.partitioner.options=-k2,3 #用第二和第三个field进行分�
       
         <div class="post-tags">
           
-            <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
-          
             <a href="/tags/BigData/" rel="tag"># BigData</a>
+          
+            <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
           
             <a href="/tags/MapReduce/" rel="tag"># MapReduce</a>
           
@@ -605,7 +605,7 @@ mapred.text.key.partitioner.options=-k2,3 #用第二和第三个field进行分�
       
 
        
-        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/MapReduce源码解析--Reduce中values的Iterator的生成.html">MapReduce源码解析--Reduce中values的Iterator的生成</a></li><li><a href="/MapReduce应用实例--二次排序之全局有序.html">MapReduce应用实例--二次排序之全局有序</a></li><li><a href="/MapReduce源码解析--JobSplit.html">MapReduce源码解析--JobSplit</a></li><li><a href="/MapReduce源码解析--环形缓冲区.html">MapReduce源码解析--环形缓冲区</a></li><li><a href="/MapReduce源码解析--Map解析.html">MapReduce源码解析--Map解析</a></li><li><a href="/MapReduce源码解析--Reduce解析.html">MapReduce源码解析--Reduce解析</a></li><li><a href="/HDFS read解析.html">HDFS read解析(一)之Open文件流</a></li><li><a href="/YARNSrcApplicationMasterArch.html">YARN源码分析之ApplicationMaster架构</a></li><li><a href="/[译]HDFS恢复过程2.html">HDFS恢复过程2</a></li><li><a href="/mac下编译Hadoop.html">mac下编译Hadoop</a></li></ul> 
+        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/MapReduce应用实例--二次排序之全局有序.html">MapReduce应用实例--二次排序之全局有序</a></li><li><a href="/MapReduce源码解析--Reduce解析.html">MapReduce源码解析--Reduce解析</a></li><li><a href="/MapReduce源码解析--Map解析.html">MapReduce源码解析--Map解析</a></li><li><a href="/MapReduce源码解析--环形缓冲区.html">MapReduce源码解析--环形缓冲区</a></li><li><a href="/MapReduce源码解析--Reduce中values的Iterator的生成.html">MapReduce源码解析--Reduce中values的Iterator的生成</a></li><li><a href="/MapReduce源码解析--JobSplit.html">MapReduce源码解析--JobSplit</a></li><li><a href="/HDFS中atime和mtime.html">HDFS中atime与mtime解析</a></li><li><a href="/Hadoop_get_NullPointerException.html">Hadoop get命令返回NullPointerException</a></li><li><a href="/再议HDFS写流程之pipeline.html">再议HDFS写流程之pipeline</a></li><li><a href="/Ozone感悟.html">Ozone感悟</a></li></ul> 
       
 
       
@@ -736,7 +736,7 @@ mapred.text.key.partitioner.options=-k2,3 #用第二和第三个field进行分�
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">97</span>
+                <span class="site-state-item-count">100</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -758,7 +758,7 @@ mapred.text.key.partitioner.options=-k2,3 #用第二和第三个field进行分�
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">157</span>
+                <span class="site-state-item-count">159</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
@@ -833,23 +833,23 @@ mapred.text.key.partitioner.options=-k2,3 #用第二和第三个field进行分�
                 
                 
                   <li>
+                    <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
+                  </li>
+                
+                  <li>
+                    <a href="/cryptozombies-src-parse.html" title="cryptozombies源码解析一" target="_blank">cryptozombies源码解析一</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Ozone感悟.html" title="Ozone感悟" target="_blank">Ozone感悟</a>
+                  </li>
+                
+                  <li>
                     <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
                   </li>
                 
                   <li>
                     <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
-                  </li>
-                
-                  <li>
-                    <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
-                  </li>
-                
-                  <li>
-                    <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
-                  </li>
-                
-                  <li>
-                    <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
                   </li>
                 
               </ul>
@@ -933,23 +933,23 @@ mapred.text.key.partitioner.options=-k2,3 #用第二和第三个field进行分�
                     
                     
                       <li>
+                        <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/cryptozombies-src-parse.html" title="cryptozombies源码解析一" target="_blank">cryptozombies源码解析一</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Ozone感悟.html" title="Ozone感悟" target="_blank">Ozone感悟</a>
+                      </li>
+                    
+                      <li>
                         <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
                       </li>
                     
                       <li>
                         <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
-                      </li>
-                    
-                      <li>
-                        <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
-                      </li>
-                    
-                      <li>
-                        <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
-                      </li>
-                    
-                      <li>
-                        <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
                       </li>
                     
                   </ul>
@@ -1001,7 +1001,7 @@ mapred.text.key.partitioner.options=-k2,3 #用第二和第三个field进行分�
 <!--add total count by szw-->
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共617.7k字</span>
+  <span class="post-count">博客全站共628.6k字</span>
 </div>
         
 <div class="busuanzi-count">

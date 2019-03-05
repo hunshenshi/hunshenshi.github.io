@@ -75,7 +75,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
 
 
-  <meta name="keywords" content="Hadoop,BigData,YARN,ApplicationMaster,分配策略,">
+  <meta name="keywords" content="BigData,Hadoop,YARN,ApplicationMaster,分配策略,">
 
 
 
@@ -92,14 +92,14 @@
 
 
 <meta name="description" content="一次和朋友的谈话中涉及到ApplicationMaster的container分配策略是什么，我映像中是随机分配的，但他说是根据各节点空闲资源来分配的。之前看代码的时候也没注意这块的逻辑，既然现在有了疑惑那就去代码里瞅瞅。">
-<meta name="keywords" content="Hadoop,BigData,YARN,ApplicationMaster,分配策略">
+<meta name="keywords" content="BigData,Hadoop,YARN,ApplicationMaster,分配策略">
 <meta property="og:type" content="article">
 <meta property="og:title" content="YARN源码分析之ApplicationMaster分配策略">
 <meta property="og:url" content="http://bigdatadecode.club/YARNSrcAMAssignPolicy.html">
 <meta property="og:site_name" content="big data decode club">
 <meta property="og:description" content="一次和朋友的谈话中涉及到ApplicationMaster的container分配策略是什么，我映像中是随机分配的，但他说是根据各节点空闲资源来分配的。之前看代码的时候也没注意这块的逻辑，既然现在有了疑惑那就去代码里瞅瞅。">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2019-02-12T09:23:37.680Z">
+<meta property="og:updated_time" content="2019-02-12T09:44:14.932Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="YARN源码分析之ApplicationMaster分配策略">
 <meta name="twitter:description" content="一次和朋友的谈话中涉及到ApplicationMaster的container分配策略是什么，我映像中是随机分配的，但他说是根据各节点空闲资源来分配的。之前看代码的时候也没注意这块的逻辑，既然现在有了疑惑那就去代码里瞅瞅。">
@@ -374,7 +374,7 @@
               
                 <span class="post-meta-item-text">更新于</span>
               
-              <time title="更新于" itemprop="dateModified" datetime="2019-02-12T17:23:37+08:00">
+              <time title="更新于" itemprop="dateModified" datetime="2019-02-12T17:44:14+08:00">
                 2019-02-12
               </time>
             
@@ -547,9 +547,9 @@
       
         <div class="post-tags">
           
-            <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
-          
             <a href="/tags/BigData/" rel="tag"># BigData</a>
+          
+            <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
           
             <a href="/tags/YARN/" rel="tag"># YARN</a>
           
@@ -561,7 +561,7 @@
       
 
        
-        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/YARNSrcApplicationMasterArch.html">YARN源码分析之ApplicationMaster架构</a></li><li><a href="/YARNSrcApplicationMasterStart.html">YARN源码分析之ApplicationMaster启动流程</a></li><li><a href="/YARNSrcRMContainerAllocator.html">YARN源码分析之RMContainerAllocator</a></li><li><a href="/YARN源码分析之AsyncDispatcher事件调度器.html">YARN源码分析之AsyncDispatcher事件调度器</a></li><li><a href="/YARNSrcMRAppMasterStart.html">YARN源码分析之MRAppMaster启动</a></li><li><a href="/Application-fail-RM-change.html">Application运行失败导致RM主备切换</a></li><li><a href="/YARN源码分析之Fair Scheduler part1.html">YARN源码分析之Fair Scheduler part1</a></li><li><a href="/YARN源码分析之StateMachineFactory状态机.html">YARN源码分析之StateMachineFactory状态机</a></li><li><a href="/YarnSrcMRCreateContainerRequest.html">YARN源码分析之MR创建container请求</a></li><li><a href="/YARN-Lost-Node显示异常.html">YARN Lost Node显示异常</a></li></ul> 
+        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/YARNSrcApplicationMasterStart.html">YARN源码分析之ApplicationMaster启动流程</a></li><li><a href="/YARNSrcApplicationMasterArch.html">YARN源码分析之ApplicationMaster架构</a></li><li><a href="/YARN源码分析之Fair Scheduler part2.html">YARN源码分析之Fair Scheduler part2</a></li><li><a href="/YARN-Lost-Node显示异常.html">YARN Lost Node显示异常</a></li><li><a href="/YARN源码分析之AsyncDispatcher事件调度器.html">YARN源码分析之AsyncDispatcher事件调度器</a></li><li><a href="/Application-fail-RM-change.html">Application运行失败导致RM主备切换</a></li><li><a href="/YARNSrcMRAppMasterStart.html">YARN源码分析之MRAppMaster启动</a></li><li><a href="/YARN源码分析之Fair Scheduler part1.html">YARN源码分析之Fair Scheduler part1</a></li><li><a href="/YARNSrcRMContainerAllocator.html">YARN源码分析之RMContainerAllocator</a></li><li><a href="/YarnSrcMRCreateContainerRequest.html">YARN源码分析之MR创建container请求</a></li></ul> 
       
 
       
@@ -692,7 +692,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">97</span>
+                <span class="site-state-item-count">100</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -714,7 +714,7 @@
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">157</span>
+                <span class="site-state-item-count">159</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
@@ -789,23 +789,23 @@
                 
                 
                   <li>
+                    <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
+                  </li>
+                
+                  <li>
+                    <a href="/cryptozombies-src-parse.html" title="cryptozombies源码解析一" target="_blank">cryptozombies源码解析一</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Ozone感悟.html" title="Ozone感悟" target="_blank">Ozone感悟</a>
+                  </li>
+                
+                  <li>
                     <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
                   </li>
                 
                   <li>
                     <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
-                  </li>
-                
-                  <li>
-                    <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
-                  </li>
-                
-                  <li>
-                    <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
-                  </li>
-                
-                  <li>
-                    <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
                   </li>
                 
               </ul>
@@ -889,23 +889,23 @@
                     
                     
                       <li>
+                        <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/cryptozombies-src-parse.html" title="cryptozombies源码解析一" target="_blank">cryptozombies源码解析一</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Ozone感悟.html" title="Ozone感悟" target="_blank">Ozone感悟</a>
+                      </li>
+                    
+                      <li>
                         <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
                       </li>
                     
                       <li>
                         <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
-                      </li>
-                    
-                      <li>
-                        <a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)" target="_blank">Merkle Patricia Tree(MPT)</a>
-                      </li>
-                    
-                      <li>
-                        <a href="/Docker-Log-Action.html" title="Docker容器log采集实践" target="_blank">Docker容器log采集实践</a>
-                      </li>
-                    
-                      <li>
-                        <a href="/Func-Closure.html" title="函数式编程之闭包" target="_blank">函数式编程之闭包</a>
                       </li>
                     
                   </ul>
@@ -957,7 +957,7 @@
 <!--add total count by szw-->
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共617.7k字</span>
+  <span class="post-count">博客全站共628.6k字</span>
 </div>
         
 <div class="busuanzi-count">
