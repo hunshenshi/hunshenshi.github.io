@@ -449,7 +449,8 @@
 <li>客户端创建了一个请求，服务端根本没有收到(可能是网络也可能是服务端挂了)</li>
 </ul>
 <p>因此在客户端收到这样的返回码时，不能新建一个session。假如客户端与服务端A正常连接时，发生了异常，此时应该尝试与服务端B建立连接，如果此时新建session就会导致之前客户端与服务端A建立的一些watcher什么的就会消失，因为zk是以session来标识客户端与服务端连接的生命周期的。</p>
-<p>当客户端收到这样的返回码之后，要做的事是根据服务器列表进行重连，如果在session过期之前，连接成功，则会话恢复，之前创建的watcher和临时节点什么的都依然存在<!--客户端会收到一个SyncConnection事件-->。如果在session过期之后，则收到Session Expired事件。</p>
+<p>当客户端收到这样的返回码之后，要做的事是根据服务器列表进行重连，如果在session过期之前，连接成功，则会话恢复，之前创建的watcher和临时节点什么的都依然存在<!--客户端会收到一个SyncConnection事件-->。如果在session过期之后，则收到Session Expired事件。所以session超时时间应该大于连接超时时间。</p>
+<!-- The session timeout must be greater than the Zookeeper disconnect timeout and is recommended to be 3X that value to enable Zookeeper to retry transient disconnections. Setting a very short session timeout may result in frequent transitions between active and standby states during issues like network outages/GS pauses.-->
 <!--Zookeeper的读写操作都是原子操作，因此可以保证不会部分读取和部分写入的情况，这就保证了数据一致性。-->
 <h2 id="SESSION-EXPIRED"><a href="#SESSION-EXPIRED" class="headerlink" title="SESSION_EXPIRED"></a>SESSION_EXPIRED</h2><p>当客户端收到SESSION_EXPIRED返回码时，会关闭与服务端的连接。</p>
 <p>客户端与服务端第一次建立连接时，会生成一个session，在session超时之后客户端与服务端的连接才会跟换session。session是否过期是由服务端控制的。</p>
@@ -510,7 +511,7 @@
     <!--add wordcount and min2 read by szw-->
     <li class="post-copyright-author">
       <strong>本文字数：</strong>
-      1,040
+      1,057
     </li>
     <li class="post-copyright-author">
       <strong>阅读时长：</strong>
@@ -547,7 +548,7 @@
       
 
        
-        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/MapReduce应用实例--二次排序之全局有序.html">MapReduce应用实例--二次排序之全局有序</a></li><li><a href="/Application-fail-RM-change.html">Application运行失败导致RM主备切换</a></li><li><a href="/HDFS HA相关的几个问题和示例场景.html">HDFS HA相关的几个问题和示例场景</a></li><li><a href="/HDFS-little-file-action.html">HDFS小文件合并实战</a></li><li><a href="/HDFSCannotObtainBlockLengthForLocatedBlock.html">HDFS之Cannot obtain block length for LocatedBlock异常</a></li><li><a href="/HDFS中atime和mtime.html">HDFS中atime与mtime解析</a></li><li><a href="/HDFS权限.html">HDFS权限</a></li><li><a href="/Hadoop_get_NullPointerException.html">Hadoop get命令返回NullPointerException</a></li><li><a href="/MysqlToHDFSWithCanal.html">利用canal同步mysql到HDFS</a></li><li><a href="/Ozone感悟.html">Ozone感悟</a></li></ul> 
+        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/MapReduce应用实例--二次排序之全局有序.html">MapReduce应用实例--二次排序之全局有序</a></li><li><a href="/Docker_log_collect.html">Docker进程log和应用log采集调研</a></li><li><a href="/HDFS HA相关的几个问题和示例场景.html">HDFS HA相关的几个问题和示例场景</a></li><li><a href="/HDFS-little-file-action.html">HDFS小文件合并实战</a></li><li><a href="/HDFSCannotObtainBlockLengthForLocatedBlock.html">HDFS之Cannot obtain block length for LocatedBlock异常</a></li><li><a href="/HDFS中atime和mtime.html">HDFS中atime与mtime解析</a></li><li><a href="/HDFS权限.html">HDFS权限</a></li><li><a href="/Hadoop_get_NullPointerException.html">Hadoop get命令返回NullPointerException</a></li><li><a href="/MysqlToHDFSWithCanal.html">利用canal同步mysql到HDFS</a></li><li><a href="/Spark编译与部署.html">Spark编译与部署</a></li></ul> 
       
 
       
@@ -678,7 +679,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">100</span>
+                <span class="site-state-item-count">101</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -700,7 +701,7 @@
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">159</span>
+                <span class="site-state-item-count">163</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
@@ -775,6 +776,10 @@
                 
                 
                   <li>
+                    <a href="/Consistency-in-Distributed.html" title="分布式一致性协议" target="_blank">分布式一致性协议</a>
+                  </li>
+                
+                  <li>
                     <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
                   </li>
                 
@@ -788,10 +793,6 @@
                 
                   <li>
                     <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
-                  </li>
-                
-                  <li>
-                    <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
                   </li>
                 
               </ul>
@@ -875,6 +876,10 @@
                     
                     
                       <li>
+                        <a href="/Consistency-in-Distributed.html" title="分布式一致性协议" target="_blank">分布式一致性协议</a>
+                      </li>
+                    
+                      <li>
                         <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
                       </li>
                     
@@ -888,10 +893,6 @@
                     
                       <li>
                         <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
-                      </li>
-                    
-                      <li>
-                        <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
                       </li>
                     
                   </ul>
@@ -943,7 +944,7 @@
 <!--add total count by szw-->
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共628.6k字</span>
+  <span class="post-count">博客全站共632.6k字</span>
 </div>
         
 <div class="busuanzi-count">

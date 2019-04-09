@@ -1,0 +1,1441 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="0hClWroWscvQbyOyRPhAZWjOZJ6g3SFCdO47yYakvdk">
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="27E5EbutCm">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="Zookeeper,BlockChain,Kafka,Paxos,Raft,BFT,">
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0">
+
+
+
+
+
+
+<meta name="description" content="分布式系统中有个著名的原则CAP原则，C为Consistency(一致性)、A为Availability(可用性)、P为Partition tolerance(分区容错性)。这里主要介绍下分布式环境下如果达到一致性。 说到一致性不得不说下经典的拜占庭问题。">
+<meta name="keywords" content="Zookeeper,BlockChain,Kafka,Paxos,Raft,BFT">
+<meta property="og:type" content="article">
+<meta property="og:title" content="分布式一致性协议">
+<meta property="og:url" content="http://bigdatadecode.club/Consistency-in-Distributed.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="分布式系统中有个著名的原则CAP原则，C为Consistency(一致性)、A为Availability(可用性)、P为Partition tolerance(分区容错性)。这里主要介绍下分布式环境下如果达到一致性。 说到一致性不得不说下经典的拜占庭问题。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://bigdatadecode.club/blogimgs/PBFT-Paxos-Raft/pbft.png">
+<meta property="og:image" content="http://bigdatadecode.club/blogimgs/PBFT-Paxos-Raft/basic-paxos.jpg">
+<meta property="og:updated_time" content="2019-04-08T12:37:25.305Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="分布式一致性协议">
+<meta name="twitter:description" content="分布式系统中有个著名的原则CAP原则，C为Consistency(一致性)、A为Availability(可用性)、P为Partition tolerance(分区容错性)。这里主要介绍下分布式环境下如果达到一致性。 说到一致性不得不说下经典的拜占庭问题。">
+<meta name="twitter:image" content="http://bigdatadecode.club/blogimgs/PBFT-Paxos-Raft/pbft.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    sidebar: {"position":"right","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://bigdatadecode.club/Consistency-in-Distributed.html">
+
+
+
+
+
+  <title> 分布式一致性协议 | big data decode club </title>
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-80813521-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+
+
+
+
+
+
+  <div style="display: none;">
+    <script src="//s95.cnzz.com/z_stat.php?id=1260961002&web_id=1260961002" language="JavaScript"></script>
+  </div>
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">big data decode club</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">hunhun -- Any answers you can find in source code.</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/Consistency-in-Distributed.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="混绅士">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="big data decode club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                分布式一致性协议
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2019-04-07T00:10:34+08:00">
+                2019-04-07
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-04-08T20:37:25+08:00">
+                2019-04-08
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/BlockChain/" itemprop="url" rel="index">
+                    <span itemprop="name">BlockChain</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/Consistency-in-Distributed.html" class="leancloud_visitors" data-flag-title="分布式一致性协议">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>分布式系统中有个著名的原则CAP原则，C为Consistency(一致性)、A为Availability(可用性)、P为Partition tolerance(分区容错性)。这里主要介绍下分布式环境下如果达到一致性。</p>
+<p>说到一致性不得不说下经典的拜占庭问题。<br><a id="more"></a></p>
+<!--
+分布式共识算法是分布式系统的核心，常见的有Paxos、pbft、bft、raft、pow等。区块链中常见的是POW、POS、DPOS、pbft等。 其中：
+POW、POS、DPOS是开放式的共识协议
+PBFT为半开放式的共识协议
+Paxos、raft等是封闭式共识协议
+区别：
+开放式，无法确切的知道节点的多少及连接状态，每个节点都可能是恶意的，但是大多数是非恶意的
+半开放式，可以确定节点的多少及连接状态，每个节点都可能是恶意的，但是有满足一定条件的非恶意节点
+封闭式，每个节点都是非恶意的，只不过可能断开连接或crash。
+-->
+<h2 id="拜占庭问题"><a href="#拜占庭问题" class="headerlink" title="拜占庭问题"></a>拜占庭问题</h2><p>话说一组拜占庭将军分别各率领一支军队共同围困一座城市。为了简化问题，将各支军队的行动策略限定为进攻或撤离两种。因为部分军队进攻部分军队撤离可能会造成灾难性后果，因此各位<em>将军必须通过投票来达成一致策略，即所有军队一起进攻或所有军队一起撤离</em>。因为各位将军分处城市不同方向，他们<em>只能通过信使互相联系</em>。在投票过程中每位将军都将自己投票给进攻还是撤退的信息通过信使分别通知其他所有将军，这样一来每位将军根据自己的投票和其他所有将军送来的信息就可以知道共同的投票结果而决定行动策略。</p>
+<p>系统的问题在于，<strong>将军中可能出现叛徒，他们不仅可能向较为糟糕的策略投票，还可能选择性地发送投票信息。假设有9位将军投票，其中1名叛徒。8名忠诚的将军中出现了4人投进攻，4人投撤离的情况。这时候叛徒可能故意给4名投进攻的将领送信表示投票进攻，而给4名投撤离的将领送信表示投撤离。这样一来在4名投进攻的将领看来，投票结果是5人投进攻，从而发起进攻；而在4名投撤离的将军看来则是5人投撤离。这样各支军队的一致协同就遭到了破坏</strong>。</p>
+<p>拜占庭问题其实是指在一个可妥协的通信网络中实现分布式协议的问题，也就是<em>在不可靠的环境中建立一个可靠的系统的问题</em>。</p>
+<p>假始那些忠诚（或是没有出错）的将军仍然能通过多数决策来决定他们的战略，便称达到了<strong>拜占庭容错</strong>。<br><!--在点对点式数字货币系统比特币里，比特币网络的运作是平行的（parallel）。各结点与终端都运算著区块链来达成工作量证明（PoW）。工作量证明的链条是解决比特币系统中拜占庭问题的关键，避免有问题的结点（即前文提到的“反叛的将军”）破坏数字货币系统里交易帐的正确性，是对整个系统的运行状态有着重要的意义。
+比特币使用经过工作量证明区块链技术解决了拜占庭容错问题。 POW增加了提出提案的成本，不是任意节点可以随意提出提案，在源头减少了干扰信息
+--></p>
+<h2 id="PBFT"><a href="#PBFT" class="headerlink" title="PBFT"></a>PBFT</h2><p>PBFT是Practical Byzantine Fault Tolerance的缩写，意为<em>实用拜占庭容错算法</em>，复杂度过高<code>O(N^2)</code>。PBFT是一种<em>状态机副本复制算法</em>，即服务作为状态机进行建模，状态机在分布式系统的不同节点进行副本复制。每个状态机的副本都保存了服务的状态，同时也实现了服务的操作。</p>
+<p>PBFT是一个<strong>三阶段算法</strong>，分为<code>Pre-Prepare</code>、<code>Prepare</code>和<code>Commit</code>。<br>PBFT中有几个概念需要了解下，所有的节点称为<code>副本</code>，这些副本有两个角色，分别为主节点(primary)和备份节点(backups)，所有的副本在一个被称为<code>视图</code>(View)的轮换过程中运作。<em>主节点和备份节点是针对视图而言，视图是连续编号的整数</em>。在某个视图中，从副本中选出一个副本为主节点，选择算法为<code>p = v mod |R|</code>，其中v是视图编号，|R|为副本个数，p为副本编号，除主节点之外所有的节点都为备份节点。当<strong>主节点失效</strong>的时候就需要启动视图更换过程。</p>
+<p>知道上述概念之后，来看下算法的具体流程：<br><img src="/blogimgs/PBFT-Paxos-Raft/pbft.png" alt="PBFT" title="PBFT"><br>其中0为主节点，123为备份节点，3宕机无法响应请求</p>
+<ol>
+<li>主节点0接收到客户端C发来的请求request，给请求分配一个序列号n，然后向所有<strong>备份节点</strong>群发预准备消息，预准备消息的格式为&lt;&lt;PRE-PREPARE,v,n,d&gt;,m&gt;，这里v是视图编号，m是客户端发送的请求消息，d是请求消息m的摘要。</li>
+<li>备份节点收到主节点广播的消息之后，check下自己是否接受，接受之后向<strong>其它副本</strong>进行prepare广播</li>
+<li>某个副本在接收到<code>2f</code>个prepare信息之后，向<strong>其它副本</strong>广播commit<!--(*备份节点的2f中有一个是未广播给自己的prepare信息*)--></li>
+<li>某个副本在接收到<code>2f+1</code>个commit信息之后，向客户端C发送reply<!--之所以这里是2f+1，是因为主节点加入了广播序列--></li>
+<li>客户端C在接收到<code>f+1</code>个相同的reply之后则达成共识<!--需要注意的是主节点没有收到pre-prepare广播，没有自己的prepare信息，但是可以收到备份节点的prepare信息，收到2f个之后就可以进行广播commit信息-->
+</li>
+</ol>
+<!--
+同所有的状态机副本复制技术一样，PBFT对每个副本节点提出了两个限定条件：（1）所有节点必须是确定性的。也就是说，在给定状态和参数相同的情况下，操作执行的结果必须相同；（2）所有节点必须从相同的状态开始执行。在这两个限定条件下，即使失效的副本节点存在，PBFT算法对所有非失效副本节点的请求执行总顺序达成一致，从而保证安全性。
+-->
+<p>拜占庭问题是一个理论性的模型，解决起来比较困难，工程实践上可以将其模型的某些条件进行假设，这样可以解决一些特定的问题。<br>将集群中是否存在背叛者作为一个已知条件来将拜占庭问题细分下：</p>
+<ol>
+<li>假如集群中存在背叛者，也就是有一些伪造信息，这种情况称为<em>拜占庭错误</em>，伪造信息的节点称为拜占庭节点。其一致性算法为BFT（Byzantine Fault Tolerance），上文介绍的PBFT就是一个拜占庭容错算法。</li>
+<li>如果集群中不存在背叛者，都是忠诚者，只是这些忠诚者由于某种原因无法正常工作，这种情况称为<em>非拜占庭错误</em>。其一致性算法为CFT（Crash Fault Tolerance）。</li>
+</ol>
+<p>下面我们就介绍两个非拜占庭一致性算法<em>Paxos</em>和<em>Raft</em>。</p>
+<h2 id="Paxos"><a href="#Paxos" class="headerlink" title="Paxos"></a>Paxos</h2><p>Paxos算法为非拜占庭一致性算法，<em>运行在允许宕机故障的异步系统中，不要求可靠的消息传递，可容忍消息丢失、延迟、乱序以及重复</em>。<strong>它利用大多数机制保证了2F+1的容错能力，即2F+1个节点的系统最多允许F个节点同时出现故障</strong>。</p>
+<p>Paxos算法中的角色分为Proposer和Acceptor，Proposer是提案者，用来发起提案（Proposal），Acceptor是决策者，用来接收和响应Proposer提出的提案。这个算法的场景是<strong>一个或多个提议进程（Proposer）可以发起提案（Proposal），需要在所有提案中选取某一个提案，使其在所有进程中达成一致。系统中的多数派同时认可该提案，即达成了一致。最多只针对一个确定的提案达成一致。</strong></p>
+<p>Paxos算法流程分为两阶段，第一阶段为Prepare阶段，第二阶段为Commit阶段。两阶段提交算法的思路大致可以概括为<strong>决策者将提案的结果通知提案者，再由提案者根据所有决策者反馈的结果决定是提交操作还是终止操作</strong>。</p>
+<p>Paxos算法大致流程为Proposer询问Acceptors<strong>是否可以发起提案</strong>，Acceptors将结果返回给Proposer(第一阶段)，再由Proposer根据Acceptors反馈的<em>结果决定提案内容以及提案是提交还是终止</em>(第二阶段)。具体流程如下：<br>第一阶段Prepare阶段：</p>
+<ol>
+<li>Proposer提出一个提案时，每次提案时都生成一个全局唯一且递增的ID，向Acceptors发送<em>PrepareRequest</em>请求，PrepareRequest请求<em>只携带提案ID</em>，而<em>无需携带提案内容</em>。</li>
+<li>Acceptors收到Proposer的请求后，判断<code>PrepareRequest</code>中的<strong>ID是否大于Acceptors记录的值</strong>，如果大于则检查下是否有已经Accept过的提案，<em>有则返回提案中ID最大的那个提案的value和ID，没有则返回空值</em>，如果<strong>小于Acceptors记录的值则不响应</strong>。<br>第一阶段结束，开始第二阶段Commit阶段：</li>
+<li>Proposer接收到多数Acceptors的<code>PrepareResponse</code>应答之后，<strong>从应答中选择提案ID最大对应的value作为本次要发起的提案</strong>。 <em>如果所有应答的提案value均为空值，则可以自己随意决定提案value</em>。然后携带当前ID，向所有Acceptors发送<code>AccpetRequest</code>请求。</li>
+<li>Accpetors收到<code>AccpetRequest</code>后，判断<code>AccpetRequest</code>中的<strong>ID是否大于等于Acceptors记录的值</strong>，是则持久化当前ID和提案内容，然后返回给Proposer响应<code>AcceptResponse</code></li>
+<li>Proposer收到多数Acceptors的<code>AcceptResponse</code>后，决议形成。</li>
+</ol>
+<blockquote>
+<p>整个流程中Acceptors的行为可以概括为<strong>两个承诺，一个应答</strong>。<br>两个承诺：</p>
+<ol>
+<li>不再应答PrepareRequest中ID小于等于当前请求PrepareRequest中ID的请求(是因为当前PrepareRequest中ID已经赋值给minProposal)</li>
+<li>不再应答AcceptRequest中ID小于当前请求AcceptRequest中ID的请求(因为当前AcceptRequest中ID是上次PrepareRequest请求中ID，所以不再应答小于的ID)<br>一个应答：<br>不违背之前作出的承诺下，返回自己已经Accept过的提案中ID最大的那个提案的内容，如果没有则返回空值</li>
+</ol>
+</blockquote>
+<p>结合下面的伪代码能够更加深刻理解这两个承诺一个应答的含义<br><img src="/blogimgs/PBFT-Paxos-Raft/basic-paxos.jpg" alt="basic paxos" title="basic paxos"><br>算法逻辑为：</p>
+<ol>
+<li>获取一个ProposalID n，为了保证ProposalID唯一，可采用时间戳+ServerID生成；</li>
+<li>Proposer向所有Acceptors广播Prepare(n)请求；</li>
+<li>Acceptor比较n和<code>minProposal</code>，如果<code>n&gt;minProposal</code>，则<code>minProposal=n</code>，并且将<code>acceptedProposal</code>和<code>acceptedValue</code>返回；</li>
+<li>Proposer接收到过半数回复后，如果发现有<code>acceptedValue</code>返回，将所有回复中<em>acceptedProposal最大的acceptedValue作为本次提案的value</em>，否则可以任意决定本次提案的value；</li>
+<li>到这里可以进入第二阶段，广播<code>Accept(n,value)</code> 到所有节点；</li>
+<li>Acceptor比较n和minProposal，如果<code>n&gt;=minProposal</code>，则<em>acceptedProposal=minProposal=n，acceptedValue=value，本地持久化后</em>，返回；<em>否则，返回minProposal</em>。</li>
+<li>提议者接收到过半数请求后，<strong>如果发现有返回值result&gt;n</strong>，表示有更新的提议，跳转到1；否则value达成一致。</li>
+</ol>
+<!--
+第一阶段：获取epoch轮次的访问权和当前var的取值，我们可以简单获取当前时间戳为epoch：
+通过Acceptor.prepare(epoch)，获取epoch轮次的访问权和当前var的取值；
+如果不能获取，返回<error>。
+第二阶段：采用“后者认同前者”的原则执行。
+如果var取值为null，则肯定旧epoch无法生成确定性取值，则通过Acceptor.accept(var, prepared_epoch, V)提交数据V。
+成功后返回<ok, V>；
+若accept失败，则说明被更新的epoch抢占或Acceptor故障，返回<error>。
+如果var取值存在，则此取值肯定是确定性取值，此时认同它不再更改，直接返回<ok, accepted_value>。
+-->
+<!--
+提案编号怎么取值，防止恶意取值
+
+JN是如何写，如何同步数据的
+
+“活锁”的根本原因在于两个proposer交替提案，避免“活锁”的方式为，如果一个proposer通过accpter返回的消息知道此时有更高编号的提案被提出时，该proposer静默一段时间，而不是马上提出更高的方案，静默期长短为一个提案从提出到被接受的大概时间长度即可，静默期过后，proposer重新提案。系统中之所以要有主proposer的原因在于，如果每次数据更改都用paxos，那实在是太慢了，还是通过主节点下发请求这样来的快，因为省去了不必要的paxos时间。所以选择主proposer用paxos算法，因为选主的频率要比更改数据频率低太多。但是主proposer挂了咋整，整个集群就一直处于不可用状态，所以一般都用租约的方式，如果proposer挂了，则租约会过期，其它proposer就可以再重新选主，如果不挂，则主proposer自己续租。
+-->
+<p>原始的Paxos算法(Basic Paxos)<em>只能对一个值形成决议</em>，决议的形成至少需要两次网络来回，<em>在高并发情况下可能需要更多的网络来回，极端情况下甚至可能形成活锁(活锁–多个Proposer交替向Acceptors提交PrepareRequest请求，在发送AccpetRequest请求时，都因为ID发生更新，Acceptors无法接受AccpetRequest请求，返回ID，是Proposer再次向Acceptors发送PrepareRequest请求，如此反复，无法形成共识。)</em>。更重要的是如果想连续确定多个值<!--这里不是太懂，标记下？？？？-->，Basic Paxos无法确定了。因此Basic Paxos几乎只是用来做理论研究，并不直接应用在实际工程中。</p>
+<p>实际应用中几乎都需要连续确定多个值，而且希望能有更高的效率。<code>Multi-Paxos</code>正是为解决此问题而提出。Multi-Paxos基于Basic Paxos做了两点改进：</p>
+<ol>
+<li>针对每一个要确定的值，运行一次Paxos算法实例（Instance），形成决议。每一个Paxos实例使用唯一的Instance ID标识。</li>
+<li>在所有Proposers中选举一个Leader，由Leader唯一的提交提案给Acceptors进行表决。<em>仅有一个Leader进行value提交的情况下，Prepare阶段就可以跳过，从而将两阶段变为一阶段，提高效率。</em>同时这样没有Proposer竞争，<em>也解决了活锁问题</em>。</li>
+</ol>
+<!--
+Multi-Paxos首先需要选举Leader，Leader的确定也是一次决议的形成，所以可执行一次Basic Paxos实例来选举出一个Leader。选出Leader之后只能由Leader提交Proposal，在Leader宕机之后服务临时不可用，需要重新选举Leader继续服务。在系统中仅有一个Leader进行Proposal提交的情况下，Prepare阶段可以跳过。
+
+Multi-Paxos通过改变Prepare阶段的作用范围至后面Leader提交的所有实例，从而使得Leader的连续提交只需要执行一次Prepare阶段，后续只需要执行Accept阶段，将两阶段变为一阶段，提高了效率。为了区分连续提交的多个实例，每个实例使用一个Instance ID标识，Instance ID由Leader本地递增生成即可。
+
+Multi-Paxos允许有多个自认为是Leader的节点并发提交Proposal而不影响其安全性，这样的场景即退化为Basic Paxos。
+-->
+<p>Paxos确实很强大，而且也可以应用于实际工程中，但是其理论真的很难理解，于是<em>Raft算法</em>出现了，以简单著称，并在工业上也得到了广泛的使用。</p>
+<h2 id="Raft"><a href="#Raft" class="headerlink" title="Raft"></a>Raft</h2><p>Raft也是两阶段提交算法，类似于Multi-Paxos。算法中的角色分为Leader、Follower和Candidate，但是<em>这三种角色并不是同时出现的，正常运行时只有Leader和Follower</em>，candidate只作为选举leader时的一个临时角色出现。</p>
+<ul>
+<li>Leader: 接受客户端请求，并向Follower同步请求日志，当日志同步到大多数节点上后告诉Follower提交日志。</li>
+<li>Follower: 接受并持久化Leader同步的日志，在Leader告之日志可以提交之后，提交日志。</li>
+<li>Candidate: Leader选举过程中的临时角色。</li>
+</ul>
+<blockquote>
+<p>系统在初始化时，同为Follower，在election timeout之后(各节点在150-300ms之间随机)，由Follower转化为Candidate进行选举Leader</p>
+</blockquote>
+<!-- heartbeat timeout 之后Follower感知到Leader消失，进行新Leader选举-->
+<p>Raft算法主要用于管理多副本状态机的日志复制，并且其<em>将一致性分解为多个子问题</em>：Leader选举(Leader election)、日志同步(Log replication)、安全性(Safety)、日志压缩(Log compaction)、成员变更(Membership change)等。同时，<em>Raft算法使用了更强的假设来减少了需要考虑的状态，使之变的易于理解和实现</em>。Raft算法支持最大的容错故障节点是F，集群总数为2F+1。</p>
+<p>个人感觉Raft算法学习的最好教程是<a href="http://thesecretlivesofdata.com/raft/#home" target="_blank" rel="noopener">http://thesecretlivesofdata.com/raft/#home</a>，俗话说一图胜千言，更何况是还是个动图，老牛逼了，保管你看一遍就懂了。。。这里就不再进行过多的介绍了。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://zhuanlan.zhihu.com/p/31780743" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/31780743</a><br><a href="https://my.oschina.net/ittrueman/blog/1612492" target="_blank" rel="noopener">https://my.oschina.net/ittrueman/blog/1612492</a><br><a href="http://thesecretlivesofdata.com/raft/#home" target="_blank" rel="noopener">http://thesecretlivesofdata.com/raft/#home</a><br><a href="https://zhuanlan.zhihu.com/p/32052223" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/32052223</a></p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的肯定，是我装逼的最大的动力！</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/path/to/wechat-reward-image/wechatpay.png" alt="混绅士 WeChat Pay">
+          <p>微信打赏</p>
+        </div>
+      
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>本文作者：</strong>
+      混绅士
+    </li>
+    
+    <!--add wordcount and min2 read by szw-->
+    <li class="post-copyright-author">
+      <strong>本文字数：</strong>
+      3,944
+    </li>
+    <li class="post-copyright-author">
+      <strong>阅读时长：</strong>
+      15
+    </li>
+
+    <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="http://bigdatadecode.club/Consistency-in-Distributed.html" title="分布式一致性协议">http://bigdatadecode.club/Consistency-in-Distributed.html</a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>版权声明： </strong>
+      本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0</a> 许可协议。转载请注明出处！
+    </li>
+  </ul>
+
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Zookeeper/" rel="tag"># Zookeeper</a>
+          
+            <a href="/tags/BlockChain/" rel="tag"># BlockChain</a>
+          
+            <a href="/tags/Kafka/" rel="tag"># Kafka</a>
+          
+            <a href="/tags/Paxos/" rel="tag"># Paxos</a>
+          
+            <a href="/tags/Raft/" rel="tag"># Raft</a>
+          
+            <a href="/tags/BFT/" rel="tag"># BFT</a>
+          
+        </div>
+      
+
+       
+        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/Zookeeper session过期和connection超时.html">Zookeeper session过期和connection超时</a></li><li><a href="/bitcoin源码环境.html">Ubuntu搭建Bitcoin源码阅读环境</a></li><li><a href="/Ethereum-deploy.html">以太坊环境部署</a></li><li><a href="/Ethereum-private-chain.html">以太坊测试环境部署</a></li><li><a href="/Solidity_Voting解析.html">Solidity Voting解析</a></li><li><a href="/Voting-Dapp-Demo.html">全栈Voting Dapp Demo</a></li><li><a href="/cryptozombies-src-parse-2.html">cryptozombies源码解析二</a></li><li><a href="/cryptozombies-src-parse.html">cryptozombies源码解析一</a></li><li><a href="/Merkle-Patricia-Tree.html">Merkle Patricia Tree(MPT)</a></li></ul> 
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/cryptozombies-src-parse-2.html" rel="next" title="cryptozombies源码解析二">
+                <i class="fa fa-chevron-left"></i> cryptozombies源码解析二
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+  <div class="bdsharebuttonbox">
+    <a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+    <a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>  
+    <a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>      
+    <a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+    <a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+    <a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a>
+    <a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a>
+    <a href="#" class="bds_more" data-cmd="more"></a>
+    <a class="bds_count" data-cmd="count"></a>
+  </div>
+  <script>
+    window._bd_share_config = {
+      "common": {
+        "bdText": "",
+        "bdMini": "1",
+        "bdMiniList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "bdPic": ""
+      },
+      "image": {
+        "viewList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "viewText": "分享到：",
+        "viewSize": "16"
+      },
+      "slide": {
+        "bdImg": "5",
+        "bdPos": "left",
+        "bdTop": "100"
+      }
+    }
+  </script>
+
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>       
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/uploads/avatar.png" alt="混绅士">
+          <p class="site-author-name" itemprop="name">混绅士</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">101</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">163</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <!-- <i class="fa  fa-fw fa-globe"></i> -->
+              <!-- modify icon to fire by szw -->
+              <i class="fa fa-fire fa-" aria-hidden="true"></i>
+              热文推荐
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                </li>
+              
+            </ul>
+          </div>
+
+
+        
+
+        
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <!-- modify icon to fire by szw -->
+                <i class="fa fa-history fa-" aria-hidden="true"></i>
+                近期文章
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                
+                  <li>
+                    <a href="/Consistency-in-Distributed.html" title="分布式一致性协议" target="_blank">分布式一致性协议</a>
+                  </li>
+                
+                  <li>
+                    <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
+                  </li>
+                
+                  <li>
+                    <a href="/cryptozombies-src-parse.html" title="cryptozombies源码解析一" target="_blank">cryptozombies源码解析一</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Ozone感悟.html" title="Ozone感悟" target="_blank">Ozone感悟</a>
+                  </li>
+                
+                  <li>
+                    <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+ 
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#拜占庭问题"><span class="nav-number">1.</span> <span class="nav-text">拜占庭问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#PBFT"><span class="nav-number">2.</span> <span class="nav-text">PBFT</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Paxos"><span class="nav-number">3.</span> <span class="nav-text">Paxos</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Raft"><span class="nav-number">4.</span> <span class="nav-text">Raft</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考"><span class="nav-number">5.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+
+          </div>
+
+          <div class="post-toc-wrap sidebar-panel sidebar-panel-active" style="margin: 0 2px; text-align: left;">
+            
+              <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+                <div class="links-of-blogroll-title">
+                  <!-- <i class="fa  fa-fw fa-globe"></i> -->
+                  <!-- modify icon to fire by szw -->
+                  <i class="fa fa-fire fa-" aria-hidden="true"></i>
+                  热文推荐
+                </div>
+                <ul class="links-of-blogroll-list">
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                    </li>
+                  
+                </ul>
+              </div>
+            
+  
+            
+                <div class="links-of-blogroll motion-element links-of-blogroll-block">
+                  <div class="links-of-blogroll-title">
+                    <!-- modify icon to fire by szw -->
+                    <i class="fa fa-history fa-" aria-hidden="true"></i>
+                    近期文章
+                  </div>
+                  <ul class="links-of-blogroll-list">
+                    
+                    
+                      <li>
+                        <a href="/Consistency-in-Distributed.html" title="分布式一致性协议" target="_blank">分布式一致性协议</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/cryptozombies-src-parse.html" title="cryptozombies源码解析一" target="_blank">cryptozombies源码解析一</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Ozone感悟.html" title="Ozone感悟" target="_blank">Ozone感悟</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
+                      </li>
+                    
+                  </ul>
+                </div>
+              
+          </div>
+
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+
+  </aside>
+
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">混绅士</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+<!--add total count by szw-->
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共632.6k字</span>
+</div>
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user">本站访客数</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      人次
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye">本站总访问量</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      次
+    </span>
+  
+</div>
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.0"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("nP29Qpe35cHgQTQIFL94dGoW-gzGzoHsz", "eVPY9SfyVH11gSsbPBEcAQM0");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+</body>
+</html>

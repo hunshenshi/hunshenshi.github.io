@@ -75,7 +75,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
 
 
-  <meta name="keywords" content="Hadoop,BigData,HDFS,read,">
+  <meta name="keywords" content="BigData,Hadoop,HDFS,read,">
 
 
 
@@ -92,14 +92,14 @@
 
 
 <meta name="description" content="记录下常用的Hadoop相关的命令，忘记了容易找">
-<meta name="keywords" content="Hadoop,BigData,HDFS,read">
+<meta name="keywords" content="BigData,Hadoop,HDFS,read">
 <meta property="og:type" content="article">
 <meta property="og:title" content="常用Hadoop命令">
 <meta property="og:url" content="http://bigdatadecode.club/常用Hadoop命令.html">
 <meta property="og:site_name" content="big data decode club">
 <meta property="og:description" content="记录下常用的Hadoop相关的命令，忘记了容易找">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2019-02-12T09:44:14.908Z">
+<meta property="og:updated_time" content="2019-03-28T06:03:19.083Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="常用Hadoop命令">
 <meta name="twitter:description" content="记录下常用的Hadoop相关的命令，忘记了容易找">
@@ -374,8 +374,8 @@
               
                 <span class="post-meta-item-text">更新于</span>
               
-              <time title="更新于" itemprop="dateModified" datetime="2019-02-12T17:44:14+08:00">
-                2019-02-12
+              <time title="更新于" itemprop="dateModified" datetime="2019-03-28T14:03:19+08:00">
+                2019-03-28
               </time>
             
           </span>
@@ -445,6 +445,10 @@
 <li>某个文件的blocks信息</li>
 </ul>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hadoop fsck /user/xx -files -blocks -locations</span><br></pre></td></tr></table></figure>
+<ul>
+<li>释放租约</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hdfs debug recoverLease -path /xxxx.lzo</span><br></pre></td></tr></table></figure>
 <ul>
 <li>改变一个文件或者目录的副本因子</li>
 </ul>
@@ -570,7 +574,7 @@
     <!--add wordcount and min2 read by szw-->
     <li class="post-copyright-author">
       <strong>本文字数：</strong>
-      1,641
+      1,687
     </li>
     <li class="post-copyright-author">
       <strong>阅读时长：</strong>
@@ -595,9 +599,9 @@
       
         <div class="post-tags">
           
-            <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
-          
             <a href="/tags/BigData/" rel="tag"># BigData</a>
+          
+            <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
           
             <a href="/tags/HDFS/" rel="tag"># HDFS</a>
           
@@ -607,7 +611,7 @@
       
 
        
-        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/HDFS read解析.html">HDFS read解析(一)之Open文件流</a></li><li><a href="/HDFS read解析2之从文件流中read.html">HDFS read解析2之从文件流中read</a></li><li><a href="/NameNode内存解析及大小评估.html">NameNode内存解析及大小评估</a></li><li><a href="/HDFS中atime和mtime.html">HDFS中atime与mtime解析</a></li><li><a href="/HDFS权限.html">HDFS权限</a></li><li><a href="/Hadoop_get_NullPointerException.html">Hadoop get命令返回NullPointerException</a></li><li><a href="/Ozone感悟.html">Ozone感悟</a></li><li><a href="/[译]HDFS恢复过程2.html">HDFS恢复过程2</a></li><li><a href="/[译]HDFS恢复过程1.html">HDFS恢复过程1</a></li><li><a href="/HDFS中LightWeightGSet与HashMap结构解析.html">HDFS中LightWeightGSet与HashMap结构解析</a></li></ul> 
+        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/HDFS read解析2之从文件流中read.html">HDFS read解析2之从文件流中read</a></li><li><a href="/HDFS read解析.html">HDFS read解析(一)之Open文件流</a></li><li><a href="/[译]HDFS恢复过程1.html">HDFS恢复过程1</a></li><li><a href="/HDFSCannotObtainBlockLengthForLocatedBlock.html">HDFS之Cannot obtain block length for LocatedBlock异常</a></li><li><a href="/HDFS中atime和mtime.html">HDFS中atime与mtime解析</a></li><li><a href="/HDFS权限.html">HDFS权限</a></li><li><a href="/Hadoop_get_NullPointerException.html">Hadoop get命令返回NullPointerException</a></li><li><a href="/再议HDFS写流程之pipeline.html">再议HDFS写流程之pipeline</a></li><li><a href="/Ozone感悟.html">Ozone感悟</a></li><li><a href="/[译]HDFS恢复过程2.html">HDFS恢复过程2</a></li></ul> 
       
 
       
@@ -738,7 +742,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">100</span>
+                <span class="site-state-item-count">101</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -760,7 +764,7 @@
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">159</span>
+                <span class="site-state-item-count">163</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
@@ -835,6 +839,10 @@
                 
                 
                   <li>
+                    <a href="/Consistency-in-Distributed.html" title="分布式一致性协议" target="_blank">分布式一致性协议</a>
+                  </li>
+                
+                  <li>
                     <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
                   </li>
                 
@@ -848,10 +856,6 @@
                 
                   <li>
                     <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
-                  </li>
-                
-                  <li>
-                    <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
                   </li>
                 
               </ul>
@@ -935,6 +939,10 @@
                     
                     
                       <li>
+                        <a href="/Consistency-in-Distributed.html" title="分布式一致性协议" target="_blank">分布式一致性协议</a>
+                      </li>
+                    
+                      <li>
                         <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
                       </li>
                     
@@ -948,10 +956,6 @@
                     
                       <li>
                         <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
-                      </li>
-                    
-                      <li>
-                        <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
                       </li>
                     
                   </ul>
@@ -1003,7 +1007,7 @@
 <!--add total count by szw-->
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共628.6k字</span>
+  <span class="post-count">博客全站共632.6k字</span>
 </div>
         
 <div class="busuanzi-count">

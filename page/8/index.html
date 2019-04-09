@@ -322,6 +322,187 @@
   
 
   <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/HDFS read解析.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="混绅士">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="big data decode club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                
+                <a class="post-title-link" href="/HDFS read解析.html" itemprop="url">
+                  HDFS read解析(一)之Open文件流
+                </a>
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-11-21T17:13:33+08:00">
+                2016-11-21
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2016-11-21T17:13:33+08:00">
+                2016-11-21
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/HDFS read解析.html" class="leancloud_visitors" data-flag-title="HDFS read解析(一)之Open文件流">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <p>本篇主要记录下HDFS读取文件的流程，流程图如下：<br><img src="/blogimgs/HDFS read解析/read流程图.png" alt="read流程图" title="read流程图"></p>
+<p>如上图所示，</p>
+<ol>
+<li>HDFS Client通过FileSystem.get()方法实例化一个FileSystem对象</li>
+<li>调用FileSystem.open打开一个文件的数据流FSDataInputStream，<em>open</em>中会用rpc方法<code>getBlockLocations</code>得到block的locations信息，默认会先得到<em>prefetchSize</em>(<code>conf.getLong(DFS_CLIENT_READ_PREFETCH_SIZE_KEY, 10 * defaultBlockSize)</code>)大小文件的信息。</li>
+<li>HDFS Client通过FSDataInputStream流读取离客户端最近的dn上的block，在第2步中得到的block location信息已经将block的副本按照离客户端的网络拓扑距离进行了排序，此过程是在nn端完成的。</li>
+<li>读取完当前block的数据后，关闭与当前的DataNode连接，并为读取下一个block寻找最佳的DataNode；</li>
+<li>当读完列表的block后，且文件读取还没有结束，客户端会继续向Namenode获取下一批的block列表。</li>
+<li><em>读取完一个block都会进行checksum验证，如果读取datanode时出现错误，客户端会通知Namenode，然后再从下一个拥有该block拷贝的datanode继续读</em>； </li>
+</ol>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/HDFS read解析.html#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/HDFS HA相关的几个问题和示例场景.html">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
@@ -1893,183 +2074,11 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/NameNode监控用户使用资源.html">
-
-    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="混绅士">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/uploads/avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="big data decode club">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h2 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/NameNode监控用户使用资源.html" itemprop="url">
-                  NameNode监控用户使用资源
-                </a>
-              
-            
-          </h2>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-10-03T19:15:00+08:00">
-                2016-10-03
-              </time>
-            
-
-            
-              <span class="post-meta-divider">|</span>
-            
-
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-check-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">更新于</span>
-              
-              <time title="更新于" itemprop="dateModified" datetime="2016-10-03T19:15:00+08:00">
-                2016-10-03
-              </time>
-            
-          </span>
-
-          
-            <span class="post-category">
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
-                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
-                    <span itemprop="name">Hadoop</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/NameNode监控用户使用资源.html" class="leancloud_visitors" data-flag-title="NameNode监控用户使用资源">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <p>HDFS是Hadoop的基石，对其的使用情况进行监控显的尤为重要。那么怎么来衡量一个用户对hdfs的使用情况呢，用什么来衡量呢？众所周知HDFS是由NameNode和DataNode组成，而NameNode又是HDFS的核心，NameNode中最重要的就是记录整个集群状态的元数据。了解集群的使用情况也就是目前的状态，这些状态记录在元数据中，而元数据中是通过记录各个用户对HDFS的操作来描绘集群的状态，那么是不是可以通过统计各个用户在某个时间段对HDFS的操作数来衡量他们使用HDFS的资源。答案是肯定是，而且此功能已经merge到2.7版本中，下面就来了解下这个<a href="https://issues.apache.org/jira/browse/HDFS-6982" target="_blank" rel="noopener">patch</a>。</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/NameNode监控用户使用资源.html#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/7/"><i class="fa fa-angle-left"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/7/">7</a><span class="page-number current">8</span><a class="page-number" href="/page/9/">9</a><a class="page-number" href="/page/10/">10</a><a class="extend next" rel="next" href="/page/9/"><i class="fa fa-angle-right"></i></a>
+    <a class="extend prev" rel="prev" href="/page/7/"><i class="fa fa-angle-left"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/7/">7</a><span class="page-number current">8</span><a class="page-number" href="/page/9/">9</a><span class="space">&hellip;</span><a class="page-number" href="/page/11/">11</a><a class="extend next" rel="next" href="/page/9/"><i class="fa fa-angle-right"></i></a>
   </nav>
 
 
@@ -2112,7 +2121,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">100</span>
+                <span class="site-state-item-count">101</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -2134,7 +2143,7 @@
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">159</span>
+                <span class="site-state-item-count">163</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
@@ -2209,6 +2218,10 @@
                 
                 
                   <li>
+                    <a href="/Consistency-in-Distributed.html" title="分布式一致性协议" target="_blank">分布式一致性协议</a>
+                  </li>
+                
+                  <li>
                     <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
                   </li>
                 
@@ -2222,10 +2235,6 @@
                 
                   <li>
                     <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
-                  </li>
-                
-                  <li>
-                    <a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战" target="_blank">HDFS小文件合并实战</a>
                   </li>
                 
               </ul>
@@ -2280,7 +2289,7 @@
 <!--add total count by szw-->
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共628.6k字</span>
+  <span class="post-count">博客全站共632.6k字</span>
 </div>
         
 <div class="busuanzi-count">
