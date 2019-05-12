@@ -4,6 +4,60 @@
   
     
     <entry>
+      <title><![CDATA[Use protobuf to FSImage]]></title>
+      <url>http://bigdatadecode.club/%5B%E8%AF%91%5DFSImage-protocol.html</url>
+      <content type="html"><![CDATA[<p>本篇是一篇译文，主要介绍下FSImage改进为protobuf的设计原理，<a href="https://issues.apache.org/jira/secure/attachment/12626179/HDFS-5698-design.pdf" target="_blank" rel="noopener">原文地址</a>。</p>
+<a id="more"></a>
+<h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>为了能从故障中快速恢复，HDFS会周期性的将内存中的namespace在磁盘上的文件系统中进行持久化。FSImage的性能和扩展性在保证数据的耐用性和可用性上至关重要。随着越来越多的高级功能被引入HDFS中，FSImage已经从一个简单的blob演变为了一个需要存储在磁盘的复杂的数据结构。FSImage有3个方面需要改进：</p>
+<ul>
+<li>效率<br>在生成环境中，我们观察到持久化到磁盘的FSImage大小能达到二三十GB。因为加载和停机时保存FSImage是NameNode的关键环节，其效率对确保NameNode操作的可用性非常重要。</li>
+<li>兼容性<br>FSImage将随着HDFS的各种功能的不断发展和演变。FSImage的实现将能够被各种不同的版本所使用，这在某些功能下非常重要，比如滚动升级。</li>
+<li>互通性<br>FSImage能被第三方工具访问的需求越来越强烈了。例如某个工具可以通过扫描FSImage收集一些统计信息。因此FSImage应该提供一个使第三方工具能与其进行交互的清晰规范。</li>
+</ul>
+<p>当前FSImage模块有大约2500行代码，但是现在的设计与实现并不能解决上面的需求。首先，对于兼容性而言，当前代码中的一些实现并不理想。例如有些属性比如inode IDs和block IDs被编码为了固定长度的整数而不是变长整数。</p>
+<p>其次，代码依赖与分支上的不同布局版本以保持向后兼容。在代码更新时在修改和测试上需要耗费很大的精力。然而，还不支持向前兼容，这使NameNode降级变的很困难</p>
+<p>再次，FSImage的格式仅由代码的具体实现而决定。如果没有正式的FSImage规范，开发人员构建第三方工具时，只能通过offline image viewer来构建，这种方式时低效的而且还容易出错。</p>
+<p>为了解决上面的挑战，我们提议使用Google的Protocol Buffers协议来定义一种新的FSImage格式。Protocol Buffers是可扩展的，与语言无关的，用于序列化结构数据。Protobuf能解决上面的挑战。首先，Protocol使用一个编译器为序列化和反序列化生成高效的代码。其次，它还支持向前和向后兼容。序列化后的每个属性都包含一个唯一的标签，因此反序列化的代码可以同时处理新加的字段和缺失的字段。最后，Protocol Buffers的源码直接定义了FSImage的格式。第三方工具仅根据protocol文件就能知道FSImage的格式。</p>
+<p><a href="https://issues.apache.org/jira/browse/HDFS-5698" target="_blank" rel="noopener">HDFS-5698</a>是关于FSImage新格式的issues。下面的内容介绍了设计的细节，新格式的一些实验参数，未来的方向和结论。</p>
+<h2 id="设计"><a href="#设计" class="headerlink" title="设计"></a>设计</h2><p>下图是新FSImage格式的EBNF语法描述。整个FSImage包括4部分，分别为MAGIC、SECTION、FileSummary和FileSummaryLength，其中SECTION包含N个。<br><img src="/blogimgs/fsimage-proto/EBNF.png" alt="FSImage格式" title="FSImage格式"></p>
+<p>FSImage将数据分成不同的部分。每部分在数据中都是相互独立的。开发人员可以添加新的部分来扩展FSImage。</p>
+<p>FileSummary模块包含4个属性，分别为ondiskVersion、layoutVersion、codec和sections，其中sections中记录了每个section的名字、长度和偏移量。所有的section可以使用指定的codec对其进行压缩。每个section都是单独压缩的，而且section中记录的长度和偏移量都是压缩之后的，因此当读取的时候可以直接通过响应的偏移量而直接定位到某个section。</p>
+<p>当解析FSImage时，先从文件的末尾读取4bytes，读取的4bytes数据记录了FileSummary模块的长度，通过解析FileSummary模块能得到所有section的位置信息，这样设计允许写入时按顺序保留FSImage。</p>
+<h3 id="序列化inode"><a href="#序列化inode" class="headerlink" title="序列化inode"></a>序列化inode</h3><p>FSImage将inode序列化为两种section。<code>INodeSection</code>记录了每个inode(<strong>包括INodeFile和INodeDirectory</strong>)的信息，<code>INodeDirectorySection</code>记录了每个目录的子inodes。这种将inodes当作图而不是树的设计模式有两个优点，第一与实际的图更加匹配，因此当快照存在时，inode不用再形成树。不同的目录能通过<code>INodeReference</code>对象指向同一个inode。第二它将结构扁平化，从而为并行性提供了机会。每个inode都独立的存储在FSImage中，因此可以并行的解析和构建不同的inodes。</p>
+<p>在protobuf的规范中，<code>INodeSection</code>并不包含inode列表，而是在INodeSection随后的protobuf消息中隐式的指定了inode列表。这样做的原因时Protocol Buffers在生成代码的时候需要将所有的属性加载到内存，然而inodes列表可能太大而不能加载到内存。文中的这种设计允许FSImage以递增的方式解析。</p>
+<p>令人惊讶的是，我们的初始分析结果表明序列化权限是代码中的瓶颈。权限是一个元组，包含用户名，组名和表示权限位的16位整数。简单的解决方案是直接序列化两个名称和16位整数。 但是，我们发现FSImage中的名称是高度冗余的，反序列化为Java的String对象需要大量的CPU时间。为了优化此用例，FSImage将名称映射为24位ID，以便可以使用64位整数表示权限。</p>
+<h2 id="实验"><a href="#实验" class="headerlink" title="实验"></a>实验</h2><p>为了评估新FSImage的性能，我们比较了新旧格式的FSImage文件的大小，和持久化和加载FSImage所需要的时间。我们将生产中使用的FSImage缩放到五种不同的尺寸，以评估具有各种尺度集群的性能。所有的测试都运行在相同的机器上。</p>
+<p>图2比较了新旧FSImage的大小。FSImage都是未压缩的。由图中所知新格式的FSImage能够节省6-13%的磁盘空间。<br><img src="/blogimgs/fsimage-proto/fig2.png" alt="图2" title="图2"></p>
+<p>图3展示了新旧FSImage加载和持久化的处理时间，也都是未压缩的。新FSImage有着较好的写性能。<br><img src="/blogimgs/fsimage-proto/fig3.png" alt="图3" title="图3"></p>
+<p>新FSImage读比旧FSImage所耗的时间长，大约为1.5x-2.3x。分析结果表明，解析字节和构造为protocol buffers生成的对象占用大部分时间。 旧格式的代码读取数据并直接构造HDFS中使用的对象，这不会受到这种类型的开销的影响。</p>
+<h2 id="未来工作"><a href="#未来工作" class="headerlink" title="未来工作"></a>未来工作</h2><h3 id="并行化"><a href="#并行化" class="headerlink" title="并行化"></a>并行化</h3><p>新FSImage的设计格式为并行加载提供了机会。新的FSImage单独存储每个inode，因此可以并行的解析数据和重构inode。同样，新FSImage也可以并行的填充不同目录的子节点。</p>
+<p>重建BlockMap占用CPU时间的大约为20％。在新的FSImage格式下，可以将BlockMap的工作负载转移到单独的线程中，从而隐藏延迟。</p>
+<h3 id="直接构建对象"><a href="#直接构建对象" class="headerlink" title="直接构建对象"></a>直接构建对象</h3><p>新的FSImage需要首先通过Protocol Buffers生成的对象，然后根据生成的对象构造HDFS中使用的对象。实验结果显示构造生成的对象需要大量时间。 可以手动解析Protocol Buffers并直接构造对象，从而消除了开销。</p>
+<h2 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h2><p>FSImage的性能和可靠性对于提供HDFS的耐用性和可用性非常重要。本文描述了一种基于Protocol Buffers的新FSImage格式。新格式满足了FSImage的效率，兼容性和互操作性要求。 我们希望新格式可以促进HDFS的创新。</p>
+]]></content>
+      
+        <categories>
+            
+            <category> Hadoop </category>
+            
+        </categories>
+        
+        
+        <tags>
+            
+            <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
+            
+            <tag> protobuf </tag>
+            
+            <tag> FSImage </tag>
+            
+        </tags>
+        
+    </entry>
+    
+    <entry>
       <title><![CDATA[分布式一致性协议]]></title>
       <url>http://bigdatadecode.club/Consistency-in-Distributed.html</url>
       <content type="html"><![CDATA[<p>分布式系统中有个著名的原则CAP原则，C为Consistency(一致性)、A为Availability(可用性)、P为Partition tolerance(分区容错性)。这里主要介绍下分布式环境下如果达到一致性。</p>
@@ -1940,7 +1994,18 @@ Caused by: java.io.IOException: error=13, Permission denied
 <li>pull会使用git merge导致冲突，需要将冲突的文件resolve掉，然后执行<code>git add -u</code>, 最后<code>git commit</code>之后才能成功pull。</li>
 <li>如果想放弃本地的文件修改，可以使用<code>git reset --hard FETCH_HEAD</code>，FETCH_HEAD表示上一次成功git pull之后形成的commit点。然后git pull。</li>
 </ol>
-<p>##<br>git checkout trunk<br>git checkout -b HDFS-14361<br>git add hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/ha/StandbyCheckpointer.java<br>git commit -m ‘HDFS-14361:SNN will always upload fsimage’<br>git push origin HDFS-14361</p>
+<h2 id="clone-hadoop"><a href="#clone-hadoop" class="headerlink" title="clone hadoop"></a>clone hadoop</h2><p>git clone <a href="mailto:git@github.com" target="_blank" rel="noopener">git@github.com</a>:hunshenshi/hadoop.git<br>git remote add upstream <a href="mailto:git@github.com" target="_blank" rel="noopener">git@github.com</a>:apache/hadoop.git</p>
+<p>如果要提交patch，先同步原Hadoop仓库代码</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git checkout trunk</span><br><span class="line">git pull upstream trunk</span><br><span class="line">git push origin trunk    <span class="comment"># 本地和仓库同步代码</span></span><br></pre></td></tr></table></figure>
+<p>然后创建分支进行提交</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">git checkout -b HDFS-14361</span><br><span class="line">git add hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/ha/StandbyCheckpointer.java</span><br><span class="line">git commit -m <span class="string">'HDFS-14361:SNN will always upload fsimage'</span></span><br><span class="line">git push origin HDFS-14361</span><br></pre></td></tr></table></figure>
+<p>最后在github上提交PR（<strong>PR的时候注意看下当前分支是否为trunk分支</strong>）</p>
+<p>如果出现“This branch is X commits ahead”<br>在trunk分支拉取原分支代码，然后进行强制提交</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git pull upstream trunk</span><br><span class="line">git push --force-with-lease</span><br></pre></td></tr></table></figure>
+<!--
+git pull --rebase upstream trunk   or   git reset --hard HEAD~2
+git push --force-with-lease origin master
+-->
 ]]></content>
       
         <categories>
@@ -7264,9 +7329,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
             
             <tag> Hadoop </tag>
             
-            <tag> Checkpoint </tag>
+            <tag> FSImage </tag>
             
-            <tag> Fsimage </tag>
+            <tag> Checkpoint </tag>
             
             <tag> Edits </tag>
             
@@ -7698,6 +7763,7 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
 <li>创建虚拟环境，命令<code>virtualenv djangoenv</code></li>
 <li>激活虚拟环境，命令<code>source djangoenv/bin/activate</code>，此时命令行显示如下</li>
 </ol>
+<!-- 退出 deactivate -->
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">(djangoenv) [hadoop@centos djangorest]$</span><br></pre></td></tr></table></figure>
 <h2 id="rest-api-demo开发"><a href="#rest-api-demo开发" class="headerlink" title="rest api demo开发"></a>rest api demo开发</h2><p>安装第三方依赖包</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">pip install django</span><br><span class="line">pip install djangorestframework</span><br><span class="line">pip install uwsgi</span><br><span class="line">pip install MySQL-python</span><br></pre></td></tr></table></figure>

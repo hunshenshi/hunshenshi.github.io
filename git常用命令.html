@@ -482,7 +482,18 @@
 <li>pull会使用git merge导致冲突，需要将冲突的文件resolve掉，然后执行<code>git add -u</code>, 最后<code>git commit</code>之后才能成功pull。</li>
 <li>如果想放弃本地的文件修改，可以使用<code>git reset --hard FETCH_HEAD</code>，FETCH_HEAD表示上一次成功git pull之后形成的commit点。然后git pull。</li>
 </ol>
-<p>##<br>git checkout trunk<br>git checkout -b HDFS-14361<br>git add hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/ha/StandbyCheckpointer.java<br>git commit -m ‘HDFS-14361:SNN will always upload fsimage’<br>git push origin HDFS-14361</p>
+<h2 id="clone-hadoop"><a href="#clone-hadoop" class="headerlink" title="clone hadoop"></a>clone hadoop</h2><p>git clone <a href="mailto:git@github.com" target="_blank" rel="noopener">git@github.com</a>:hunshenshi/hadoop.git<br>git remote add upstream <a href="mailto:git@github.com" target="_blank" rel="noopener">git@github.com</a>:apache/hadoop.git</p>
+<p>如果要提交patch，先同步原Hadoop仓库代码</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git checkout trunk</span><br><span class="line">git pull upstream trunk</span><br><span class="line">git push origin trunk    <span class="comment"># 本地和仓库同步代码</span></span><br></pre></td></tr></table></figure>
+<p>然后创建分支进行提交</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">git checkout -b HDFS-14361</span><br><span class="line">git add hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/ha/StandbyCheckpointer.java</span><br><span class="line">git commit -m <span class="string">'HDFS-14361:SNN will always upload fsimage'</span></span><br><span class="line">git push origin HDFS-14361</span><br></pre></td></tr></table></figure>
+<p>最后在github上提交PR（<strong>PR的时候注意看下当前分支是否为trunk分支</strong>）</p>
+<p>如果出现“This branch is X commits ahead”<br>在trunk分支拉取原分支代码，然后进行强制提交</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git pull upstream trunk</span><br><span class="line">git push --force-with-lease</span><br></pre></td></tr></table></figure>
+<!--
+git pull --rebase upstream trunk   or   git reset --hard HEAD~2
+git push --force-with-lease origin master
+-->
 
       
     </div>
@@ -529,11 +540,11 @@
     <!--add wordcount and min2 read by szw-->
     <li class="post-copyright-author">
       <strong>本文字数：</strong>
-      2,271
+      2,624
     </li>
     <li class="post-copyright-author">
       <strong>阅读时长：</strong>
-      11
+      13
     </li>
 
     <li class="post-copyright-link">
@@ -691,7 +702,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">101</span>
+                <span class="site-state-item-count">102</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -713,7 +724,7 @@
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">163</span>
+                <span class="site-state-item-count">164</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
@@ -788,6 +799,10 @@
                 
                 
                   <li>
+                    <a href="/[译]FSImage-protocol.html" title="Use protobuf to FSImage" target="_blank">Use protobuf to FSImage</a>
+                  </li>
+                
+                  <li>
                     <a href="/Consistency-in-Distributed.html" title="分布式一致性协议" target="_blank">分布式一致性协议</a>
                   </li>
                 
@@ -801,10 +816,6 @@
                 
                   <li>
                     <a href="/Ozone感悟.html" title="Ozone感悟" target="_blank">Ozone感悟</a>
-                  </li>
-                
-                  <li>
-                    <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
                   </li>
                 
               </ul>
@@ -827,7 +838,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#开发本地分支同步到远程dev"><span class="nav-number">1.</span> <span class="nav-text">开发本地分支同步到远程dev</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#本地与远程代码冲突"><span class="nav-number">2.</span> <span class="nav-text">本地与远程代码冲突</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#版本回滚"><span class="nav-number">3.</span> <span class="nav-text">版本回滚</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#gitignore-文件的配置"><span class="nav-number">4.</span> <span class="nav-text">.gitignore 文件的配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#fork分支同步源分支"><span class="nav-number">5.</span> <span class="nav-text">fork分支同步源分支</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#error-解决"><span class="nav-number">6.</span> <span class="nav-text">error 解决</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#开发本地分支同步到远程dev"><span class="nav-number">1.</span> <span class="nav-text">开发本地分支同步到远程dev</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#本地与远程代码冲突"><span class="nav-number">2.</span> <span class="nav-text">本地与远程代码冲突</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#版本回滚"><span class="nav-number">3.</span> <span class="nav-text">版本回滚</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#gitignore-文件的配置"><span class="nav-number">4.</span> <span class="nav-text">.gitignore 文件的配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#fork分支同步源分支"><span class="nav-number">5.</span> <span class="nav-text">fork分支同步源分支</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#error-解决"><span class="nav-number">6.</span> <span class="nav-text">error 解决</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#clone-hadoop"><span class="nav-number">7.</span> <span class="nav-text">clone hadoop</span></a></li></ol></div>
             
 
           </div>
@@ -888,6 +899,10 @@
                     
                     
                       <li>
+                        <a href="/[译]FSImage-protocol.html" title="Use protobuf to FSImage" target="_blank">Use protobuf to FSImage</a>
+                      </li>
+                    
+                      <li>
                         <a href="/Consistency-in-Distributed.html" title="分布式一致性协议" target="_blank">分布式一致性协议</a>
                       </li>
                     
@@ -901,10 +916,6 @@
                     
                       <li>
                         <a href="/Ozone感悟.html" title="Ozone感悟" target="_blank">Ozone感悟</a>
-                      </li>
-                    
-                      <li>
-                        <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
                       </li>
                     
                   </ul>
@@ -956,7 +967,7 @@
 <!--add total count by szw-->
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共632.6k字</span>
+  <span class="post-count">博客全站共635.2k字</span>
 </div>
         
 <div class="busuanzi-count">

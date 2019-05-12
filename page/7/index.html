@@ -322,6 +322,178 @@
   
 
   <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/MapReduce源码解析--Reduce解析.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="混绅士">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="big data decode club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                
+                <a class="post-title-link" href="/MapReduce源码解析--Reduce解析.html" itemprop="url">
+                  MapReduce源码解析--Reduce解析
+                </a>
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-12-10T21:21:00+08:00">
+                2016-12-10
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-02-12T17:44:14+08:00">
+                2019-02-12
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/MapReduce源码解析--Reduce解析.html" class="leancloud_visitors" data-flag-title="MapReduce源码解析--Reduce解析">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <h2 id="MapReduce–Reduce"><a href="#MapReduce–Reduce" class="headerlink" title="MapReduce–Reduce"></a>MapReduce–Reduce</h2><p><a href="http://bigdatadecode.club/MapReduce源码解析--Map解析.html">上篇</a>主要扒了下Map阶段的代码，并根据代码把Map阶段的流程串了下，本篇主要扒下Reduce阶段的代码，顺便串下Reduce阶段的流程。<br>Reduce大致分为copy、sort、reduce三个阶段，重点在前两个阶段。Reduce Task和Map Task一样，同样也有四中任务类型，分别为job setup、job cleanup、reduce task、task cleanup。Reduce阶段的代码入口是<code>ReduceTask.java</code>类中的<code>run</code>方法，代码如下：</p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/MapReduce源码解析--Reduce解析.html#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/Java同步锁解析.html">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
@@ -1906,180 +2078,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/[译]HDFS恢复过程1.html">
-
-    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="混绅士">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/uploads/avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="big data decode club">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h2 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/[译]HDFS恢复过程1.html" itemprop="url">
-                  HDFS恢复过程1
-                </a>
-              
-            
-          </h2>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-11-21T18:00:11+08:00">
-                2016-11-21
-              </time>
-            
-
-            
-              <span class="post-meta-divider">|</span>
-            
-
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-check-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">更新于</span>
-              
-              <time title="更新于" itemprop="dateModified" datetime="2016-11-21T18:00:11+08:00">
-                2016-11-21
-              </time>
-            
-          </span>
-
-          
-            <span class="post-category">
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
-                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
-                    <span itemprop="name">Hadoop</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/[译]HDFS恢复过程1.html" class="leancloud_visitors" data-flag-title="HDFS恢复过程1">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <p>运行或者移动生产环境中的Hadoop时，对很好的掌握HDFS的恢复过程是非常重要的。<br>HDFS中一个重要的设计需求就是要保证在生产部署中持续正确的操作。<em>尤其复杂的是在网络和节点故障的情况下保证写入HDFS的正确性，租约恢复、block恢复和pipeline恢复保证了写的正确性。</em>理解这些恢复操作何时何地被调用，以及做了什么，能帮助用户或者开发者理解HDFS集群的原理。</p>
-<p>在这篇博客中，你会对那些恢复流程有个更深入的理解。首先简单介绍下HDFS write pipeline和恢复流程，对block/replica的状态和generation stamps的概念进行解释，然后逐步介绍租约恢复和block恢复。</p>
-<p>这系列文章被分为两篇：第一篇介绍租约恢复和block恢复的细节，第二篇主要介绍pipeline恢复。想了解更多的内容，请参考设计文档：<a href="https://issues.apache.org/jira/secure/attachment/12445209/appendDesign3.pdf" target="_blank" rel="noopener">Append, Hflush, and Read for implementation details</a></p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/[译]HDFS恢复过程1.html#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -2127,7 +2125,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">101</span>
+                <span class="site-state-item-count">102</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -2149,7 +2147,7 @@
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">163</span>
+                <span class="site-state-item-count">164</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
@@ -2224,6 +2222,10 @@
                 
                 
                   <li>
+                    <a href="/[译]FSImage-protocol.html" title="Use protobuf to FSImage" target="_blank">Use protobuf to FSImage</a>
+                  </li>
+                
+                  <li>
                     <a href="/Consistency-in-Distributed.html" title="分布式一致性协议" target="_blank">分布式一致性协议</a>
                   </li>
                 
@@ -2237,10 +2239,6 @@
                 
                   <li>
                     <a href="/Ozone感悟.html" title="Ozone感悟" target="_blank">Ozone感悟</a>
-                  </li>
-                
-                  <li>
-                    <a href="/Hadoop-Ozone.html" title="Hadoop小文件利器Ozone调研" target="_blank">Hadoop小文件利器Ozone调研</a>
                   </li>
                 
               </ul>
@@ -2295,7 +2293,7 @@
 <!--add total count by szw-->
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共632.6k字</span>
+  <span class="post-count">博客全站共635.2k字</span>
 </div>
         
 <div class="busuanzi-count">
