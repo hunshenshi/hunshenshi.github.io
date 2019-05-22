@@ -4,6 +4,109 @@
   
     
     <entry>
+      <title><![CDATA[Resource Localization in YARN]]></title>
+      <url>http://bigdatadecode.club/YARN-Resource-Localization.html</url>
+      <content type="html"><![CDATA[<p>一个Applciation运行在YARN上的流程为，从YARN Client向ResourceManager提交任务，将Applciation所需资源提交到HDFS中，然后ResourceManager启动APPMaster，APPMaster通知各个NodeManager启动container执行具体到计算任务。在启动container之前需要从HDFS上下载该container执行所依赖的资源，这些资源包括jar、依赖的jar或者其它文件，这个过程就称为<strong>资源本地化</strong>(Resource Localization)。</p>
+<p>本篇主要介绍下资源本地化相关的内容。</p>
+<a id="more"></a>
+<h2 id="相关概念"><a href="#相关概念" class="headerlink" title="相关概念"></a>相关概念</h2><p><strong>本地化(Localization)</strong><br>本地化是指将HDFS上的资源下载到本地的<strong>过程</strong>。将资源本地化，使container不用总是访问HDFS上的数据，而是直接访问本地数据，提高效率。</p>
+<p><strong>本地资源(LocalResource)</strong><br>本地资源是指container运行时所需要的资源，可以是某个文件或者依赖的library，这些资源存在HDFS中。NodeManager在container启动之前负责将这些资源进行本地化。对于Application来说，本地资源指：</p>
+<ul>
+<li>URL: 需要从HDFS上下载的本地资源地址</li>
+<li>Size: 本地资源的大小</li>
+<li>timestamp: 本地资源在HDFS上创建时的时间戳</li>
+<li>LocalResourceType: NodeManager本地化资源时指定的资源类型，有FILE、ARCHIVE和PATTERN</li>
+<li>Pattern: 从archive中解压具体内容时使用的规则匹配方式(只有LocalResourceType是PATTERN时才生效)。</li>
+<li>LocalResourceVisibility: NodeManager将资源本地化之后针对该Nodemanager上其它用户和Application的可见性。可见范围为PUBLIC、PRIVATE和APPLICATION。</li>
+</ul>
+<blockquote>
+<p>NOTE: 本地资源并不是指在本地磁盘的资源，而是需要从HDFS下载到本地的资源。</p>
+</blockquote>
+<p>那么container会请求什么样的资源进行本地化呢？可以是任意的文件，但是这些文件对contianer必须是只读的。<br>下面举几个比较适合做本地资源的典型例子：</p>
+<ol>
+<li>container启动的时候需要的代码库，如jar文件</li>
+<li>container启动时所需要的configure文件</li>
+<li>静态的文件目录</li>
+</ol>
+<p>一些动态资源不适合作为本地资源，例如：container需要的资源有可能被其它组件进行更新，application自己会直接更新的文件或者application想跟其它服务共享文件的变化情况的。</p>
+<p><strong>ResourceLocalizationService</strong><br>ResourceLocalizationService是NodeManager内部的一个服务，主要负责下载和管理container所需的各种资源。下载时会对所有可用的磁盘进行负载均衡，对下载的资源会严格控制他们的访问权限。</p>
+<p><strong>DeletionService</strong><br>DeletionService也是NodeManager内部的一个服务，主要负责在收到指令之后删除本地目录</p>
+<p><strong>Localizer</strong><br>Localizer实际上是一个线程，用于资源本地化。Localizer有两种类型，一种是指用与下载PUBLIC访问类型资源的<em>PublicLocalizer</em>，另一种是下载PRIVATE和APPLICATION访问类型的<em>ContainerLocalizers</em>。</p>
+<p><strong>LocalCache</strong><br>LocalCache是NodeManager维护所有下载到本地的文件的local-cache。这些资源通过下载时指定的HDFS地址来唯一标识。</p>
+<h2 id="概念补充"><a href="#概念补充" class="headerlink" title="概念补充"></a>概念补充</h2><h3 id="LOCALRESOURCE-TIMESTAMPS"><a href="#LOCALRESOURCE-TIMESTAMPS" class="headerlink" title="LOCALRESOURCE TIMESTAMPS"></a>LOCALRESOURCE TIMESTAMPS</h3><p>timestamp反应了本地资源的一个版本，NodeManager在下载本地资源时会检查timestamp，这样Application在运行时看到的文件内容都一样。<br>利用timestamp，YARN能发现资源是否发生过变化，如果发生变化将使container失败避免不一致发生。因为在HDFS上的资源一旦被NodeManager本地化到本地磁盘，这个文件就不再与源文件有任何联系，只会记录下原来的URL用来在本地进行唯一标识。此时即使源文件发生变化，NodeManager也不会跟踪此变化再次下载文件。</p>
+<blockquote>
+<p>这里需要注意的是<em>当container启动时，ApplicationMaster会向运行container的NodeManager指定资源的timestamp，同样当运行ApplicationMaster的container启动时，也需要资源的timestamp，此时这个timestamp就需要由client指定</em>。以MapReduce on YARN为例，MapReduce的JobClient决定ApplicationMaster需要的资源的timestamp，然后由ApplicationMaster自己决定map和reduce所需资源的timestamp。</p>
+</blockquote>
+<h3 id="LOCALRESOURCE-TYPES"><a href="#LOCALRESOURCE-TYPES" class="headerlink" title="LOCALRESOURCE TYPES"></a>LOCALRESOURCE TYPES</h3><p>上一节中提到LocalResourceType为FILE、ARCHIVE和PATTERN，下面介绍下三种type的具体含义。<br>FILE类型是指普通的文件，文本类型或者二进制文件<br>ARCHIVE类型是指一些可以被NodeManager自动识别解压的归档文件，比如jars、tars、tar.gz和zip<br>PATTERN是ARCHIVE和FILE的一种混合体。这种类型下载到本地的源文件会保留，并且在本地化时只有解压的文件会留存在本地文件系统中。源文件和解压的文件在同一个目录中。哪些文件需要从ARCHIVE中抽取出来，哪些不需要这些都是由pattern决定的。目前只有jar支持PATTERN，其它都被认为正常的ARCHIVE。</p>
+<h3 id="LOCALRESOURCE-VISIBILITES"><a href="#LOCALRESOURCE-VISIBILITES" class="headerlink" title="LOCALRESOURCE VISIBILITES"></a>LOCALRESOURCE VISIBILITES</h3><p>上一节LocalResourceVisibility中提到本地资源有三种可见性，分别为PUBLIC、PRIVATE和APPLICATION。其中</p>
+<p>PUBLIC的访问权限是指<strong>任何用户的任意Application的container都可以访问</strong>。典型的PUBLIC资源是那些在HDFS上可以被任何人访问的文件，当这些资源被本地化之后会保留相同的访问权限。<em>如果一个资源是PUBLIC，当有container(container可以是当前Attempt，也可以是其它用户的任意Application中的container)请求相同的本地资源时，只要此资源没有被LocalCache删除，都可以直接从LocalCache里直接使用，而不需要再次下载</em>。</p>
+<p>PUBLIC资源存储在NodeManager本地磁盘的<code>&lt;local-dir&gt;/filecache</code>目录下，此目录中的所有文件的owner是NodeManager进程启动时的用户，并且所有用户都有读权限，因此这些资源可以在此NodeManager上运行的所有用户的container共享。</p>
+<p>PRIVATE权限本地资源只能在<strong>当前节点上相同用户的application之间共享</strong>，这些资源存储在NodeManager本地磁盘的<code>&lt;local-dir&gt;/usercache/$username/filecache</code>目录下，这些文件的owner是启动Application的user，并且其它用户没有访问权限。类似PUBLIC，一旦资源本地化，所有的用户都没有写权限，即使是提交任务的user。这样是为了避免恶意的container去修改文件。</p>
+<p>APPLICATION只在<strong>当前节点上同一个application的container之间共享</strong>。这些资源存储在NodeManager本地磁盘的<code>&lt;local-dir&gt;/usercache/$username/appcache/&lt;app-id&gt;/</code>目录下，文件的owner是Application的提交者，并且只有读权限。</p>
+<blockquote>
+<p>这里需要注意的是LOCALRESOURCE VISIBILITIES与LOCALRESOURCE TIMESTAMPS类似，都是由ApplicationMaster指定本地资源的可见性，NodeManager并不会对资源的可见性做任何决定。同样当运行ApplicationMaster的container启动时，也需要资源的可见性，此时这个可见性就需要由client指定。以MapReduce on YARN为例，MapReduce的JobClient决定ApplicationMaster需要的资源的可见性，然后由ApplicationMaster自己决定map和reduce所需资源的可见性。</p>
+</blockquote>
+<h4 id="本地化流程"><a href="#本地化流程" class="headerlink" title="本地化流程"></a>本地化流程</h4><p>PUBLIC资源本地化是由<code>PublicLocalizer</code>实现的，在NodeManager进程中会有一个线程池PublicLocalizers，其个数是由<code>yarn.nodemanager.localizer.fetch.thread-count</code>决定，线程池的大小决定并行下载PUBLIC资源的线程最大个数。当PublicLocalizer本地化PUBLIC资源时，会通过检查这些资源在HDFS上的权限来确定所申请的资源确实为PUBLIC。只要有资源不符合就拒绝本地化。PublicLocalizer能安全的从HDFS上下载资源是向ContainerLaunchContext传递了证书。 </p>
+<p>PRIVATE/APPLICATON资源的本地化是由<code>ContainerLocalizer</code>实现的，不同与PUBLIC的<code>PublicLocalizer</code>实现。<em>PublicLocalizer是直接在NodeManager中启动一个线程池进行本地化，而ContainerLocalizer出于安全问题，并没有在NodeManager进程中直接实现，而是在continer中实现的</em>。</p>
+<p>PRIVATE/APPLICATON资源的本地化是由<code>ContainerLocalizer</code>实现，这是一个单独的进程，这个进程由<code>LocalizerRunner</code>线程管理，<em>LocalizerRunner是NodeManager中的一个线程</em>，只要某个container有资源还没有下载，<em>那么此container就会触发一个LocalizerRunner</em>。下面看下具体的细节：</p>
+<!--
+LocalResourcesTracker is a per-user or per-application object that tracks all the LocalResources for a given user or an application.
+-->
+<p>当某个container第一次请求PRIVATE/APPLICATION类型的本地资源时，如果没有在LocalResourcesTracker中找到，则加入pending-resources列表。随后是否需要创建LocalizerRunner线程取决于是否有必要下载资源，如果需要就将本地资源加入<strong>LocalizerRunner</strong>维护的pending-resources列表。</p>
+<p>NodeManager在安全模式时，本地资源本地化时需要所用的user是application的提交用户而不是NodeManager的启动用户。因此<strong>LocalizerRunner会以application提交者的身份启动LinuxContainerExecutor(LCE)进程，然后LCE会执行ContainerLocalizer下载资源</strong>。<em>ContainerLocalizer启动之后会与NodeManager维持一个心跳</em>，通过心跳，LocalizerRunner给ContainerLocalizer分配需要下载的资源或者停止ContainerLocalizer进程，而ContainerLocalizer会通知LocalizerRunner自己的下载进度。如果资源下载失败，这个资源将会从LocalResourcesTracker中移除，并且container最终也会失败。如果下载成功，LocalizerRunner会通过心跳给ContainerLocalizer另一个资源进行下载，直到所有的资源都下载完。</p>
+<!--
+At present, each ContainerLocalizer doesn’t support parallel download of mutliple PRIVATE/APPLICATION resources which we are trying to fix via YARN-574.
+
+Note that because of the above, the maximum parallelism that we can get at present is the number of containers requested for same user on same node manager at THAT point of time. This in the worst case is one when an ApplicationMaster itself is starting. So if AM needs any resources to be localized then today they will be downloaded serially before its container starts.
+-->
+<h4 id="本地资源的生命周期"><a href="#本地资源的生命周期" class="headerlink" title="本地资源的生命周期"></a>本地资源的生命周期</h4><p>由于本地资源的访问权限不一样，则不同的LocalResourceType在本地保留的时间也会不一样。</p>
+<ul>
+<li>PUBLIC由于是在任何用户的任意Application之间共享，所以并不会在某个container或者application结束之后被删除，只有在本地目录<local-dir>达到存储阈值时才会被删除，这个阈值由<code>yarn.nodemanager.localizer.cache.target-size-mb</code>控制。</local-dir></li>
+<li>PRIVATE和PUBLIC的生命周期一样。</li>
+<li>APPLICATION会在application结束之后立即删除。</li>
+</ul>
+<!--
+One thing of note is that for any given application, we may have multiple ApplicationAttempts and each attempt may start zero or more containers on a given node manager. When the first container belonging to an ApplicationAttempt starts, ResourceLocalizationService localizes files for that application as requested in the container’s launch context. If future containers request more such resources then they all will be localized. If one ApplicationAttempt finishes/fails and another is started, ResourceLocalizationService doesn’t do anything w.r.t the previously localized resources. However when eventually the application finishes, ResourceManager communicates that information to NodeManagers which in turn clear the application LocalCache. In summary, APPLICATION LocalResources are truly application scoped and not ApplicationAttempt scoped.
+-->
+<h4 id="本地化相关的配置"><a href="#本地化相关的配置" class="headerlink" title="本地化相关的配置"></a>本地化相关的配置</h4><p>在<code>yarn-site.xml</code>中有一些资源本地化相关的配置。</p>
+<ul>
+<li><code>yarn.nodemanager.local-dirs</code>: 资源本地化时所在的本地目录，可以是以逗号分隔的多个磁盘目录。</li>
+<li><code>yarn.nodemanager.local-cache.max-files-per-directory</code>: 每个目录中最多本地化文件的个数，PUBLIC / PRIVATE / APPLICATION分别统计。</li>
+<li><code>yarn.nodemanager.localizer.address</code>: ResourceLocalizationService服务监听的RPC地址，用来接收不同localizers</li>
+<li><code>yarn.nodemanager.localizer.client.thread-count</code>: ResourceLocalizationService中用来处理来自localizers请求的线程数。默认是5</li>
+<li><code>yarn.nodemanager.localizer.fetch.thread-count</code>: 本地化PUBLIC资源时PublicLocalizer的线程数。默认是4</li>
+<li><code>yarn.nodemanager.delete.thread-count</code>: DeletionService中删除文件的线程数，默认是4。</li>
+<li><code>yarn.nodemanager.localizer.cache.target-size-mb</code>: 本地化资源所占的最大磁盘空间，单位是MB，比包括APPLICATION资源。</li>
+<li><code>yarn.nodemanager.localizer.cache.cleanup.interval-ms</code>: 每隔固定时间，去检查下磁盘的使用量。在此间隔之后，如果存储的磁盘空间超过了配置的阈值，会删除未用的资源。</li>
+</ul>
+<blockquote>
+<p>未使用的资源是指没有被正在运行的container引用的资源。每次container请求资源时，container会被加入到一个资源引用列表中，直到container结束之后才会被移除。所以当引用数为0时，可以被删除。</p>
+</blockquote>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://zh.hortonworks.com/blog/management-of-application-dependencies-in-yarn/" target="_blank" rel="noopener">Management of Application Dependencies in YARN</a><br><a href="https://zh.hortonworks.com/blog/resource-localization-in-yarn-deep-dive/" target="_blank" rel="noopener">Resource Localization in YARN: Deep Dive</a></p>
+]]></content>
+      
+        <categories>
+            
+            <category> Hadoop </category>
+            
+        </categories>
+        
+        
+        <tags>
+            
+            <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
+            
+            <tag> YARN </tag>
+            
+            <tag> Localization </tag>
+            
+        </tags>
+        
+    </entry>
+    
+    <entry>
       <title><![CDATA[Use protobuf to FSImage]]></title>
       <url>http://bigdatadecode.club/%5B%E8%AF%91%5DFSImage-protocol.html</url>
       <content type="html"><![CDATA[<p>本篇是一篇译文，主要介绍下FSImage改进为protobuf的设计原理，<a href="https://issues.apache.org/jira/secure/attachment/12626179/HDFS-5698-design.pdf" target="_blank" rel="noopener">原文地址</a>。</p>
@@ -45,9 +148,9 @@
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> protobuf </tag>
             
@@ -365,9 +468,9 @@ https://issues.apache.org/jira/secure/attachment/12895963/HDFS%20Scalability%20a
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -486,9 +589,9 @@ This is a harder problem to solve. Unlike the namespace, the block map does not 
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -544,9 +647,9 @@ This is a harder problem to solve. Unlike the namespace, the block map does not 
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -816,9 +919,9 @@ This is a harder problem to solve. Unlike the namespace, the block map does not 
         
         <tags>
             
-            <tag> Docker </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Docker </tag>
             
             <tag> log </tag>
             
@@ -980,9 +1083,9 @@ print sum
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -1140,9 +1243,9 @@ INodeWithAdditionalFields.modificationTime accessTime
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -1212,9 +1315,9 @@ INodeWithAdditionalFields.modificationTime accessTime
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -1431,9 +1534,9 @@ Caused by: java.io.IOException: error=13, Permission denied
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -1488,9 +1591,9 @@ Caused by: java.io.IOException: error=13, Permission denied
         
         <tags>
             
-            <tag> Docker </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Docker </tag>
             
             <tag> log </tag>
             
@@ -1660,9 +1763,9 @@ Caused by: java.io.IOException: error=13, Permission denied
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -2066,9 +2169,9 @@ git push --force-with-lease origin master
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -2134,9 +2237,9 @@ maps存放attemptID与request映射，待执行的map集合
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -2202,9 +2305,9 @@ maps存放attemptID与request映射，待执行的map集合
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -2304,9 +2407,9 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -2344,9 +2447,9 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -2703,9 +2806,9 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -2766,9 +2869,9 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -3110,9 +3213,9 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> MapReduce应用实例 </tag>
             
@@ -3183,9 +3286,9 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> MapReduce </tag>
             
@@ -3258,9 +3361,9 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> MapReduce </tag>
             
@@ -3363,9 +3466,9 @@ mapred.text.key.partitioner.options=-k2,3 #用第二和第三个field进行分�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> MapReduce </tag>
             
@@ -3427,9 +3530,9 @@ mapred.text.key.partitioner.options=-k2,3 #用第二和第三个field进行分�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> MapReduce </tag>
             
@@ -3663,9 +3766,9 @@ Exception in thread "main" java.lang.AssertionError: Missing tools.jar at: /Libr
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> build </tag>
             
@@ -3896,9 +3999,9 @@ iptables restart
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> MapReduce应用实例 </tag>
             
@@ -4611,9 +4714,9 @@ iptables restart
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -4668,9 +4771,9 @@ iptables restart
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> MapReduce </tag>
             
@@ -4744,9 +4847,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> MapReduce </tag>
             
@@ -5247,9 +5350,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -5377,9 +5480,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -5585,9 +5688,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -5755,9 +5858,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -5839,9 +5942,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -5894,9 +5997,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -5945,9 +6048,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -6059,9 +6162,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -6158,9 +6261,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -6302,9 +6405,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -6423,9 +6526,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -6686,9 +6789,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -6941,9 +7044,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -7037,9 +7140,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -7098,9 +7201,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> YARN </tag>
             
@@ -7220,9 +7323,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> RPC </tag>
             
@@ -7325,9 +7428,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> FSImage </tag>
             
@@ -7397,9 +7500,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -7494,9 +7597,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -7615,9 +7718,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
@@ -7939,9 +8042,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Hadoop </tag>
+            
+            <tag> BigData </tag>
             
             <tag> HDFS </tag>
             
