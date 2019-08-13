@@ -322,6 +322,179 @@
   
 
   <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/YARN源码分析之AsyncDispatcher事件调度器.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="混绅士">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="big data decode club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                
+                <a class="post-title-link" href="/YARN源码分析之AsyncDispatcher事件调度器.html" itemprop="url">
+                  YARN源码分析之AsyncDispatcher事件调度器
+                </a>
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-08-08T11:23:14+08:00">
+                2016-08-08
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-02-12T17:44:14+08:00">
+                2019-02-12
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/YARN源码分析之AsyncDispatcher事件调度器.html" class="leancloud_visitors" data-flag-title="YARN源码分析之AsyncDispatcher事件调度器">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <p>YARN采用了事件驱动机制，其核心服务实际上都是一个异步调度器，包括Resourcemanager、Nodemanager、MRAppMaster等。本篇以MRAppMaster为例，其内部包含一个异步调度器AsyncDispatcher，AsyncDispatcher在yarn中的主要作用是对发生的一系列事件找到各个事件对应的handle进行处理，从其功能上可以看出其内部应该有一个队列，队列主要用来存放等待调度的事件，还应该有一个事件与handle的映射表，用来处理各个事件。</p>
+<p>通过查看代码首先可以发现AsyncDispatcher是一个服务，继承了AbstractService，其次是通过<em>阻塞队列</em>存放事件，然后单独起一个线程从阻塞队列中消费事件，通过事先定义好的事件和处理器的映射表找到各自的处理器进行处理。</p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/YARN源码分析之AsyncDispatcher事件调度器.html#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/Hadoop RPC 解析.html">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
@@ -1914,182 +2087,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/将sublime text2添加到右键菜单中.html">
-
-    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="混绅士">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/uploads/avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="big data decode club">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h2 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/将sublime text2添加到右键菜单中.html" itemprop="url">
-                  将sublime text 2 添加到右键菜单中
-                </a>
-              
-            
-          </h2>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-02-15T22:57:21+08:00">
-                2016-02-15
-              </time>
-            
-
-            
-              <span class="post-meta-divider">|</span>
-            
-
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-check-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">更新于</span>
-              
-              <time title="更新于" itemprop="dateModified" datetime="2016-02-15T22:57:21+08:00">
-                2016-02-15
-              </time>
-            
-          </span>
-
-          
-            <span class="post-category">
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
-                  <a href="/categories/tool/" itemprop="url" rel="index">
-                    <span itemprop="name">tool</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/将sublime text2添加到右键菜单中.html" class="leancloud_visitors" data-flag-title="将sublime text 2 添加到右键菜单中">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h2 id="将sublime-text2添加到右键菜单中"><a href="#将sublime-text2添加到右键菜单中" class="headerlink" title="将sublime text2添加到右键菜单中"></a>将sublime text2添加到右键菜单中</h2><p>Windows安装sublime text2，右键文件不能使用sublime text打开，右键中并无此快捷键，所以需要手动添加使用sublime text编辑的选项。</p>
-<p>将Sublime Text添加到右键可以概括为一个统一的功能，就是讲应用程序的快捷键添加到鼠标右键中。</p>
-<h3 id="修改注册表"><a href="#修改注册表" class="headerlink" title="修改注册表"></a>修改注册表</h3><hr>
-<ol>
-<li>开始-&gt;运行-&gt;regedit打开注册表编辑器。(快捷键 window+R 输入regedit 回车)</li>
-<li>选择<code>HKEY_CLASSES_ROOT</code>-&gt;<code>*</code>-&gt;<code>shell</code>，然后右键选择<code>新建项</code>，命名为Edit with Sublime Text(这个值就是鼠标右键菜单中显示的名称，可以随便改)，然后在右边空白区域右键<code>新建</code>-&gt;<code>字符串值</code>，命名为<code>Icon</code>(这个不能改，这里设置的是的右键菜单中显示的图标)，值为<code>D:\Program Files\Sublime Text 2\sublime_text.exe,0</code>。</li>
-<li>在<code>Edit with Sublime Text</code>下右键<code>新建</code>-&gt;<code>项</code>，命名为<code>Command</code>，然后修改右边的默认值为<code>D:\Program Files\Sublime Text 2\sublime_text.exe %1</code></li>
-</ol>
-<p>完成，关闭注册表就可以用右键打开文件进行编辑了。</p>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -2137,7 +2134,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">103</span>
+                <span class="site-state-item-count">104</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -2159,7 +2156,7 @@
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">165</span>
+                <span class="site-state-item-count">166</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
@@ -2234,6 +2231,10 @@
                 
                 
                   <li>
+                    <a href="/[译]Yarn-capacity.html" title="YARN Capacity Scheduler" target="_blank">YARN Capacity Scheduler</a>
+                  </li>
+                
+                  <li>
                     <a href="/YARN-Resource-Localization.html" title="Resource Localization in YARN" target="_blank">Resource Localization in YARN</a>
                   </li>
                 
@@ -2247,10 +2248,6 @@
                 
                   <li>
                     <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
-                  </li>
-                
-                  <li>
-                    <a href="/cryptozombies-src-parse.html" title="cryptozombies源码解析一" target="_blank">cryptozombies源码解析一</a>
                   </li>
                 
               </ul>
@@ -2305,7 +2302,7 @@
 <!--add total count by szw-->
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共638.5k字</span>
+  <span class="post-count">博客全站共642.2k字</span>
 </div>
         
 <div class="busuanzi-count">

@@ -4,6 +4,70 @@
   
     
     <entry>
+      <title><![CDATA[YARN Capacity Scheduler]]></title>
+      <url>http://bigdatadecode.club/%5B%E8%AF%91%5DYarn-capacity.html</url>
+      <content type="html"><![CDATA[<p>这是一篇译文，<a href="https://hortonworks.com/blog/yarn-capacity-scheduler/" target="_blank" rel="noopener">原文地址</a></p>
+<p>主要介绍了Capacity Scheduler相关的内容。</p>
+<p>Capacity Scheduler在资源分配时主要考虑两个主要属性：<em>用户名和应用程序ID</em>。在指定最小用户百分比和用户限制因素的队列中，用户之间共享资源时，关注的是用户名本身。在队列中，应用程序获取资源分配由叶子队列排序策略驱动：FIFO或FAIR，它只关心应用程序而不关心哪个用户正在运行它。在FIFO中，资源首先被分配给队列中最先提交的应用程序，并且只有当它不再需要任何请求时，下一个应用程序才会获得分配。对于使用最少资源的FAIR应用程序，首先询问是否存在待处理的分配，如果存在则分配，则如果不存在，则检查具有最少资源的下一个应用程序；这有助于与通常使用它们的应用程序平均共享队列。</p>
+<a id="more"></a>
+<h2 id="容量和分层设计"><a href="#容量和分层设计" class="headerlink" title="容量和分层设计"></a>容量和分层设计</h2><p>​YARN对其可分配的资源定义了最小分配量和最大分配量，目前这些资源包括内存和内核。可调度资源是由NodeManage提供的，来自所有节点的资源聚合为可被Capacity调度的总资源，总资源组成root队列。</p>
+<p>​Capacity调度的基础设置是如何布置队列以及为它们分配资源。队列以分层设计布局，最顶层的父节点是集群队列的“根”，可以从根分配子队列，或者可以在自己队列的基础上再次分配子队列。资源被分配给这些队列，作为层次结构中父级资源的最小和最大百分比。 最小容量是如果群集上的所有队列都已运行，并且集群总资源已用完，此时各队列应该可以使用的资源量。 最大容量是类似弹性的容量，允许队列利用不用于填充其他队列中的最小容量需求的资源。<br><img src="/blogimgs/capacity/queue.png" alt="队列设计" title="队列设计"></p>
+<h2 id="最低用户百分比和用户限制因素"><a href="#最低用户百分比和用户限制因素" class="headerlink" title="最低用户百分比和用户限制因素"></a>最低用户百分比和用户限制因素</h2><p>​最小用户百分比和用户限制因子是控制如何将正在使用的队列中的资源分配给他们的方法。 最小用户百分比是单个用户在请求时应访问的最小资源量百分比，是一个软限制。 例如，10％的最小用户百分比意味着10个用户将获得10％; 这个值不是硬性规定的，因为如果其中一个用户要求更少，我们可能会将更多用户放入队列。</p>
+<p>​用户限制因子是一种控制单个用户可以使用的最大资源量的方法。 用户限制因子设置为队列最小容量的倍数。如果用户限制因子为1表示用户可以使用队列的整个最小容量， 如果用户限制因子大于1，则用户可能会增长到最大容量，如果该值设置为小于1，例如0.5，则用户只能获得队列最小容量的一半。 如果您希望用户能够增长到队列设置的最大容量，则大于1的值将允许用户多次超过最小容量。<br><img src="/blogimgs/capacity/user.png" alt="限制因子" title="限制因子"></p>
+<p>​最初可能不直观的常见设计点是按工作负载而不是应用程序创建队列，然后使用用户限制因子来防止单个用户<strong>通过使用小于1.0的值单独接管队列</strong>。 此模型支持更简单的操作，不允许通过为每个LoB创建一个队列来创建队列，而是通过按工作负载创建队列来创建可预测的队列行为。 一旦群集完全使用并且应用程序排队等待运行时，较低的用户限制因素将是控制租户之间资源共享的关键。</p>
+<p>​最初，由于使用较小的用户限制来限制用户资源，这可能无法在其Hadoop平台旅程开始时提供群集利用率，有许多方法，但需要考虑的是，最初允许单个租户接管一个小集群（比如10个节点），这可能是合理的，但是当扩展平台占用空间时，降低用户限制因子，以便每个租户保留与添加新节点之前相同数量的可分配资源。 这可以让用户保持最初的体验，但是无法接管整个集群，因为随着整个群集的增长，新用户可以轻松获得分配的容量，同时不会降低原始用户的体验。</p>
+<h2 id="队列设计"><a href="#队列设计" class="headerlink" title="队列设计"></a>队列设计</h2><p>​队列设计时需要考虑如下相关场景：</p>
+<ul>
+<li><strong>即时查询</strong><br>主要是些临时统计需求，任务的出现没有规律，主要集中在工作时间，由用户主动触发</li>
+<li><strong>紧急需求</strong><br>主要用于处理一些紧急需求，比如紧急补数</li>
+<li><strong>机器学习</strong><br>这部分需求是需要大量的资源并且可能会长时间占用资源，但是紧急度和运行时长要求不是很高</li>
+<li><strong>实时计算</strong><br>这部分需求是长时间运行并且没有明确的结束标识，对实时要求较高，不能容忍延迟，需要严格保证资源不被其它需求抢占</li>
+<li><strong>批处理</strong><br>是指一些常规数据ETL，主要关注任务的吞吐量而不是当个任务是否延迟</li>
+</ul>
+<p>​队列中资源使用模型可以认为是一些containers像常量那样一直存在和新启动的。 这种使用模型对于具有良好行为的集群非常重要，因为队列可以快速重新平衡到其最小容量，并公平地平衡其用户之间的队列容量。 不好的使用模式是长期存在的容器，资源一直在被自己使用并且永远不会释放，这样它可以阻止资源的适当重新平衡，在某些情况下它可以完全阻止其他应用程序启动或其他队列恢复其最小容量。 当不使用抢占时，如果队列扩容弹性空间但从不释放其容器，则弹性空间永远不会被返回给其他队列来保证他们的最小容量。 如果在队列中运行的应用程序具有长期存在容器，请特别注意并考虑使用诸如用户限制因子，抢占或甚至没有弹性容量的专用队列等功能来减轻其对其他用户的影响的方法。</p>
+<h2 id="CAPACITY调度特性"><a href="#CAPACITY调度特性" class="headerlink" title="CAPACITY调度特性"></a>CAPACITY调度特性</h2><h3 id="CPU调度"><a href="#CPU调度" class="headerlink" title="CPU调度"></a>CPU调度</h3><p>​默认情况下Capacity调度不支持CPU调度。如果开启CPU调度的话，可能会降低批处理任务的吞吐量。支持CPU调度的算法是Dominant Resource Fairness (DRF)。</p>
+<p>​CPU调度主要包含两部分：</p>
+<ol>
+<li>分配和放置</li>
+<li>强制限制</li>
+</ol>
+<p>​只要开启CPU调度即可解决分配和放置问题，调度器会使用DRF算法和VCores Node Manager的汇报结果。 这解决了一些新问题，例如用户使用1个或2个executors来调度他的Spark应用程序，但是每个executor分配8个core，然后由于可用内存过多而继续向这个节点分配任务，由于core的限制影响这些任务的运行。 通过启用简单的CPU调度，如果正在使用所有core，则不再将其他任务分配到该节点上，并找到群集中其它节点来放置任务。</p>
+<p>​至于强制限制可以通过Cgroup来解决。Cgroup可以让YARN确保分配给某个container的vcore个数不会超过请求的数量。可以启用未使用时共享vcores，也可以仅严格执行已安排的内容。 节点管理器还可以配置为服务器上允许所有任务总和的最大CPU使用量，这样可以保证操作系统的功能正常使用core。</p>
+<h3 id="抢占"><a href="#抢占" class="headerlink" title="抢占"></a>抢占</h3><p>​当应用程序在队列A中使用了弹性容量，此时另一个队列B提交了一个应用程序，队列B的资源被队列A的任务抢先使用中，此时正常情况下队列B中的应用程序必须等待队列A中的任务释放自由之后才能运行。如果开启抢占功能，就可以立马回收其他队列中的资源，以便满足队列的最小容量需求。抢占功能并不会彻底杀死一个应用程序，优先抢占map任务的资源，最后才是reduce的资源，因为被kill掉的任务必须重新运行，reduce比map要重复更多的工作。 从排序的角度来看，抢占时优先考虑最新的应用程序和大多数超额订阅的应用程序。</p>
+<p>​抢占有些功能并不能像用户预期的那样发挥作用。<strong>最常见的行为是认为队列可以在其自身内部抢占以平衡所有用户的资源。 这种假设是错误的，因为抢占只能在队列之间</strong>，在队列中用户之间的资源平衡需要查看其他控制方式，例如用户限制因子和队列FIFO / FAIR策略。<br><!--
+另一个行为是，如果资源不能提供足够的资源来满足另一个资源分配请求，则Preemption不会抢占资源。 虽然对于具有较大最大容器大小的小型集群而言，大型集群通常不会出现问题但是Preemption未配置为回收最大可能容量的容器，因此根本不会执行任何操作。 用于控制此行为的主要属性是每轮总抢占率和自然终止因子。 每轮总抢占率是群集中可以立即被抢占的资源的百分比，自然终止因子是所请求的总群集（100％）中资源的百分比将被抢占到每轮总抢占数。
+--></p>
+<h3 id="队列的排序策略"><a href="#队列的排序策略" class="headerlink" title="队列的排序策略"></a>队列的排序策略</h3><p>​Capacity调度目前支持两种排序策略：FIFO和FAIR。队列默认使用的是FIFO，但是这不是用户所希望的排序策略。在叶子队列中配置FIFO或者FAIR，可以在应用程序的吞吐量和共享公平之间合理选择。关于排序策略的一个重要事情是，排序是针对队列中的应用程序级别，而不关心哪个用户拥有应用程序。</p>
+<p>​FIFO策略是按照应用程序提交的顺序来排序的。如果应用程序有未完成的资源请求，则会根据先到先得的原则分配。 这样做的结果是，如果应用程序有足够的未完成请求，它们将在完成之前多次请求，可能会使用整个队列，它们将阻止其他应用程序启动。 用户甚至可以使用自己的应用程序占满整个集群资源而阻止其它应用程序提交，正是这种行为对用户来说是最不可接受的。</p>
+<p>​使用FAIR策略能很容易的解决上面的问题。在子队列上使用FAIR策略时，应首先对应用程序已占用的资源量进行评估，资源使用最少的应用程序会优先分配请求。 这样，进入队列的没有进行资源分配的新应用程序将首先进行资源分配。 一旦队列中的所有应用程序都得到资源，这样就在用户之间得到平衡。</p>
+<p>​最重要的是，只有在队列中有良好的资源交互时才会出现此行为。由于队列内部不存在抢占资源，因此无法在队列中强制重新分配资源，而且FAIR排序策略仅涉及新资源分配而非当前已使用资源的再分配；这是什么意思？ 如果队列中资源被当前任务使用且任务永远不会完成或长时间运行而不允许在队列中发生容器结束，那么将保留资源并仍然阻止应用程序执行。</p>
+<h3 id="默认队列映射"><a href="#默认队列映射" class="headerlink" title="默认队列映射"></a>默认队列映射</h3><p>​通常是在配置文件中指定用户提交的队列，Capacity调度可以使用<strong>默认队列映射</strong>通过用户名或者用户组将用户路由到指定的队列。但是需要注意的是默认队列的路由规则是哪个规则先满足就使用那个规则进行路由。也就是说如果组用户映射规则在用户映射规则前面，则先使用组用户映射规则对用户进行路由。</p>
+<h3 id="优先级"><a href="#优先级" class="headerlink" title="优先级"></a>优先级</h3><p>​当资源在队列之间分配时，<strong>具有最低相对容量的队列首先获得资源</strong>。如果你想让某个队列总是比其它队列优先获得资源，那么最简单的方法就是提高这个队列的优先级。</p>
+<p>​在这两个队列之上提供了如何使用未经队列优先级修改的相对容量的示例。在这种情况下，即使队列A小于队列B并且队列B使用更多绝对资源，也会选择继续接收它们，因为它的相对容量低于队列A的相对容量。如果所需行为需要队列A始终接收资源分配首先，队列优先级应该增加到高于队列B的优先级。当分配优先级时，更高的值表示更高的优先级。</p>
+]]></content>
+      
+        <categories>
+            
+            <category> Hadoop </category>
+            
+        </categories>
+        
+        
+        <tags>
+            
+            <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
+            
+            <tag> YARN </tag>
+            
+            <tag> Capacity </tag>
+            
+        </tags>
+        
+    </entry>
+    
+    <entry>
       <title><![CDATA[Resource Localization in YARN]]></title>
       <url>http://bigdatadecode.club/YARN-Resource-Localization.html</url>
       <content type="html"><![CDATA[<p>一个Applciation运行在YARN上的流程为，从YARN Client向ResourceManager提交任务，将Applciation所需资源提交到HDFS中，然后ResourceManager启动APPMaster，APPMaster通知各个NodeManager启动container执行具体到计算任务。在启动container之前需要从HDFS上下载该container执行所依赖的资源，这些资源包括jar、依赖的jar或者其它文件，这个过程就称为<strong>资源本地化</strong>(Resource Localization)。</p>
@@ -94,9 +158,9 @@ One thing of note is that for any given application, we may have multiple Applic
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> YARN </tag>
             
@@ -148,9 +212,9 @@ One thing of note is that for any given application, we may have multiple Applic
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> protobuf </tag>
             
@@ -468,9 +532,9 @@ https://issues.apache.org/jira/secure/attachment/12895963/HDFS%20Scalability%20a
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -589,9 +653,9 @@ This is a harder problem to solve. Unlike the namespace, the block map does not 
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -647,9 +711,9 @@ This is a harder problem to solve. Unlike the namespace, the block map does not 
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -919,9 +983,9 @@ This is a harder problem to solve. Unlike the namespace, the block map does not 
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Docker </tag>
+            
+            <tag> BigData </tag>
             
             <tag> log </tag>
             
@@ -1083,9 +1147,9 @@ print sum
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> YARN </tag>
             
@@ -1243,9 +1307,9 @@ INodeWithAdditionalFields.modificationTime accessTime
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -1315,9 +1379,9 @@ INodeWithAdditionalFields.modificationTime accessTime
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> YARN </tag>
             
@@ -1534,9 +1598,9 @@ Caused by: java.io.IOException: error=13, Permission denied
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -1591,9 +1655,9 @@ Caused by: java.io.IOException: error=13, Permission denied
         
         <tags>
             
-            <tag> BigData </tag>
-            
             <tag> Docker </tag>
+            
+            <tag> BigData </tag>
             
             <tag> log </tag>
             
@@ -1763,9 +1827,9 @@ Caused by: java.io.IOException: error=13, Permission denied
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -2169,9 +2233,9 @@ git push --force-with-lease origin master
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> YARN </tag>
             
@@ -2237,9 +2301,9 @@ maps存放attemptID与request映射，待执行的map集合
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> YARN </tag>
             
@@ -2305,9 +2369,9 @@ maps存放attemptID与request映射，待执行的map集合
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> YARN </tag>
             
@@ -2407,9 +2471,9 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> YARN </tag>
             
@@ -2447,9 +2511,9 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -2806,9 +2870,9 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> YARN </tag>
             
@@ -2869,9 +2933,9 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> YARN </tag>
             
@@ -3213,9 +3277,9 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> MapReduce应用实例 </tag>
             
@@ -3286,9 +3350,9 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> MapReduce </tag>
             
@@ -3361,9 +3425,9 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> MapReduce </tag>
             
@@ -3466,9 +3530,9 @@ mapred.text.key.partitioner.options=-k2,3 #用第二和第三个field进行分�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> MapReduce </tag>
             
@@ -3530,9 +3594,9 @@ mapred.text.key.partitioner.options=-k2,3 #用第二和第三个field进行分�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> MapReduce </tag>
             
@@ -3766,9 +3830,9 @@ Exception in thread "main" java.lang.AssertionError: Missing tools.jar at: /Libr
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> build </tag>
             
@@ -3999,9 +4063,9 @@ iptables restart
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> MapReduce应用实例 </tag>
             
@@ -4714,9 +4778,9 @@ iptables restart
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -4771,9 +4835,9 @@ iptables restart
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> MapReduce </tag>
             
@@ -4847,9 +4911,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> MapReduce </tag>
             
@@ -5350,9 +5414,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -5480,9 +5544,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -5688,9 +5752,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -5858,9 +5922,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -5942,9 +6006,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -5981,7 +6045,7 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
 </li>
 <li><p>ActiveNN machine crash<br><strong>当整个机器crash了，ASE(ActiveStandbyElector)在zk的session将会过期，另一个ZKFC将会获取这个事件，引发failover。</strong></p>
 </li>
-<li><p>Active ZKFC crash<br>尽管ZKFC设计简单，但是仍然有可能会crash掉，在这个情况下，failover将会被错误的触发。另一个NN的ZKFC将会对ActiveNN调用transitionToStandby让它放弃active lock，然后进行aggressive fencing。<strong>尽管会成功，但是会导致进行了一次没有必要的failover</strong>。</p>
+<li><p>Active ZKFC crash<br>尽管ZKFC设计简单，但是仍然有可能会crash掉，在这个情况下，failover将会被错误的触发。另一个NN的ZKFC通过RPC将对ActiveNN调用transitionToStandby让它放弃active lock，然后进行aggressive fencing。<strong>尽管会成功，但是会导致进行了一次没有必要的failover</strong>。</p>
 </li>
 <li><p>Zookeeper crash<br>当zk集群crash了，那么所有的ZKFC将收到DISCONNECTED事件。然后ZKFC在本地NN调用enterNeutralMode，除此之外不做任何改变。系统除了不能执行failover之外，与其他情况无异。<br>当zk恢复了，clients立马能够重连。而zk能够将之前的session信息重新被各个client进行获取（在启动的一个timeou时间内）。所以所有的nodes将会重新获取session，不需要进行无必要的failover。<br>FutureWork：breadcrumb znode在这个情况下可以优先的给予到ActiveNN，在ZK挂掉之前。</p>
 </li>
@@ -5997,9 +6061,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -6048,9 +6112,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -6162,9 +6226,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -6261,9 +6325,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -6405,9 +6469,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> YARN </tag>
             
@@ -6526,9 +6590,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> YARN </tag>
             
@@ -6691,7 +6755,7 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
 <p>这里假设nums1的长度小于等于nums2.length，由上面的概念2得知，每次减去的个数应该是两个数组折半的较小值。</p>
 </blockquote>
 <p>按照这个思路去敲代码，发现代码尼玛越写越长，考虑的情况越来越多，如两个数组一个是奇数一个是偶数；一个数组只有两个元素并且另一个数组只有一个元素，或者另一个数组是多个元素(奇偶也不定)，各种情况中位数都不一样，(<em>网上有很多帖子是用上面的思路解决的，那是因为他们遇到偶数的情况取的中位数是上中位数或者下中位数，而本题中却要上下中位数的平均值，这就要求需要保留并且去比较上下中位数，<strong>因为这两个数字可能来自于同一个数组，也可能来自两个数组</strong>这种情况就比较繁琐，很容易漏掉某种情况</em>)。撸到半夜都没有搞定，感觉可能不是这么回事，还是google下吧。</p>
-<h3 id="扩展问题至查找第k个元素"><a href="#扩展问题至查找第k个元素" class="headerlink" title="扩展问题至查找第k个元素"></a>扩展问题至查找第k个元素</h3><p>由于安装上面的思路撸了两百多行代码都没有搞定，感觉必有蹊跷，然后google下，发现有同命相连者，观其思路的核心思想为<br><em>将其转化为去找两个数组的从小到大排的第k个数</em>。<strong>两个数组共有m+n个数，若m+n是奇数，那么就是找第(m+n)/2+1个数，偶数的话就是找第(m+n)/2个数和第(m+n)/2+1个数的平均数</strong>。转换成找第k个元素之后，在二分查找时就避开了奇数偶数情况不同的问题，只管去第k个元素。</p>
+<h3 id="扩展问题至查找第k个元素"><a href="#扩展问题至查找第k个元素" class="headerlink" title="扩展问题至查找第k个元素"></a>扩展问题至查找第k个元素</h3><p>由于按照上面的思路撸了两百多行代码都没有搞定，感觉必有蹊跷，然后google下，发现有同命相连者，观其思路的核心思想为<br><em>将其转化为去找两个数组的从小到大排的第k个数</em>。<strong>两个数组共有m+n个数，若m+n是奇数，那么就是找第(m+n)/2+1个数，偶数的话就是找第(m+n)/2个数和第(m+n)/2+1个数的平均数</strong>。转换成找第k个元素之后，在二分查找时就避开了奇数偶数情况不同的问题，只管去第k个元素。</p>
 <p>具体思路如下：<br>假设要在数组A和数组B中查找第k个数(<em>假设A的长度m不大于B的长度n，这里k一定不大于m+n</em>)。也就是找A和B的第k个数。(<strong>很显然，数列“前x个数中的最后一个数”就是数列的“第x个数”。所以找第x个数和找前x个数是一样的。因为一但确定了前x个数，这些数的最后一个数就是第x个数</strong>)。</p>
 <p><em>先假定最终的前k个数中有一半(k/2)在A中，另一半(k-k/2)在B中。当然，如果A中总个数m少于k/2，只好假定最终的前k个数中有m个在A中，另外k-m个在B中。</em></p>
 <p><strong>做好上面的假定之后</strong>，根据之前的假定，<em>A中的在前k个数中的元素的最后一个数是第pa个数，B中的在前k个数中的数的最后一个数叫第pb个数</em>。<br>1、<em>如果第pa数等于第pb数</em>，那么最终的前k个数的最后一个数一定等于第pa数（是pa还是pb无所谓了），也就是说最终的第k个数就是第pa数。<br>2、<em>如果第pa数大于第pb数</em>，那么说明，我所假定的B中目前属于前k个数的数确实是属于最终的前k个数，并且后面还有部分数也属于。我所假定的A中目前属于前k个数的数不一定都属于最终的前k个数。好了，于是我就把B中确实是属于最终的前k个数的这pb个数（即第pb和第pb之前的这些数）切掉，变成B’。问题就变为去找A和B’中的前k-pb个数。<br>3、<em>如果第pa数小于第pb数</em>，那么说明，我所假定的A中目前属于前k个数的数确实是属于最终的前k个数，并且后面还有部分数也属于（有可能后面已经没数了）。我所假定的B中目前属于前k个数的数不一定都属于最终的前k个数。好了，于是我就把A中确实是属于最终的前k个数的这pa个数（即第pa和第pa之前的这些数，有可能就是A中所有的数）切掉，变成了A’（可能是空的）。问题变为去找A’和B中的前k-pa个数。</p>
@@ -6789,9 +6853,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -7044,9 +7108,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -7140,9 +7204,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> YARN </tag>
             
@@ -7201,9 +7265,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> YARN </tag>
             
@@ -7323,9 +7387,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> RPC </tag>
             
@@ -7428,9 +7492,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> FSImage </tag>
             
@@ -7500,9 +7564,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -7597,9 +7661,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -7718,9 +7782,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             
@@ -8042,9 +8106,9 @@ reduce的key输出不是有序的，为什么？ reduce的key输入是不是有�
         
         <tags>
             
-            <tag> Hadoop </tag>
-            
             <tag> BigData </tag>
+            
+            <tag> Hadoop </tag>
             
             <tag> HDFS </tag>
             

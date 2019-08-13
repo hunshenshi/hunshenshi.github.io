@@ -75,7 +75,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
 
 
-  <meta name="keywords" content="Hadoop,BigData,RPC,">
+  <meta name="keywords" content="BigData,Hadoop,RPC,">
 
 
 
@@ -92,7 +92,7 @@
 
 
 <meta name="description" content="RPCRPC由四个模块组成：1、通信模块。两个相互协作的通信模块实现请求-应答协议,它们在客户和服务器之间传递请求和应答消息,一般不会对数据包进行任何处理。请求–应答协议的实现方式有同步方式和异步方式两种。同步模式下客户端程序一直阻塞到服务器端发送的应答请求到达本地; 而异步模式不同,客户端将请求发送到服务器端后,不必等待应答返回,可以做其他事情,待服务器端处理完请求后,主动通知客户端。在高并发应">
-<meta name="keywords" content="Hadoop,BigData,RPC">
+<meta name="keywords" content="BigData,Hadoop,RPC">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Hadoop RPC 解析">
 <meta property="og:url" content="http://bigdatadecode.club/Hadoop RPC 解析.html">
@@ -606,9 +606,9 @@
       
         <div class="post-tags">
           
-            <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
-          
             <a href="/tags/BigData/" rel="tag"># BigData</a>
+          
+            <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
           
             <a href="/tags/RPC/" rel="tag"># RPC</a>
           
@@ -616,7 +616,7 @@
       
 
        
-        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/YARN源码分析之Fair Scheduler part1.html">YARN源码分析之Fair Scheduler part1</a></li><li><a href="/Application-fail-RM-change.html">Application运行失败导致RM主备切换</a></li><li><a href="/HDFS-little-file-action.html">HDFS小文件合并实战</a></li><li><a href="/HDFSCannotObtainBlockLengthForLocatedBlock.html">HDFS之Cannot obtain block length for LocatedBlock异常</a></li><li><a href="/HDFS中atime和mtime.html">HDFS中atime与mtime解析</a></li><li><a href="/HDFS权限.html">HDFS权限</a></li><li><a href="/Hadoop_get_NullPointerException.html">Hadoop get命令返回NullPointerException</a></li><li><a href="/Ozone感悟.html">Ozone感悟</a></li><li><a href="/YARNSrcApplicationMasterArch.html">YARN源码分析之ApplicationMaster架构</a></li><li><a href="/[译]FSImage-protocol.html">Use protobuf to FSImage</a></li></ul> 
+        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/Hadoop-Ozone.html">Hadoop小文件利器Ozone调研</a></li><li><a href="/HDFS write解析.html">HDFS write解析</a></li><li><a href="/HDFS HA相关的几个问题和示例场景.html">HDFS HA相关的几个问题和示例场景</a></li><li><a href="/HDFSCannotObtainBlockLengthForLocatedBlock.html">HDFS之Cannot obtain block length for LocatedBlock异常</a></li><li><a href="/HDFS-little-file-action.html">HDFS小文件合并实战</a></li><li><a href="/HDFS中atime和mtime.html">HDFS中atime与mtime解析</a></li><li><a href="/HDFS权限.html">HDFS权限</a></li><li><a href="/Hadoop_get_NullPointerException.html">Hadoop get命令返回NullPointerException</a></li><li><a href="/再议HDFS写流程之pipeline.html">再议HDFS写流程之pipeline</a></li><li><a href="/MapReduce源码解析--Reduce解析.html">MapReduce源码解析--Reduce解析</a></li></ul> 
       
 
       
@@ -747,7 +747,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">103</span>
+                <span class="site-state-item-count">104</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -769,7 +769,7 @@
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">165</span>
+                <span class="site-state-item-count">166</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
@@ -844,6 +844,10 @@
                 
                 
                   <li>
+                    <a href="/[译]Yarn-capacity.html" title="YARN Capacity Scheduler" target="_blank">YARN Capacity Scheduler</a>
+                  </li>
+                
+                  <li>
                     <a href="/YARN-Resource-Localization.html" title="Resource Localization in YARN" target="_blank">Resource Localization in YARN</a>
                   </li>
                 
@@ -857,10 +861,6 @@
                 
                   <li>
                     <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
-                  </li>
-                
-                  <li>
-                    <a href="/cryptozombies-src-parse.html" title="cryptozombies源码解析一" target="_blank">cryptozombies源码解析一</a>
                   </li>
                 
               </ul>
@@ -944,6 +944,10 @@
                     
                     
                       <li>
+                        <a href="/[译]Yarn-capacity.html" title="YARN Capacity Scheduler" target="_blank">YARN Capacity Scheduler</a>
+                      </li>
+                    
+                      <li>
                         <a href="/YARN-Resource-Localization.html" title="Resource Localization in YARN" target="_blank">Resource Localization in YARN</a>
                       </li>
                     
@@ -957,10 +961,6 @@
                     
                       <li>
                         <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
-                      </li>
-                    
-                      <li>
-                        <a href="/cryptozombies-src-parse.html" title="cryptozombies源码解析一" target="_blank">cryptozombies源码解析一</a>
                       </li>
                     
                   </ul>
@@ -1012,7 +1012,7 @@
 <!--add total count by szw-->
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共638.5k字</span>
+  <span class="post-count">博客全站共642.2k字</span>
 </div>
         
 <div class="busuanzi-count">
