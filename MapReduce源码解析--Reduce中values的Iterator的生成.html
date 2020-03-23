@@ -75,7 +75,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
 
 
-  <meta name="keywords" content="BigData,Hadoop,MapReduce,Reduce,Iterator,">
+  <meta name="keywords" content="Hadoop,BigData,MapReduce,Reduce,Iterator,">
 
 
 
@@ -92,7 +92,7 @@
 
 
 <meta name="description" content="众所周知Reduce中的values是一个Iterator，但是value的数据并不是一下全部加载到这个Iterator(也就是对value根据key进行分组，这个分组比较器可以重写，二次排序中可能会需要重写，默认是按照key进行分组)，那么values的Iterator是怎么形成的，是怎么被加载的呢？ 下面从源码的角度去探秘一下吧，因为源码才是最好的教科书。">
-<meta name="keywords" content="BigData,Hadoop,MapReduce,Reduce,Iterator">
+<meta name="keywords" content="Hadoop,BigData,MapReduce,Reduce,Iterator">
 <meta property="og:type" content="article">
 <meta property="og:title" content="MapReduce源码解析--Reduce中values的Iterator的生成">
 <meta property="og:url" content="http://bigdatadecode.club/MapReduce源码解析--Reduce中values的Iterator的生成.html">
@@ -541,9 +541,9 @@
       
         <div class="post-tags">
           
-            <a href="/tags/BigData/" rel="tag"># BigData</a>
-          
             <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
+          
+            <a href="/tags/BigData/" rel="tag"># BigData</a>
           
             <a href="/tags/MapReduce/" rel="tag"># MapReduce</a>
           
@@ -555,7 +555,7 @@
       
 
        
-        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/MapReduce源码解析--Reduce解析.html">MapReduce源码解析--Reduce解析</a></li><li><a href="/MapReduce源码解析--Map解析.html">MapReduce源码解析--Map解析</a></li><li><a href="/MapReduce源码解析--环形缓冲区.html">MapReduce源码解析--环形缓冲区</a></li><li><a href="/MapReduce源码解析--JobSplit.html">MapReduce源码解析--JobSplit</a></li><li><a href="/MapReduce源码解析--TotalOrderPartitioner.html">MapReduce源码解析--TotalOrderPartitioner</a></li><li><a href="/MapReduce应用实例--二次排序之reduce内有序.html">MapReduce应用实例--二次排序之reduce内有序</a></li><li><a href="/HDFS权限.html">HDFS权限</a></li><li><a href="/Hadoop_get_NullPointerException.html">Hadoop get命令返回NullPointerException</a></li><li><a href="/再议HDFS写流程之pipeline.html">再议HDFS写流程之pipeline</a></li><li><a href="/Hadoop RPC 解析.html">Hadoop RPC 解析</a></li></ul> 
+        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/MapReduce源码解析--Reduce解析.html">MapReduce源码解析--Reduce解析</a></li><li><a href="/MapReduce源码解析--JobSplit.html">MapReduce源码解析--JobSplit</a></li><li><a href="/MapReduce源码解析--TotalOrderPartitioner.html">MapReduce源码解析--TotalOrderPartitioner</a></li><li><a href="/MapReduce源码解析--环形缓冲区.html">MapReduce源码解析--环形缓冲区</a></li><li><a href="/MapReduce源码解析--Map解析.html">MapReduce源码解析--Map解析</a></li><li><a href="/YarnSrcMRCreateContainerRequest.html">YARN源码分析之MR创建container请求</a></li><li><a href="/Hadoop_get_NullPointerException.html">Hadoop get命令返回NullPointerException</a></li><li><a href="/Ozone感悟.html">Ozone感悟</a></li><li><a href="/YARNSrcApplicationMasterArch.html">YARN源码分析之ApplicationMaster架构</a></li><li><a href="/[译]HDFS恢复过程2.html">HDFS恢复过程2</a></li></ul> 
       
 
       
@@ -677,7 +677,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">104</span>
+                <span class="site-state-item-count">106</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -688,7 +688,7 @@
             
             <div class="site-state-item site-state-categories">
               <a href="/categories/index.html">
-                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-count">17</span>
                 <span class="site-state-item-name">分类</span>
               </a>
             </div>
@@ -699,7 +699,7 @@
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">166</span>
+                <span class="site-state-item-count">171</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
@@ -774,6 +774,14 @@
                 
                 
                   <li>
+                    <a href="/Flink-Window-Decode.html" title="Flink window解密" target="_blank">Flink window解密</a>
+                  </li>
+                
+                  <li>
+                    <a href="/golang-newbie.html" title="golang新手入门" target="_blank">golang新手入门</a>
+                  </li>
+                
+                  <li>
                     <a href="/[译]Yarn-capacity.html" title="YARN Capacity Scheduler" target="_blank">YARN Capacity Scheduler</a>
                   </li>
                 
@@ -783,14 +791,6 @@
                 
                   <li>
                     <a href="/[译]FSImage-protocol.html" title="Use protobuf to FSImage" target="_blank">Use protobuf to FSImage</a>
-                  </li>
-                
-                  <li>
-                    <a href="/Consistency-in-Distributed.html" title="分布式一致性协议" target="_blank">分布式一致性协议</a>
-                  </li>
-                
-                  <li>
-                    <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
                   </li>
                 
               </ul>
@@ -822,7 +822,7 @@
         <div class="copyright">
   
   &copy;  2016 - 
-  <span itemprop="copyrightYear">2019</span>
+  <span itemprop="copyrightYear">2020</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
@@ -845,7 +845,7 @@
 <!--add total count by szw-->
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共642.2k字</span>
+  <span class="post-count">博客全站共657.1k字</span>
 </div>
         
 <div class="busuanzi-count">

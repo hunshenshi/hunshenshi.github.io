@@ -322,6 +322,360 @@
   
 
   <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/linux配置ssh并更改默认端口.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="混绅士">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="big data decode club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                
+                <a class="post-title-link" href="/linux配置ssh并更改默认端口.html" itemprop="url">
+                  linux配置ssh并更改默认端口
+                </a>
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-04-29T17:59:20+08:00">
+                2016-04-29
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2019-02-12T17:44:14+08:00">
+                2019-02-12
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/tool/" itemprop="url" rel="index">
+                    <span itemprop="name">tool</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/linux配置ssh并更改默认端口.html" class="leancloud_visitors" data-flag-title="linux配置ssh并更改默认端口">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <h2 id="各机器打通ssh"><a href="#各机器打通ssh" class="headerlink" title="各机器打通ssh"></a>各机器打通ssh</h2><ol>
+<li><p>安装 ssh(hadoop 用户)<br> <code>mkdir .ssh  #( __创建的.ssh目录的权限必须是 700__，否则会导致ssh不通 )</code><br> <code>ssh-keygen -t rsa</code><br> <code>cat .ssh/id\_rsa.pub &gt;&gt; .ssh/authorized\_keys</code><br> <strong><code>chmod 600 .ssh/authorized_keys #(修改文件权限，否则不起作用 )  必须为600</code></strong><br>执行完以后，可以在本机上测试下，用 ssh连接自己，即：<code>ssh localhost</code> (或 ssh master),如果不幸还是提示要输入密码，说明还没起作用（ <em><code>ssh user@hostname –v</code>  是debug 模式</em>）</p>
+</li>
+<li><p>在其它机器上生成公钥、密钥，并将公钥文件复制到 master<br>a) 以 hadoop身份登录其它二台机器 slave01、 slave02，执行 <code>ssh-keygen -t rsa -P &#39;&#39;</code> 生成公钥、密钥<br>b) 然后用 scp命令，把公钥文件发放给 master（即：刚才已经搞定的那台机器）<br>slave01上：<br> <code>scp .ssh/id\_rsa.pub hadoop@master:/home/hadoop/id\_rsa\_01.pub</code><br>slave02上：<br> <code>scp .ssh/id\_rsa.pub hadoop@master:/home/hadoop/id\_rsa\_02.pub</code><br>这二行执行完后，回到master中，查看下 /home/hadoop目录，应该有二个新文件 id_rsa_01.pub、id_rsa_02.pub ，然后在 master上，导入这二个公钥<br> <code>cat id\_rsa\_01.pub &gt;&gt; .ssh/authorized_keys</code><br> <code>cat id\_rsa\_02.pub &gt;&gt; .ssh/authorized_keys</code><br>这样，master 这台机器上，就有所有 3台机器的公钥了。</p>
+</li>
+<li><p>将 master上的“ 最全”公钥，复制到其它机器<br>a) 继续保持在 master上，<br> <code>scp .ssh/authorized\_keys hadoop@slave01:/home/hadoop/.ssh/authorized\_keys</code><br> <code>scp .ssh/authorized\_keys hadoop@slave02:/home/hadoop/.ssh/authorized\_keys</code><br>b) 修改其它机器上 authorized_keys文件的权限<br>slave01以及 slave02机器上，均执行命令<br> <code>chmod 600 .ssh/authorized_keys</code></p>
+</li>
+<li><p>验证<br>在每个虚拟机上，均用 ssh 其它机器的 hostname 验证下，如果能正常无密码连接成功，表示 ok</p>
+</li>
+</ol>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/linux配置ssh并更改默认端口.html#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/python开发环境安装及restapi demo开发.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="混绅士">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="big data decode club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                
+                <a class="post-title-link" href="/python开发环境安装及restapi demo开发.html" itemprop="url">
+                  python开发环境安装及restapi demo开发
+                </a>
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-04-25T17:29:00+08:00">
+                2016-04-25
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2016-04-25T17:29:00+08:00">
+                2016-04-25
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/tool/" itemprop="url" rel="index">
+                    <span itemprop="name">tool</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/python开发环境安装及restapi demo开发.html" class="leancloud_visitors" data-flag-title="python开发环境安装及restapi demo开发">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <h2 id="linux下安装"><a href="#linux下安装" class="headerlink" title="linux下安装"></a>linux下安装</h2><p>linux中一般默认安装python，在命令行中输入python，查看当前版本</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$ python</span><br><span class="line"></span><br><span class="line">Python 2.6.6 (r266:84292, Nov 22 2013, 12:16:22) </span><br><span class="line">[GCC 4.4.7 20120313 (Red Hat 4.4.7-4)] on linux2</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/python开发环境安装及restapi demo开发.html#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/将sublime text2添加到右键菜单中.html">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
@@ -553,8 +907,8 @@
               
                 <span class="post-meta-item-text">更新于</span>
               
-              <time title="更新于" itemprop="dateModified" datetime="2019-03-28T14:03:19+08:00">
-                2019-03-28
+              <time title="更新于" itemprop="dateModified" datetime="2020-02-12T15:06:48+08:00">
+                2020-02-12
               </time>
             
           </span>
@@ -1119,7 +1473,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">104</span>
+                <span class="site-state-item-count">106</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -1130,7 +1484,7 @@
             
             <div class="site-state-item site-state-categories">
               <a href="/categories/index.html">
-                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-count">17</span>
                 <span class="site-state-item-name">分类</span>
               </a>
             </div>
@@ -1141,7 +1495,7 @@
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">166</span>
+                <span class="site-state-item-count">171</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
@@ -1216,6 +1570,14 @@
                 
                 
                   <li>
+                    <a href="/Flink-Window-Decode.html" title="Flink window解密" target="_blank">Flink window解密</a>
+                  </li>
+                
+                  <li>
+                    <a href="/golang-newbie.html" title="golang新手入门" target="_blank">golang新手入门</a>
+                  </li>
+                
+                  <li>
                     <a href="/[译]Yarn-capacity.html" title="YARN Capacity Scheduler" target="_blank">YARN Capacity Scheduler</a>
                   </li>
                 
@@ -1225,14 +1587,6 @@
                 
                   <li>
                     <a href="/[译]FSImage-protocol.html" title="Use protobuf to FSImage" target="_blank">Use protobuf to FSImage</a>
-                  </li>
-                
-                  <li>
-                    <a href="/Consistency-in-Distributed.html" title="分布式一致性协议" target="_blank">分布式一致性协议</a>
-                  </li>
-                
-                  <li>
-                    <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
                   </li>
                 
               </ul>
@@ -1264,7 +1618,7 @@
         <div class="copyright">
   
   &copy;  2016 - 
-  <span itemprop="copyrightYear">2019</span>
+  <span itemprop="copyrightYear">2020</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
@@ -1287,7 +1641,7 @@
 <!--add total count by szw-->
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共642.2k字</span>
+  <span class="post-count">博客全站共657.1k字</span>
 </div>
         
 <div class="busuanzi-count">

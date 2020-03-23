@@ -75,7 +75,7 @@
 <link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
 
 
-  <meta name="keywords" content="BigData,Hadoop,YARN,StateMachineFactory,">
+  <meta name="keywords" content="Hadoop,BigData,YARN,StateMachineFactory,">
 
 
 
@@ -92,7 +92,7 @@
 
 
 <meta name="description" content="状态机由一组状态组成，这些状态大体分为三类，分别为初始状态、中间状态和最终状态。状态机首先由初始状态A开始运行，经过一系列的中间状态后到达最终状态，并在最终状态退出，从而形成一个有向无环图。其状态处理的逻辑是收到一个事件，触发状态A到状态B的转换，而转换操作是由事件对应的hook完成的。 YARN中引入了事件机制和状态机机制，事件机制可以在这篇文章中了解下事件机制的调度器，本篇主要从源码的角度解析">
-<meta name="keywords" content="BigData,Hadoop,YARN,StateMachineFactory">
+<meta name="keywords" content="Hadoop,BigData,YARN,StateMachineFactory">
 <meta property="og:type" content="article">
 <meta property="og:title" content="YARN源码分析之StateMachineFactory状态机">
 <meta property="og:url" content="http://bigdatadecode.club/YARN源码分析之StateMachineFactory状态机.html">
@@ -100,7 +100,7 @@
 <meta property="og:description" content="状态机由一组状态组成，这些状态大体分为三类，分别为初始状态、中间状态和最终状态。状态机首先由初始状态A开始运行，经过一系列的中间状态后到达最终状态，并在最终状态退出，从而形成一个有向无环图。其状态处理的逻辑是收到一个事件，触发状态A到状态B的转换，而转换操作是由事件对应的hook完成的。 YARN中引入了事件机制和状态机机制，事件机制可以在这篇文章中了解下事件机制的调度器，本篇主要从源码的角度解析">
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="http://bigdatadecode.club/blogimgs/StateMachine/RMApp.png">
-<meta property="og:updated_time" content="2019-02-12T09:44:14.924Z">
+<meta property="og:updated_time" content="2019-10-09T07:12:02.073Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="YARN源码分析之StateMachineFactory状态机">
 <meta name="twitter:description" content="状态机由一组状态组成，这些状态大体分为三类，分别为初始状态、中间状态和最终状态。状态机首先由初始状态A开始运行，经过一系列的中间状态后到达最终状态，并在最终状态退出，从而形成一个有向无环图。其状态处理的逻辑是收到一个事件，触发状态A到状态B的转换，而转换操作是由事件对应的hook完成的。 YARN中引入了事件机制和状态机机制，事件机制可以在这篇文章中了解下事件机制的调度器，本篇主要从源码的角度解析">
@@ -376,8 +376,8 @@
               
                 <span class="post-meta-item-text">更新于</span>
               
-              <time title="更新于" itemprop="dateModified" datetime="2019-02-12T17:44:14+08:00">
-                2019-02-12
+              <time title="更新于" itemprop="dateModified" datetime="2019-10-09T15:12:02+08:00">
+                2019-10-09
               </time>
             
           </span>
@@ -457,7 +457,7 @@
 <p>RMAPPImpl中的初始状态是<code>RMAppState.NEW</code>，由其初始状态初始化一个StateMachineFactory实例，然后通过addTransition注册各种状态转移。</p>
 <h2 id="addTransition"><a href="#addTransition" class="headerlink" title="addTransition"></a>addTransition</h2><p>StateMachineFactory中有五个addTransition方法，如下：</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> StateMachineFactory</span><br><span class="line">           &lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;</span><br><span class="line">        addTransition(STATE preState, STATE postState, EVENTTYPE eventType) &#123;</span><br><span class="line">  <span class="keyword">return</span> addTransition(preState, postState, eventType, <span class="keyword">null</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> StateMachineFactory&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt; <span class="title">addTransition</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">    STATE preState, STATE postState, Set&lt;EVENTTYPE&gt; eventTypes)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> addTransition(preState, postState, eventTypes, <span class="keyword">null</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> StateMachineFactory&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt; <span class="title">addTransition</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">    STATE preState, STATE postState, Set&lt;EVENTTYPE&gt; eventTypes,</span></span></span><br><span class="line"><span class="function"><span class="params">    SingleArcTransition&lt;OPERAND, EVENT&gt; hook)</span> </span>&#123;</span><br><span class="line">  StateMachineFactory&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt; factory = <span class="keyword">null</span>;</span><br><span class="line">  <span class="keyword">for</span> (EVENTTYPE event : eventTypes) &#123;</span><br><span class="line">    <span class="keyword">if</span> (factory == <span class="keyword">null</span>) &#123;</span><br><span class="line">      factory = addTransition(preState, postState, event, hook);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      factory = factory.addTransition(preState, postState, event, hook);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> factory;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> StateMachineFactory</span><br><span class="line">           &lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;</span><br><span class="line">        addTransition(STATE preState, STATE postState,</span><br><span class="line">                      EVENTTYPE eventType,</span><br><span class="line">                      SingleArcTransition&lt;OPERAND, EVENT&gt; hook)&#123;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">new</span> StateMachineFactory&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;</span><br><span class="line">      (<span class="keyword">this</span>, <span class="keyword">new</span> ApplicableSingleOrMultipleTransition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;</span><br><span class="line">         (preState, eventType, <span class="keyword">new</span> SingleInternalArc(postState, hook)));</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> StateMachineFactory</span><br><span class="line">           &lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;</span><br><span class="line">        addTransition(STATE preState, Set&lt;STATE&gt; postStates,</span><br><span class="line">                      EVENTTYPE eventType,</span><br><span class="line">                      MultipleArcTransition&lt;OPERAND, EVENT, STATE&gt; hook)&#123;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">new</span> StateMachineFactory&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;</span><br><span class="line">      (<span class="keyword">this</span>,</span><br><span class="line">       <span class="keyword">new</span> ApplicableSingleOrMultipleTransition&lt;OPERAND, STATE, EVENTTYPE, EVENT&gt;</span><br><span class="line">         (preState, eventType, <span class="keyword">new</span> MultipleInternalArc(postStates, hook)));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>由其上的addTransition方法可以看出定于了三种状态转换方式，分别是</p>
+<p>由其上的addTransition方法可以看出定义了三种状态转换方式，分别是</p>
 <ol>
 <li>preState通过<em>某个事件</em>转换为postState，也就是状态机在preState时，接收到Event事件后，执行对应的hook，并在执行完成后将当前的状态转换为postState。<br><code>addTransition(STATE preState, STATE postState, EVENTTYPE eventType, SingleArcTransition&lt;OPERAND, EVENT&gt; hook)</code></li>
 <li>preState通过<em>多个事件</em>转换为postState，也就是状态机在preState时，接收到某些Event事件后，执行对应的hook，并在执行完成后将当前的状态转换为postState。<br><code>addTransition(STATE preState, STATE postState, Set&lt;EVENTTYPE&gt; eventTypes, SingleArcTransition&lt;OPERAND, EVENT&gt; hook)</code></li>
@@ -580,9 +580,9 @@
       
         <div class="post-tags">
           
-            <a href="/tags/BigData/" rel="tag"># BigData</a>
-          
             <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
+          
+            <a href="/tags/BigData/" rel="tag"># BigData</a>
           
             <a href="/tags/YARN/" rel="tag"># YARN</a>
           
@@ -592,7 +592,7 @@
       
 
        
-        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/Application-fail-RM-change.html">Application运行失败导致RM主备切换</a></li><li><a href="/YARNSrcAMAssignPolicy.html">YARN源码分析之ApplicationMaster分配策略</a></li><li><a href="/YARN源码分析之Fair Scheduler part2.html">YARN源码分析之Fair Scheduler part2</a></li><li><a href="/YARN-Lost-Node显示异常.html">YARN Lost Node显示异常</a></li><li><a href="/YARN-Resource-Localization.html">Resource Localization in YARN</a></li><li><a href="/YARN源码分析之AsyncDispatcher事件调度器.html">YARN源码分析之AsyncDispatcher事件调度器</a></li><li><a href="/[译]Yarn-capacity.html">YARN Capacity Scheduler</a></li><li><a href="/YARNSrcApplicationMasterArch.html">YARN源码分析之ApplicationMaster架构</a></li><li><a href="/YARNSrcMRAppMasterStart.html">YARN源码分析之MRAppMaster启动</a></li><li><a href="/YARNSrcRMContainerAllocator.html">YARN源码分析之RMContainerAllocator</a></li></ul> 
+        <h3> 相关推荐：</h3><ul class="related-posts"><li><a href="/YarnSrcMRCreateContainerRequest.html">YARN源码分析之MR创建container请求</a></li><li><a href="/Application-fail-RM-change.html">Application运行失败导致RM主备切换</a></li><li><a href="/YARN源码分析之Fair Scheduler part2.html">YARN源码分析之Fair Scheduler part2</a></li><li><a href="/YARNSrcApplicationMasterStart.html">YARN源码分析之ApplicationMaster启动流程</a></li><li><a href="/YARNSrcAMAssignPolicy.html">YARN源码分析之ApplicationMaster分配策略</a></li><li><a href="/YARN源码分析之Fair Scheduler part1.html">YARN源码分析之Fair Scheduler part1</a></li><li><a href="/YARNSrcRMContainerAllocator.html">YARN源码分析之RMContainerAllocator</a></li><li><a href="/YARNSrcMRAppMasterStart.html">YARN源码分析之MRAppMaster启动</a></li><li><a href="/YARNSrcApplicationMasterArch.html">YARN源码分析之ApplicationMaster架构</a></li><li><a href="/[译]Yarn-capacity.html">YARN Capacity Scheduler</a></li></ul> 
       
 
       
@@ -723,7 +723,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">104</span>
+                <span class="site-state-item-count">106</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -734,7 +734,7 @@
             
             <div class="site-state-item site-state-categories">
               <a href="/categories/index.html">
-                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-count">17</span>
                 <span class="site-state-item-name">分类</span>
               </a>
             </div>
@@ -745,7 +745,7 @@
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">166</span>
+                <span class="site-state-item-count">171</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
@@ -820,6 +820,14 @@
                 
                 
                   <li>
+                    <a href="/Flink-Window-Decode.html" title="Flink window解密" target="_blank">Flink window解密</a>
+                  </li>
+                
+                  <li>
+                    <a href="/golang-newbie.html" title="golang新手入门" target="_blank">golang新手入门</a>
+                  </li>
+                
+                  <li>
                     <a href="/[译]Yarn-capacity.html" title="YARN Capacity Scheduler" target="_blank">YARN Capacity Scheduler</a>
                   </li>
                 
@@ -829,14 +837,6 @@
                 
                   <li>
                     <a href="/[译]FSImage-protocol.html" title="Use protobuf to FSImage" target="_blank">Use protobuf to FSImage</a>
-                  </li>
-                
-                  <li>
-                    <a href="/Consistency-in-Distributed.html" title="分布式一致性协议" target="_blank">分布式一致性协议</a>
-                  </li>
-                
-                  <li>
-                    <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
                   </li>
                 
               </ul>
@@ -920,6 +920,14 @@
                     
                     
                       <li>
+                        <a href="/Flink-Window-Decode.html" title="Flink window解密" target="_blank">Flink window解密</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/golang-newbie.html" title="golang新手入门" target="_blank">golang新手入门</a>
+                      </li>
+                    
+                      <li>
                         <a href="/[译]Yarn-capacity.html" title="YARN Capacity Scheduler" target="_blank">YARN Capacity Scheduler</a>
                       </li>
                     
@@ -929,14 +937,6 @@
                     
                       <li>
                         <a href="/[译]FSImage-protocol.html" title="Use protobuf to FSImage" target="_blank">Use protobuf to FSImage</a>
-                      </li>
-                    
-                      <li>
-                        <a href="/Consistency-in-Distributed.html" title="分布式一致性协议" target="_blank">分布式一致性协议</a>
-                      </li>
-                    
-                      <li>
-                        <a href="/cryptozombies-src-parse-2.html" title="cryptozombies源码解析二" target="_blank">cryptozombies源码解析二</a>
                       </li>
                     
                   </ul>
@@ -965,7 +965,7 @@
         <div class="copyright">
   
   &copy;  2016 - 
-  <span itemprop="copyrightYear">2019</span>
+  <span itemprop="copyrightYear">2020</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
@@ -988,7 +988,7 @@
 <!--add total count by szw-->
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共642.2k字</span>
+  <span class="post-count">博客全站共657.1k字</span>
 </div>
         
 <div class="busuanzi-count">
