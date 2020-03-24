@@ -91,18 +91,18 @@
 
 
 
-<meta name="description" content="Go开发环境配置​    选择操作系统对应的版本，可以直接下载安装包进行一键安装，也可以下载tar/zip包进行自定义安装。自定义安装时需要在环境变量中指定GOROOT和GOPATH，GOROOT是tar包的解压目录，GOPATH是Go工程项目目录，这里不仅存储这自己开发的项目也存放着项目所依赖包的源码及二进制文件。 Go项目目录​    使用某种编程语言或者某个编程框架开发的项目都有自己特有的目">
+<meta name="description" content="Go开发环境配置​    选择操作系统对应的版本，可以直接下载安装包进行一键安装，也可以下载tar/zip包进行自定义安装。自定义安装时需要在环境变量中指定GOROOT和GOPATH，GOROOT是tar包的解压目录，GOPATH是Go工程项目目录，这里不仅存储这自己开发的项目也存放着项目所依赖包的源码及二进制文件。">
 <meta name="keywords" content="go,菜鸟,环境">
 <meta property="og:type" content="article">
 <meta property="og:title" content="golang新手入门">
 <meta property="og:url" content="http://bigdatadecode.club/golang-newbie.html">
 <meta property="og:site_name" content="big data decode club">
-<meta property="og:description" content="Go开发环境配置​    选择操作系统对应的版本，可以直接下载安装包进行一键安装，也可以下载tar/zip包进行自定义安装。自定义安装时需要在环境变量中指定GOROOT和GOPATH，GOROOT是tar包的解压目录，GOPATH是Go工程项目目录，这里不仅存储这自己开发的项目也存放着项目所依赖包的源码及二进制文件。 Go项目目录​    使用某种编程语言或者某个编程框架开发的项目都有自己特有的目">
+<meta property="og:description" content="Go开发环境配置​    选择操作系统对应的版本，可以直接下载安装包进行一键安装，也可以下载tar/zip包进行自定义安装。自定义安装时需要在环境变量中指定GOROOT和GOPATH，GOROOT是tar包的解压目录，GOPATH是Go工程项目目录，这里不仅存储这自己开发的项目也存放着项目所依赖包的源码及二进制文件。">
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:updated_time" content="2019-11-02T03:33:12.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="golang新手入门">
-<meta name="twitter:description" content="Go开发环境配置​    选择操作系统对应的版本，可以直接下载安装包进行一键安装，也可以下载tar/zip包进行自定义安装。自定义安装时需要在环境变量中指定GOROOT和GOPATH，GOROOT是tar包的解压目录，GOPATH是Go工程项目目录，这里不仅存储这自己开发的项目也存放着项目所依赖包的源码及二进制文件。 Go项目目录​    使用某种编程语言或者某个编程框架开发的项目都有自己特有的目">
+<meta name="twitter:description" content="Go开发环境配置​    选择操作系统对应的版本，可以直接下载安装包进行一键安装，也可以下载tar/zip包进行自定义安装。自定义安装时需要在环境变量中指定GOROOT和GOPATH，GOROOT是tar包的解压目录，GOPATH是Go工程项目目录，这里不仅存储这自己开发的项目也存放着项目所依赖包的源码及二进制文件。">
 
 
 
@@ -440,6 +440,7 @@
 
       
         <h2 id="Go开发环境配置"><a href="#Go开发环境配置" class="headerlink" title="Go开发环境配置"></a>Go开发环境配置</h2><p>​    选择操作系统对应的版本，可以直接下载安装包进行一键安装，也可以下载tar/zip包进行自定义安装。自定义安装时需要在环境变量中指定<code>GOROOT</code>和<code>GOPATH</code>，<code>GOROOT</code>是tar包的解压目录，<code>GOPATH</code>是Go工程项目目录，这里不仅存储这自己开发的项目也存放着项目所依赖包的源码及二进制文件。</p>
+<a id="more"></a>
 <h2 id="Go项目目录"><a href="#Go项目目录" class="headerlink" title="Go项目目录"></a>Go项目目录</h2><p>​    使用某种编程语言或者某个编程框架开发的项目都有自己特有的目录结构，所以学习一门新语言或者编程框架时要先熟悉其项目的工程目录结构。Go的工程目录是一个层级目录，第一层有两个目录<code>bin</code>和<code>src</code>两个目录，<code>bin</code>文件中存放的是Go编译之后的可执行文件，<code>src</code>文件夹中存放的都是项目源文件，项目的目录结构可根据代码功能进行划分。Go工程项目结构样例如下：</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">bin/</span><br><span class="line">    hello                          <span class="comment"># command executable</span></span><br><span class="line">    outyet                         <span class="comment"># command executable</span></span><br><span class="line">src/</span><br><span class="line">    github.com/golang/example/</span><br><span class="line">        .git/                      <span class="comment"># Git repository metadata</span></span><br><span class="line">        hello/</span><br><span class="line">            hello.go               <span class="comment"># command source</span></span><br><span class="line">        outyet/</span><br><span class="line">            main.go                <span class="comment"># command source</span></span><br><span class="line">            main_test.go           <span class="comment"># test source</span></span><br><span class="line">        stringutil/</span><br><span class="line">            reverse.go             <span class="comment"># package source</span></span><br><span class="line">            reverse_test.go        <span class="comment"># test source</span></span><br><span class="line">    golang.org/x/image/</span><br><span class="line">        .git/                      <span class="comment"># Git repository metadata</span></span><br><span class="line">        bmp/</span><br><span class="line">            reader.go              <span class="comment"># package source</span></span><br><span class="line">            writer.go              <span class="comment"># package source</span></span><br><span class="line">    ... (many more repositories and packages omitted) ...</span><br></pre></td></tr></table></figure>
 <p>上面的<code>src</code>目录有两个Go项目，分别是<code>example</code>和<code>image</code>。<code>example</code>中有三个文件夹，其中<code>hello</code>和<code>outyet</code>分别包含可执行命令的文件，<code>stringutil</code>是一个工具包。<code>image</code>中没有包含可执行命令的文件，只有一个bmp的工具包和其它工具包。通过<code>go install</code>命令编译<code>example</code>项目会<code>bin</code>目录中增加两个可执行文件<code>hello</code>和<code>outyet</code></p>
@@ -511,7 +512,7 @@
     <!--add wordcount and min2 read by szw-->
     <li class="post-copyright-author">
       <strong>本文字数：</strong>
-      3,449
+      3,453
     </li>
     <li class="post-copyright-author">
       <strong>阅读时长：</strong>
