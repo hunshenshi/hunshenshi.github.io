@@ -322,6 +322,181 @@
   
 
   <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/Spark编译与部署.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="混绅士">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="big data decode club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                
+                <a class="post-title-link" href="/Spark编译与部署.html" itemprop="url">
+                  Spark编译与部署
+                </a>
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2016-05-24T22:50:00+08:00">
+                2016-05-24
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2016-05-24T22:50:00+08:00">
+                2016-05-24
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/Spark/" itemprop="url" rel="index">
+                    <span itemprop="name">Spark</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/Spark编译与部署.html" class="leancloud_visitors" data-flag-title="Spark编译与部署">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <h2 id="编译spark-1-6-1"><a href="#编译spark-1-6-1" class="headerlink" title="编译spark-1.6.1"></a>编译spark-1.6.1</h2><h3 id="使用maven编译"><a href="#使用maven编译" class="headerlink" title="使用maven编译"></a>使用maven编译</h3><p>编译spark时需要先将maven(<em>maven需要3.3以上</em>)的内存加大，执行命令<br><code>export MAVEN_OPTS=&quot;-Xmx2g -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m&quot;</code></p>
+<p>然后执行编译命令(<em>编译继承hadoop和hive的版本</em>)<br><code>mvn -Pyarn -Phadoop-2.6 -Dhadoop.version=2.6.0 -Phive -Phive-thriftserver -DskipTests clean package</code></p>
+<p>此处只是将spark源码进行编译，并没有打包成可部署的tar包，类似可部署tar解压之后的结果，但包含源码和别的jar包。为了部署方便还是要将spark编译为tar包，执行命令<br><code>./make-distribution.sh --tgz -Phadoop-2.6 -Phive -Phive-thriftserver -Pyarn -DskipTests -Dhadoop.version=2.6.0</code><br><em>执行此条命令时可能需要等待一段时间才会显示编译的过程，不要心急，慢慢等会</em></p>
+<p>编译时如果不指定scala的版本，默认是2.10。如果需要改变scala的版本，执行如下命令：<br><code>./dev/change-scala-version.sh 2.11</code><br>然后再执行编译命令。<br>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/Spark编译与部署.html#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </p></div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/linux配置ssh并更改默认端口.html">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
@@ -1473,7 +1648,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">106</span>
+                <span class="site-state-item-count">107</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -1495,7 +1670,7 @@
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">171</span>
+                <span class="site-state-item-count">174</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
@@ -1570,6 +1745,10 @@
                 
                 
                   <li>
+                    <a href="/golang-cache2go-src.html" title="golang随波逐流之cache2go源码解读" target="_blank">golang随波逐流之cache2go源码解读</a>
+                  </li>
+                
+                  <li>
                     <a href="/Flink-Window-Decode.html" title="Flink window解密" target="_blank">Flink window解密</a>
                   </li>
                 
@@ -1583,10 +1762,6 @@
                 
                   <li>
                     <a href="/YARN-Resource-Localization.html" title="Resource Localization in YARN" target="_blank">Resource Localization in YARN</a>
-                  </li>
-                
-                  <li>
-                    <a href="/[译]FSImage-protocol.html" title="Use protobuf to FSImage" target="_blank">Use protobuf to FSImage</a>
                   </li>
                 
               </ul>
@@ -1641,7 +1816,7 @@
 <!--add total count by szw-->
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共657.1k字</span>
+  <span class="post-count">博客全站共665.9k字</span>
 </div>
         
 <div class="busuanzi-count">
