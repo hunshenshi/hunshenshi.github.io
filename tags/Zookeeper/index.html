@@ -388,7 +388,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">107</span>
+                <span class="site-state-item-count">108</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -485,6 +485,10 @@
                 
                 
                   <li>
+                    <a href="/golang-cache2go-sec.html" title="golang随波逐流之cache2go知识点解读" target="_blank">golang随波逐流之cache2go知识点解读</a>
+                  </li>
+                
+                  <li>
                     <a href="/golang-cache2go-src.html" title="golang随波逐流之cache2go源码解读" target="_blank">golang随波逐流之cache2go源码解读</a>
                   </li>
                 
@@ -498,10 +502,6 @@
                 
                   <li>
                     <a href="/[译]Yarn-capacity.html" title="YARN Capacity Scheduler" target="_blank">YARN Capacity Scheduler</a>
-                  </li>
-                
-                  <li>
-                    <a href="/YARN-Resource-Localization.html" title="Resource Localization in YARN" target="_blank">Resource Localization in YARN</a>
                   </li>
                 
               </ul>
@@ -556,7 +556,7 @@
 <!--add total count by szw-->
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共665.9k字</span>
+  <span class="post-count">博客全站共671.3k字</span>
 </div>
         
 <div class="busuanzi-count">
@@ -928,6 +928,39 @@
     $(function() {
       var Counter = AV.Object.extend("Counter");
       if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+</body>
+</html>
+ ($('.leancloud_visitors').length == 1) {
         addCount(Counter);
       } else if ($('.post-title-link').length > 1) {
         showTime(Counter);

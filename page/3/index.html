@@ -322,6 +322,182 @@
   
 
   <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/YARN-Lost-Node显示异常.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="混绅士">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="big data decode club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                
+                <a class="post-title-link" href="/YARN-Lost-Node显示异常.html" itemprop="url">
+                  YARN Lost Node显示异常
+                </a>
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-09-15T23:35:23+08:00">
+                2018-09-15
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2018-09-15T23:55:23+08:00">
+                2018-09-15
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/YARN-Lost-Node显示异常.html" class="leancloud_visitors" data-flag-title="YARN Lost Node显示异常">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <p>先说现象，在yarn的web页面，Lost Nodes指标显示的数据异常，如下：<br><img src="/blogimgs/lostnode/lostnode1.png" alt=""><br>我的集群一共有5台节点，这里显示有一台节点为<code>Lost Nodes</code>，但依然有5台<code>Active Nodes</code>，细心观察发现或有某个节点即存在Active Nodes中也存在Lost Nodes中，只是端口不一样。</p>
+<p>这种情况如何解决呢？<br>在<code>yarn-site.xml</code>中添加<code>yarn.nodemanager.address</code>配置项，如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&lt;property&gt;</span><br><span class="line">    &lt;name&gt;yarn.nodemanager.address&lt;/name&gt;</span><br><span class="line">    &lt;value&gt;<span class="variable">$&#123;yarn.nodemanager.hostname&#125;</span>:65033&lt;/value&gt;</span><br><span class="line">&lt;/property&gt;</span><br></pre></td></tr></table></figure>
+<p>需要重启集群，让参数生效。</p>
+<p>现在你可以去修改你集群的配置，是不是瞬间心情愉快了很多，那是不是可以继续读下去，看下我们如何解决这种问题。</p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/YARN-Lost-Node显示异常.html#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/Ethereum-private-chain.html">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
@@ -1869,180 +2045,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/JavaSynchronizedTheory.html">
-
-    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="混绅士">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/uploads/avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="big data decode club">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h2 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/JavaSynchronizedTheory.html" itemprop="url">
-                  Java Synchronized实现原理
-                </a>
-              
-            
-          </h2>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-10-20T00:40:16+08:00">
-                2017-10-20
-              </time>
-            
-
-            
-              <span class="post-meta-divider">|</span>
-            
-
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-check-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">更新于</span>
-              
-              <time title="更新于" itemprop="dateModified" datetime="2019-02-12T17:44:14+08:00">
-                2019-02-12
-              </time>
-            
-          </span>
-
-          
-            <span class="post-category">
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
-                  <a href="/categories/Java/" itemprop="url" rel="index">
-                    <span itemprop="name">Java</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/JavaSynchronizedTheory.html" class="leancloud_visitors" data-flag-title="Java Synchronized实现原理">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <p><a href="http://bigdatadecode.club/Java同步锁解析.html">之前一篇文章</a>介绍了Synchronized的用法，本篇从实现原理上更进一步了解下。</p>
-<p>查看带有<em>Synchronized语句块</em>的class文件可以看到在同步代码块的起始位置插入了<code>moniterenter</code>指令，在同步代码块结束的位置插入了<code>monitorexit</code>指令。(JVM需要保证每一个monitorenter都有一个monitorexit与之相对应，但每个monitorexit不一定都有一个monitorenter)<br>但是查看同步方法的class文件时，同步方法并没有通过指令monitorenter和monitorexit来完成，而被翻译成普通的方法调用和返回指令，只是在其<strong>常量池中多了ACC_SYNCHRONIZED标示符</strong>。JVM就是根据该标示符来实现方法的同步的：当方法调用时，调用指令将会检查方法的 ACC_SYNCHRONIZED 访问标志是否被设置，如果设置了，执行线程将先获取monitor，获取成功之后才能执行方法体，方法执行完后再释放monitor。在方法执行期间，其他任何线程都无法再获得同一个monitor对象。 <em>其实本质上没有区别，只是方法的同步是一种隐式的方式来实现，无需通过字节码来完成</em>。</p>
-<p>moniterenter和moniterexit指令是通过monitor对象实现的。<br>Synchronized的实现不仅与monitor对象有关，还与另一个东西密切相关，那就是<strong>对象头</strong>。</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/JavaSynchronizedTheory.html#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -2090,7 +2092,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">107</span>
+                <span class="site-state-item-count">108</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -2187,6 +2189,10 @@
                 
                 
                   <li>
+                    <a href="/golang-cache2go-sec.html" title="golang随波逐流之cache2go知识点解读" target="_blank">golang随波逐流之cache2go知识点解读</a>
+                  </li>
+                
+                  <li>
                     <a href="/golang-cache2go-src.html" title="golang随波逐流之cache2go源码解读" target="_blank">golang随波逐流之cache2go源码解读</a>
                   </li>
                 
@@ -2200,10 +2206,6 @@
                 
                   <li>
                     <a href="/[译]Yarn-capacity.html" title="YARN Capacity Scheduler" target="_blank">YARN Capacity Scheduler</a>
-                  </li>
-                
-                  <li>
-                    <a href="/YARN-Resource-Localization.html" title="Resource Localization in YARN" target="_blank">Resource Localization in YARN</a>
                   </li>
                 
               </ul>
@@ -2258,7 +2260,7 @@
 <!--add total count by szw-->
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共665.9k字</span>
+  <span class="post-count">博客全站共671.3k字</span>
 </div>
         
 <div class="busuanzi-count">
