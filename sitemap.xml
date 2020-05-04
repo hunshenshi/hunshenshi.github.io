@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://bigdatadecode.club/golang-point-address.html</loc>
+    
+    <lastmod>2020-05-03T15:33:12.000Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://bigdatadecode.club/golang-cache2go-sec.html</loc>
     
     <lastmod>2020-05-03T09:22:39.000Z</lastmod>
@@ -142,14 +149,14 @@
   </url>
   
   <url>
-    <loc>http://bigdatadecode.club/about/index.html</loc>
+    <loc>http://bigdatadecode.club/tags/index.html</loc>
     
     <lastmod>2019-02-12T09:44:14.939Z</lastmod>
     
   </url>
   
   <url>
-    <loc>http://bigdatadecode.club/tags/index.html</loc>
+    <loc>http://bigdatadecode.club/about/index.html</loc>
     
     <lastmod>2019-02-12T09:44:14.939Z</lastmod>
     
@@ -303,7 +310,7 @@
   </url>
   
   <url>
-    <loc>http://bigdatadecode.club/HUE%E7%BC%96%E8%AF%91%E4%B8%8E%E9%83%A8%E7%BD%B2.html</loc>
+    <loc>http://bigdatadecode.club/YARN%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8BFair%20Scheduler%20part2.html</loc>
     
     <lastmod>2019-02-12T09:44:14.920Z</lastmod>
     
@@ -317,7 +324,7 @@
   </url>
   
   <url>
-    <loc>http://bigdatadecode.club/YARN%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8BFair%20Scheduler%20part2.html</loc>
+    <loc>http://bigdatadecode.club/HUE%E7%BC%96%E8%AF%91%E4%B8%8E%E9%83%A8%E7%BD%B2.html</loc>
     
     <lastmod>2019-02-12T09:44:14.920Z</lastmod>
     

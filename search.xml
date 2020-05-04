@@ -4,6 +4,74 @@
   
     
     <entry>
+      <title><![CDATA[golang指针*和取址&傻傻分不清楚]]></title>
+      <url>http://bigdatadecode.club/golang-point-address.html</url>
+      <content type="html"><![CDATA[<p>golang中有指针的概念，有指针相对的就有取址，何时使用指针何时使用取址对于刚接触的同学总是有点傻傻分不清楚。<br>本篇主要介绍下指针和取址的概念和区别。</p>
+<a id="more"></a>
+<p>指针类似于变量和常量，在使用指针前你需要声明指针。指针声明格式如下：<code>var name *Type</code>。<br>指针是指向一个<strong>值的内存地址</strong>，也就是说指针变量存放的是某个值或者对象的<strong>内存地址</strong>，即指针变量占用字节的大小与所指向的值的大小无关。<em>当一个指针被定义后没有分配到任何变量时，它的默认值为nil。</em></p>
+<p>指针变量存放的是一个值的内存地址，那如何获取一个变量的内存地址呢？那就需要使用取址符号<code>&amp;</code>。<br>将一个值的内存地址通过<code>&amp;</code>赋值给了指针，那又应该如何通过指针来读取对应的值？需要使用符号<code>*</code>，需要与指针声明时的<code>*</code>进行区别。</p>
+<p>看个代码感受下吧，代码如下：</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">"fmt"</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="comment">// 声明一个指针</span></span><br><span class="line">	<span class="keyword">var</span> addr *<span class="keyword">string</span></span><br><span class="line">	<span class="keyword">var</span> house = <span class="string">"Malibu Point 10880, 90265"</span></span><br><span class="line">	<span class="comment">// 通过&amp;将一个变量的内存地址赋值给指针</span></span><br><span class="line">	addr = &amp;house</span><br><span class="line">	<span class="comment">// 通过*获取指针中存储的地址对应的值</span></span><br><span class="line">	value := *addr</span><br><span class="line">	fmt.Printf(<span class="string">"addr type: %T\n"</span>, addr)</span><br><span class="line">	<span class="comment">// 输出指针存储的内存地址，也就是house的内存地址</span></span><br><span class="line">	fmt.Printf(<span class="string">"address: %p\n"</span>, addr)</span><br><span class="line">	<span class="comment">// 输出addr自身的内存地址</span></span><br><span class="line">	fmt.Printf(<span class="string">"address: %p\n"</span>, &amp;addr)</span><br><span class="line">	fmt.Printf(<span class="string">"value type: %T\n"</span>, value)</span><br><span class="line">	fmt.Printf(<span class="string">"value: %s\n"</span>, value)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// addr type: *string</span></span><br><span class="line"><span class="comment">// address: 0xc000010200</span></span><br><span class="line"><span class="comment">// address: 0xc00000e028</span></span><br><span class="line"><span class="comment">// value type: string</span></span><br><span class="line"><span class="comment">// value: Malibu Point 10880, 90265</span></span><br></pre></td></tr></table></figure>
+<p>代码先通过指针声明方式声明了一个<code>addr</code>指针，又通过取址符号<code>&amp;</code>将house的地址赋值给<code>addr</code>，然后又通过<code>*</code>将指针<code>addr</code>存储内存地址对应的值赋值给普通变量<code>value</code>。由于指针<code>addr</code>变量存储的是变量<code>house</code>的内存地址，所以输出的<code>addr</code>的值为一个内存地址，而又因为指针<code>addr</code>本身也是一个变量，也需要一个内存块来存储自己，所以通过取址符号<code>&amp;</code>得到的地址是指针变量的内存地址。</p>
+<p>初看上面的代码，对其中的<code>*</code>和<code>&amp;</code>是不是傻傻分不清楚。<code>&amp;</code>功能比较单一，就是取址，获取变量的内存地址。<code>*</code>有<em>两种含义</em>，第一种是在指针声明时跟在变量的后面，紧跟变量类型，代表该变量是一个指针变量，如果使用<code>%p</code>来输出的话，它将是一个16进制数，第二种是紧跟指针变量，出现在指针变量的前面，代表获取该指针存储内存地址的值，一般是一个和指针类型一致的变量或者常量。在上面的demo代码中都有体现。</p>
+<blockquote>
+<p>Tips<br>go中何时使用指针？</p>
+</blockquote>
+<ul>
+<li>当结构体较大的时候使用指针会更高效，可以避免内存拷贝</li>
+<li>如果要修改结构体内部的数据或状态必须使用指针</li>
+<li>如果方法的receiver是map、slice 、channel等引用类型不要使用指针</li>
+<li>如果该函数需要将传入变量的修改状态传递出去，可以使用指针</li>
+</ul>
+<!--
+切片slice、字典map、管道channel
+
+引用类型的特点是：变量存储的是一个地址，这个地址对应的空间里才是真正存储的值，内存通常在堆中分配
+
+golang中到底有没有引用类型
+
+按照Golang的说法,Golang中所有的类型都是属于值类型,但是有几个类型比较特殊,表现出引用类型的特征
+
+go life, golang[够浪]
+
+
+unsafe是什么
+
+
+
+
+
+引用类型 是什么， 值类型
+引用类型是什么？golang中是否有引用类型？
+Go语言中有4个类型比较特别，看起来像引用类型
+引用类型 与 引用语义
+
+引用：就是变量的一个别名。
+java 引用变量
+-->]]></content>
+      
+        <categories>
+            
+            <category> golang </category>
+            
+        </categories>
+        
+        
+        <tags>
+            
+            <tag> go </tag>
+            
+            <tag> golang </tag>
+            
+            <tag> 指针 </tag>
+            
+            <tag> 取址 </tag>
+            
+        </tags>
+        
+    </entry>
+    
+    <entry>
       <title><![CDATA[golang随波逐流之cache2go知识点解读]]></title>
       <url>http://bigdatadecode.club/golang-cache2go-sec.html</url>
       <content type="html"><![CDATA[<p><a href="http://bigdatadecode.club/golang-cache2go-src.html">上篇</a>介绍了cache2go的代码逻辑，梳理代码逻辑时也能从中了解golang的一些语法以及使用技巧，本篇集中将源码中涉及到的知识点梳理下。</p>
