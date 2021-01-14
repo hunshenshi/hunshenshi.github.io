@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://bigdatadecode.club/elasticsearch-op.html</loc>
+    
+    <lastmod>2020-08-03T03:33:12.000Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://bigdatadecode.club/golang-point-address.html</loc>
     
     <lastmod>2020-05-03T15:33:12.000Z</lastmod>
@@ -128,14 +135,14 @@
   </url>
   
   <url>
-    <loc>http://bigdatadecode.club/baidu_verify_27E5EbutCm.html</loc>
+    <loc>http://bigdatadecode.club/categories/index.html</loc>
     
     <lastmod>2019-02-12T09:44:15.018Z</lastmod>
     
   </url>
   
   <url>
-    <loc>http://bigdatadecode.club/categories/index.html</loc>
+    <loc>http://bigdatadecode.club/baidu_verify_27E5EbutCm.html</loc>
     
     <lastmod>2019-02-12T09:44:15.018Z</lastmod>
     
@@ -149,14 +156,14 @@
   </url>
   
   <url>
-    <loc>http://bigdatadecode.club/tags/index.html</loc>
+    <loc>http://bigdatadecode.club/about/index.html</loc>
     
     <lastmod>2019-02-12T09:44:14.939Z</lastmod>
     
   </url>
   
   <url>
-    <loc>http://bigdatadecode.club/about/index.html</loc>
+    <loc>http://bigdatadecode.club/tags/index.html</loc>
     
     <lastmod>2019-02-12T09:44:14.939Z</lastmod>
     
@@ -240,14 +247,14 @@
   </url>
   
   <url>
-    <loc>http://bigdatadecode.club/%E5%AE%9E%E6%97%B6%E6%8A%93%E5%8F%96MySQL%E7%9A%84%E6%9B%B4%E6%96%B0%E6%95%B0%E6%8D%AE%E5%88%B0Hadoop.html</loc>
+    <loc>http://bigdatadecode.club/hexo-next%E4%B8%BB%E9%A2%98%E6%B7%BB%E5%8A%A0%E8%BF%91%E6%9C%9F%E6%96%87%E7%AB%A0%E7%89%88%E5%9D%97.html</loc>
     
     <lastmod>2019-02-12T09:44:14.926Z</lastmod>
     
   </url>
   
   <url>
-    <loc>http://bigdatadecode.club/hexo-next%E4%B8%BB%E9%A2%98%E6%B7%BB%E5%8A%A0%E8%BF%91%E6%9C%9F%E6%96%87%E7%AB%A0%E7%89%88%E5%9D%97.html</loc>
+    <loc>http://bigdatadecode.club/%E5%AE%9E%E6%97%B6%E6%8A%93%E5%8F%96MySQL%E7%9A%84%E6%9B%B4%E6%96%B0%E6%95%B0%E6%8D%AE%E5%88%B0Hadoop.html</loc>
     
     <lastmod>2019-02-12T09:44:14.926Z</lastmod>
     
@@ -310,7 +317,7 @@
   </url>
   
   <url>
-    <loc>http://bigdatadecode.club/YARN%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8BFair%20Scheduler%20part2.html</loc>
+    <loc>http://bigdatadecode.club/HUE%E7%BC%96%E8%AF%91%E4%B8%8E%E9%83%A8%E7%BD%B2.html</loc>
     
     <lastmod>2019-02-12T09:44:14.920Z</lastmod>
     
@@ -324,7 +331,7 @@
   </url>
   
   <url>
-    <loc>http://bigdatadecode.club/HUE%E7%BC%96%E8%AF%91%E4%B8%8E%E9%83%A8%E7%BD%B2.html</loc>
+    <loc>http://bigdatadecode.club/YARN%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8BFair%20Scheduler%20part2.html</loc>
     
     <lastmod>2019-02-12T09:44:14.920Z</lastmod>
     
@@ -394,14 +401,14 @@
   </url>
   
   <url>
-    <loc>http://bigdatadecode.club/bitcoin%E6%BA%90%E7%A0%81%E7%8E%AF%E5%A2%83.html</loc>
+    <loc>http://bigdatadecode.club/MapReduce%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90--Reduce%E8%A7%A3%E6%9E%90.html</loc>
     
     <lastmod>2019-02-12T09:44:14.913Z</lastmod>
     
   </url>
   
   <url>
-    <loc>http://bigdatadecode.club/MapReduce%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90--Reduce%E8%A7%A3%E6%9E%90.html</loc>
+    <loc>http://bigdatadecode.club/bitcoin%E6%BA%90%E7%A0%81%E7%8E%AF%E5%A2%83.html</loc>
     
     <lastmod>2019-02-12T09:44:14.913Z</lastmod>
     

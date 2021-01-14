@@ -4,6 +4,59 @@
   
     
     <entry>
+      <title><![CDATA[elasticsearch运维踩坑]]></title>
+      <url>http://bigdatadecode.club/elasticsearch-op.html</url>
+      <content type="html"><![CDATA[<p>接触ES也小半年了，ES虽然使用方便，运维简单但是集群规模和数据量大的话运维也很头疼，这里梳理下这半年的运维经验。</p>
+<a id="more"></a>
+<h2 id="磁盘坑"><a href="#磁盘坑" class="headerlink" title="磁盘坑"></a>磁盘坑</h2><p>集群随着使用，数据会积累越来越多，磁盘消耗也会越来越大，此时为了保护某个磁盘被写满，需要给磁盘设置阈值，配置项为：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 磁盘使用超过此值，将不再接受shard的均衡，只接受主shard的写入</span></span><br><span class="line">cluster.routing.allocation.disk.watermark.low</span><br><span class="line"><span class="comment"># 磁盘使用超过此值，磁盘上的shard开始向其他磁盘迁移，释放磁盘空间</span></span><br><span class="line">cluster.routing.allocation.disk.watermark.high</span><br><span class="line"><span class="comment"># 磁盘使用超过此值，节点将不再提供服务</span></span><br><span class="line">cluster.routing.allocation.disk.watermark.flood_stage</span><br></pre></td></tr></table></figure>
+<p>配置项值的默认形式是百分比，也可以是绝对值。<br>如果集群进行了扩容，各个机器的磁盘大小不一，此时依然使用百分比的话对磁盘大机器就会造成存储空间浪费，将百分比改为绝对值可以充分使用各个不同大小的磁盘。</p>
+<h2 id="shard重新分配"><a href="#shard重新分配" class="headerlink" title="shard重新分配"></a>shard重新分配</h2><p>集群中某个DataNode实例挂掉或者集群中某个磁盘的使用率达到上线，就需要对shard进行重新分配，有几个配置项可以对其调整，加快分配的速度，配置项为：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 实例用来控制接收和分发shard的线程数</span></span><br><span class="line">cluster.routing.allocation.node_concurrent_recoveries</span><br><span class="line"><span class="comment"># 控制从本地恢复主分片的线程数</span></span><br><span class="line">cluster.routing.allocation.node_initial_primaries_recoveries</span><br></pre></td></tr></table></figure>
+<p><code>node_concurrent_recoveries</code>不宜设置的太大，如果集群规模没有超过百台，设置为DataNode实例个数的一半即可。<br><code>node_initial_primaries_recoveries</code>此值可根据机器配置进行设置即可。</p>
+<h2 id="重启坑"><a href="#重启坑" class="headerlink" title="重启坑"></a>重启坑</h2><p>当集群实例宕机出现雪崩无法恢复时，需要重启集群进行恢复。但是由于ES重启之后需要加载所有索引的shard之后集群才可正常使用，而ES会自动对索引shard根据现有的集群状态对shard进行重分配，这个分配过程是比较耗时而且针对<strong>集群重启</strong>的场景是没有意义的，因为集群只是重启，shard并没有丢失。<br>所以在集群重启之时可以将<code>cluster.routing.allocation.enable</code>设置为none，等所有的DataNode实例启动之后再将其设置为all。</p>
+<h2 id="大查询"><a href="#大查询" class="headerlink" title="大查询"></a>大查询</h2><p>数据查询量大，会触发ES的内存保护机制进行熔断，可以增加单独的查询客户端，并增加客户端实例的内存。随后设置集群配置，配置项为：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># </span></span><br><span class="line">indices.breaker.total.limit</span><br><span class="line"><span class="comment"># </span></span><br><span class="line">indices.breaker.fielddata.limit</span><br><span class="line"><span class="comment"># </span></span><br><span class="line">indices.breaker.request.limit</span><br></pre></td></tr></table></figure>
+<h2 id="排查问题工具"><a href="#排查问题工具" class="headerlink" title="排查问题工具"></a>排查问题工具</h2><ul>
+<li>集群状态发生变化<ul>
+<li>使用命令<code>ip:9200/_cluster/health?pretty</code>查询集群状态，如果集群状态发生了变化，可以从中分析原因</li>
+</ul>
+</li>
+<li>节点正常，但是集群状态不是green<ul>
+<li>使用命令<code>ip:9200/_cat/indices?v</code>，此命令会返回所有索引的状态，找到非green的索引，然后具体分析。</li>
+</ul>
+</li>
+<li>查询分片失败原因<ul>
+<li>命令<code>ip:9200/_cluster/allocation/explain</code></li>
+</ul>
+</li>
+<li>查询索引分片状态<ul>
+<li>命令<code>ip:9200/_cat/shards/index_name?v</code></li>
+</ul>
+</li>
+</ul>
+]]></content>
+      
+        <categories>
+            
+            <category> bigdata </category>
+            
+        </categories>
+        
+        
+        <tags>
+            
+            <tag> BigData </tag>
+            
+            <tag> ElasticSearch </tag>
+            
+            <tag> 运维 </tag>
+            
+        </tags>
+        
+    </entry>
+    
+    <entry>
       <title><![CDATA[golang指针*和取址&傻傻分不清楚]]></title>
       <url>http://bigdatadecode.club/golang-point-address.html</url>
       <content type="html"><![CDATA[<p>golang中有指针的概念，有指针相对的就有取址，何时使用指针何时使用取址对于刚接触的同学总是有点傻傻分不清楚。<br>本篇主要介绍下指针和取址的概念和区别。</p>
@@ -3360,11 +3413,11 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
+            <tag> 运维 </tag>
+            
             <tag> big data </tag>
             
             <tag> kafka </tag>
-            
-            <tag> 运维 </tag>
             
             <tag> offset resetting </tag>
             
@@ -3645,13 +3698,13 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
+            <tag> 运维 </tag>
+            
             <tag> big data </tag>
             
             <tag> flume </tag>
             
             <tag> kafka </tag>
-            
-            <tag> 运维 </tag>
             
         </tags>
         
@@ -3709,11 +3762,11 @@ LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
         
         <tags>
             
+            <tag> 运维 </tag>
+            
             <tag> big data </tag>
             
             <tag> kafka </tag>
-            
-            <tag> 运维 </tag>
             
         </tags>
         
