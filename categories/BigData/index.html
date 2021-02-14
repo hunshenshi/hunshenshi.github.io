@@ -94,7 +94,7 @@
 <meta name="description" content="Any answers you can find in source code.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="big data decode club">
-<meta property="og:url" content="http://bigdatadecode.club/categories/bigdata/index.html">
+<meta property="og:url" content="http://bigdatadecode.club/categories/BigData/index.html">
 <meta property="og:site_name" content="big data decode club">
 <meta property="og:description" content="Any answers you can find in source code.">
 <meta property="og:locale" content="zh-Hans">
@@ -128,13 +128,13 @@
 
 
 
-  <link rel="canonical" href="http://bigdatadecode.club/categories/bigdata/">
+  <link rel="canonical" href="http://bigdatadecode.club/categories/BigData/">
 
 
 
 
 
-  <title> 分类: bigdata | big data decode club </title>
+  <title> 分类: BigData | big data decode club </title>
 </head>
 
 <body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -313,7 +313,7 @@
   <section id="posts" class="posts-collapse">
     <div class="collection-title">
       <h2>
-        bigdata
+        BigData
         <small>分类</small>
       </h2>
     </div>
@@ -326,17 +326,69 @@
 
       <h2 class="post-title">
         
-            <a class="post-title-link" href="/elasticsearch-op.html" itemprop="url">
+            <a class="post-title-link" href="/Flink-Window-Decode.html" itemprop="url">
               
-                <span itemprop="name">elasticsearch运维踩坑</span>
+                <span itemprop="name">Flink window解密</span>
               
             </a>
         
       </h2>
 
       <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated" datetime="2020-08-03T11:33:12+08:00" content="2020-08-03">
-          08-03
+        <time class="post-time" itemprop="dateCreated" datetime="2019-12-05T21:52:53+08:00" content="2019-12-05">
+          12-05
+        </time>
+      </div>
+
+    </header>
+  </article>
+
+
+    
+      
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      <h2 class="post-title">
+        
+            <a class="post-title-link" href="/MysqlToHDFSWithCanal.html" itemprop="url">
+              
+                <span itemprop="name">利用canal同步mysql到HDFS</span>
+              
+            </a>
+        
+      </h2>
+
+      <div class="post-meta">
+        <time class="post-time" itemprop="dateCreated" datetime="2017-08-02T19:02:31+08:00" content="2017-08-02">
+          08-02
+        </time>
+      </div>
+
+    </header>
+  </article>
+
+
+    
+      
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      <h2 class="post-title">
+        
+            <a class="post-title-link" href="/实时抓取MySQL的更新数据到Hadoop.html" itemprop="url">
+              
+                <span itemprop="name">实时抓取MySQL的更新数据到Hadoop</span>
+              
+            </a>
+        
+      </h2>
+
+      <div class="post-meta">
+        <time class="post-time" itemprop="dateCreated" datetime="2017-02-28T13:02:21+08:00" content="2017-02-28">
+          02-28
         </time>
       </div>
 
@@ -389,7 +441,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">110</span>
+                <span class="site-state-item-count">111</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -411,7 +463,7 @@
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">177</span>
+                <span class="site-state-item-count">181</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
@@ -486,6 +538,10 @@
                 
                 
                   <li>
+                    <a href="/android-app-timeup.html" title="坑娃-防沉迷App" target="_blank">坑娃-防沉迷App</a>
+                  </li>
+                
+                  <li>
                     <a href="/elasticsearch-op.html" title="elasticsearch运维踩坑" target="_blank">elasticsearch运维踩坑</a>
                   </li>
                 
@@ -499,10 +555,6 @@
                 
                   <li>
                     <a href="/golang-cache2go-src.html" title="golang随波逐流之cache2go源码解读" target="_blank">golang随波逐流之cache2go源码解读</a>
-                  </li>
-                
-                  <li>
-                    <a href="/Flink-Window-Decode.html" title="Flink window解密" target="_blank">Flink window解密</a>
                   </li>
                 
               </ul>
@@ -557,7 +609,7 @@
 <!--add total count by szw-->
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共673.8k字</span>
+  <span class="post-count">博客全站共678.7k字</span>
 </div>
         
 <div class="busuanzi-count">
@@ -908,59 +960,6 @@
             /* End Set ACL */
             newcounter.set("title", title);
             newcounter.set("url", url);
-            newcounter.set("time", 1);
-            newcounter.save(null, {
-              success: function(newcounter) {
-                var $element = $(document.getElementById(url));
-                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
-              },
-              error: function(newcounter, error) {
-                console.log('Failed to create');
-              }
-            });
-          }
-        },
-        error: function(error) {
-          console.log('Error:' + error.code + " " + error.message);
-        }
-      });
-    }
-
-    $(function() {
-      var Counter = AV.Object.extend("Counter");
-      if ($('.leancloud_visitors').length == 1) {
-        addCount(Counter);
-      } else if ($('.post-title-link').length > 1) {
-        showTime(Counter);
-      }
-    });
-  </script>
-
-
-
-  
-<script>
-(function(){
-    var bp = document.createElement('script');
-    var curProtocol = window.location.protocol.split(':')[0];
-    if (curProtocol === 'https') {
-        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
-    }
-    else {
-        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
-    }
-    var s = document.getElementsByTagName("script")[0];
-    s.parentNode.insertBefore(bp, s);
-})();
-</script>
-
-
-  
-
-  
-
-</body>
-</html>
             newcounter.set("time", 1);
             newcounter.save(null, {
               success: function(newcounter) {

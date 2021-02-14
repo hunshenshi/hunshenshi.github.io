@@ -322,6 +322,180 @@
   
 
   <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/Application-fail-RM-change.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="混绅士">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="big data decode club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                
+                <a class="post-title-link" href="/Application-fail-RM-change.html" itemprop="url">
+                  Application运行失败导致RM主备切换
+                </a>
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-11-27T23:35:23+08:00">
+                2018-11-27
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2018-11-27T23:55:23+08:00">
+                2018-11-27
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/Application-fail-RM-change.html" class="leancloud_visitors" data-flag-title="Application运行失败导致RM主备切换">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <p>先说故障现象:<br>某天收到RM主备切换报警，正常切换并不会有什么影响，但我当时还是出于警觉想去服务器上check下为什么切，check的时候发现集群无法提交任务，所以的任务都被挂起了。<br>第一反应是原standby节点有问题，于是手动又触发了一次切换，但任务依然无法运行。主备RM都重启过了但问题依然无法解决，那只能使用终极杀手锏了，重启了整个yarn集群。<br>集群重启之后任务恢复了，心里舒了一口气，去查RM的log吧，看下是什么原因导致了这次故障，log还没有细看，只看到一些<code>KeeperErrorCode = ConnectionLoss</code>，此时悲剧发生了，又收到了RM切换的报警，任务又被挂起了。。。</p>
+<p>毫无头绪，只能再次重启集群，<em>这次重点关注了下集群上运行任务，估计是哪个任务把集群给干瘫了</em>，观察到有个任务运行失败的时候集群就会被瘫，看了下该任务的<strong>报错信息特别特别的长</strong>，于是告诉任务的负责人暂时把任务停掉，观察下集群是不是因为这个任务导致的。</p>
+<p>该任务停掉之后集群正常运行了一段时间，在这段时间内在查RM的log并没有发现太多有价值的东西，全是与zk的连接丢失，连接丢失确实是会触发主备切换，但关键是为什么连接会丢失呢？没有头绪，只好去zk server端看下log，发现报<code>2018-11-27 15:54:30,208 [myid:1] - WARN  [NIOServerCxn.Factory:0.0.0.0/0.0.0.0:2181:NIOServerCnxn@373] - Exception causing close of session 0x36753e378030000 due to java.io.IOException: Len error 8603591</code></p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/Application-fail-RM-change.html#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/Solidity_Voting解析.html">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
@@ -1874,183 +2048,11 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/HDFS权限.html">
-
-    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="混绅士">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/uploads/avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="big data decode club">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h2 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/HDFS权限.html" itemprop="url">
-                  HDFS权限
-                </a>
-              
-            
-          </h2>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2018-04-21T22:35:20+08:00">
-                2018-04-21
-              </time>
-            
-
-            
-              <span class="post-meta-divider">|</span>
-            
-
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-check-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">更新于</span>
-              
-              <time title="更新于" itemprop="dateModified" datetime="2018-04-21T22:35:20+08:00">
-                2018-04-21
-              </time>
-            
-          </span>
-
-          
-            <span class="post-category">
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
-                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
-                    <span itemprop="name">Hadoop</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/HDFS权限.html" class="leancloud_visitors" data-flag-title="HDFS权限">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <p>之前对HDFS更或者说是对Linux中文件的权限没有进行一个完整的学习，只是知道有所有者、所属组和其它权限，具体到某个人的权限有读(r)、写(w)和可执行(x)。<br>遇到没有权限的问题就<em>chmod</em>加个权限，加完之后如果还有问题就给父目录也加一样的权限，如果还不行就给777。<br>这其中应该给什么权限，给什么权限最合适都是一头雾水。<br><strong>今天就说说文件和目录权限的那些事</strong>。。。。</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/HDFS权限.html#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/2/"><i class="fa fa-angle-left"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/">4</a><span class="space">&hellip;</span><a class="page-number" href="/page/11/">11</a><a class="extend next" rel="next" href="/page/4/"><i class="fa fa-angle-right"></i></a>
+    <a class="extend prev" rel="prev" href="/page/2/"><i class="fa fa-angle-left"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/">4</a><span class="space">&hellip;</span><a class="page-number" href="/page/12/">12</a><a class="extend next" rel="next" href="/page/4/"><i class="fa fa-angle-right"></i></a>
   </nav>
 
 
@@ -2093,7 +2095,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">110</span>
+                <span class="site-state-item-count">111</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -2115,7 +2117,7 @@
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">177</span>
+                <span class="site-state-item-count">181</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
@@ -2190,6 +2192,10 @@
                 
                 
                   <li>
+                    <a href="/android-app-timeup.html" title="坑娃-防沉迷App" target="_blank">坑娃-防沉迷App</a>
+                  </li>
+                
+                  <li>
                     <a href="/elasticsearch-op.html" title="elasticsearch运维踩坑" target="_blank">elasticsearch运维踩坑</a>
                   </li>
                 
@@ -2203,10 +2209,6 @@
                 
                   <li>
                     <a href="/golang-cache2go-src.html" title="golang随波逐流之cache2go源码解读" target="_blank">golang随波逐流之cache2go源码解读</a>
-                  </li>
-                
-                  <li>
-                    <a href="/Flink-Window-Decode.html" title="Flink window解密" target="_blank">Flink window解密</a>
                   </li>
                 
               </ul>
@@ -2261,7 +2263,7 @@
 <!--add total count by szw-->
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共673.8k字</span>
+  <span class="post-count">博客全站共678.7k字</span>
 </div>
         
 <div class="busuanzi-count">

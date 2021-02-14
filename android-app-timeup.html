@@ -1,0 +1,1375 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+  <meta name="google-site-verification" content="0hClWroWscvQbyOyRPhAZWjOZJ6g3SFCdO47yYakvdk">
+
+
+
+
+
+
+
+  <meta name="baidu-site-verification" content="27E5EbutCm">
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="android,app,防沉迷,生活,">
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0">
+
+
+
+
+
+
+<meta name="description" content="猿爸：屁孩，已经看了很长xx了，该让眼睛休息下了。屁孩：不情不愿的关了，去玩别的。很和谐是不是？当你不在家的时候，屁孩就没这么乖了，是不是，认同不？这时就需要有一个强势的“人”来阻止他，这个可别奢望老人来阻止他，于是只能让“机器人”来搞了。 于是搞了个App，名字叫坑娃神器（不知道若干年后，屁孩看到这个文章心里是什么滋味。。。），功能比较简单，就是监控指定app的活动状态，如果连续运行一段时间，坑">
+<meta name="keywords" content="android,app,防沉迷,生活">
+<meta property="og:type" content="article">
+<meta property="og:title" content="坑娃-防沉迷App">
+<meta property="og:url" content="http://bigdatadecode.club/android-app-timeup.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="猿爸：屁孩，已经看了很长xx了，该让眼睛休息下了。屁孩：不情不愿的关了，去玩别的。很和谐是不是？当你不在家的时候，屁孩就没这么乖了，是不是，认同不？这时就需要有一个强势的“人”来阻止他，这个可别奢望老人来阻止他，于是只能让“机器人”来搞了。 于是搞了个App，名字叫坑娃神器（不知道若干年后，屁孩看到这个文章心里是什么滋味。。。），功能比较简单，就是监控指定app的活动状态，如果连续运行一段时间，坑">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://bigdatadecode.club/blogimgs/android-monitor/app01.png">
+<meta property="og:image" content="http://bigdatadecode.club/blogimgs/android-monitor/app02.png">
+<meta property="og:image" content="http://bigdatadecode.club/blogimgs/android-monitor/app03.png">
+<meta property="og:updated_time" content="2021-02-12T05:30:10.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="坑娃-防沉迷App">
+<meta name="twitter:description" content="猿爸：屁孩，已经看了很长xx了，该让眼睛休息下了。屁孩：不情不愿的关了，去玩别的。很和谐是不是？当你不在家的时候，屁孩就没这么乖了，是不是，认同不？这时就需要有一个强势的“人”来阻止他，这个可别奢望老人来阻止他，于是只能让“机器人”来搞了。 于是搞了个App，名字叫坑娃神器（不知道若干年后，屁孩看到这个文章心里是什么滋味。。。），功能比较简单，就是监控指定app的活动状态，如果连续运行一段时间，坑">
+<meta name="twitter:image" content="http://bigdatadecode.club/blogimgs/android-monitor/app01.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    sidebar: {"position":"right","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://bigdatadecode.club/android-app-timeup.html">
+
+
+
+
+
+  <title> 坑娃-防沉迷App | big data decode club </title>
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-80813521-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+
+
+
+
+
+
+  <div style="display: none;">
+    <script src="//s95.cnzz.com/z_stat.php?id=1260961002&web_id=1260961002" language="JavaScript"></script>
+  </div>
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-right page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">big data decode club</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description">hunhun -- Any answers you can find in source code.</h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope="" itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://bigdatadecode.club/android-app-timeup.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="混绅士">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="big data decode club">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">
+            
+            
+              
+                坑娃-防沉迷App
+              
+            
+          </h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-02-11T10:31:19+08:00">
+                2021-02-11
+              </time>
+            
+
+            
+              <span class="post-meta-divider">|</span>
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-check-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">更新于</span>
+              
+              <time title="更新于" itemprop="dateModified" datetime="2021-02-12T13:30:10+08:00">
+                2021-02-12
+              </time>
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing">
+                  <a href="/categories/tool/" itemprop="url" rel="index">
+                    <span itemprop="name">tool</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/android-app-timeup.html" class="leancloud_visitors" data-flag-title="坑娃-防沉迷App">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>猿爸：屁孩，已经看了很长xx了，该让眼睛休息下了。<br>屁孩：不情不愿的关了，去玩别的。<br>很和谐是不是？当你不在家的时候，屁孩就没这么乖了，是不是，认同不？<br>这时就需要有一个强势的“人”来阻止他，这个可别奢望老人来阻止他，于是只能让“机器人”来搞了。</p>
+<p>于是搞了个App，名字叫<strong>坑娃神器</strong>（不知道若干年后，屁孩看到这个文章心里是什么滋味。。。），功能比较简单，就是监控指定app的活动状态，如果连续运行一段时间，坑娃神器就会自动从后台切到前台进行倒计时，倒计时结束之后可以继续娱乐。</p>
+<p>这个App目前只是处于原始社会版，希望有能力的猿爸们加入，我们一起将其完善，帮助下一代养成一个好的自律能力，此App已在github上开源，欢迎贡献，项目地址<a href="https://github.com/hunshenshi/timeup.git" target="_blank" rel="noopener">https://github.com/hunshenshi/timeup.git</a></p>
+<a id="more"></a>
+<h2 id="调研–准备工作"><a href="#调研–准备工作" class="headerlink" title="调研–准备工作"></a>调研–准备工作</h2><p>找了下目前市面已有的工具和一些手机自带的健康使用的功能，不太满足我的需求，<br>1、大多数都是限制每天累计使用时长，而我希望每使用一段时间就休息一会，而不关注累计时长<br>2、由于市面上都是一些面向广大用户的产品，达到时长之后会有提示，而不会有更激烈的行为。而我的需求强硬，再强硬（反正用户只有家长的娃）</p>
+<blockquote>
+<p>我想要的功能也比较简单，就是当检测到前台视频类的软件连续运行一段时间之后，依然在运行，就将其切换到后台，并将倒计时页面切换至前台，等待倒计时结束。随后再次进行下一轮监控，不监控累计时长，只监控连续使用时长，并且强制切换App。</p>
+</blockquote>
+<p>没有现成的轮子那就自己造一个吧，梳理下会用到的技术点：<br>1、App保活，因为需要坑娃神器长期存活于后台进行监控<br>2、如何拿到正在运行的app<br>3、定时执行，需要坑娃神器定期检测前台运行的app是什么<br>4、后台唤醒，需要坑娃神器从后台唤醒到前台进行倒计时</p>
+<p>看了些相关的文章，感觉功能大都可以实现，只是安卓的版本太多了，各种功能在各个版本中实现方式又不一样，在这特别同情搞安卓的朋友，真不容易呀。。。</p>
+<h2 id="第一个Android-Application"><a href="#第一个Android-Application" class="headerlink" title="第一个Android Application"></a>第一个Android Application</h2><p>决定要搞了，那就先从Hello World开始吧，首先下载个Android Studio，然后根据向导创建一个android应用，这里语言我选的是java，一路下来就能运行一个demo app了。具体步骤如下：<br><img src="/blogimgs/android-monitor/app01.png" alt="新建project" title="新建project"><br>新建project之后，进入选择模版页面，这里我选的是basic，下面还有很多模版可以选<br><img src="/blogimgs/android-monitor/app02.png" alt="选择project" title="选择project"><br>选择下一步之后，填写project相关的信息，比如project名字，需要的语言和sdk<br><img src="/blogimgs/android-monitor/app03.png" alt="填写project信息" title="填写project信息"><br>点击Finish就结束了，等待IDE加载程序就行了。</p>
+<p>这个过程可能会比较慢，主要是gradle-5.6.4-all.zip下载慢，你可以使用迅雷下载，然后放到指定的目录就OK了。</p>
+<h2 id="App保活"><a href="#App保活" class="headerlink" title="App保活"></a>App保活</h2><p>App保活这个话题，不搜不知道，一搜是打开眼界呀，充分展现了群众的智慧呀。什么双Activity相互唤醒、播放无声音频各种奇淫巧技。<br>不过我这里就自己用，这么多的奇淫巧技我是用不上了（就算需要用上我也没有那么高深的功力），规规矩矩的申请权限吧。</p>
+<p>常驻后台需要申请电池白名单权限，网上有很多代码示例，相关代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Intent intent = <span class="keyword">new</span> Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);</span><br><span class="line">context.startActivity(intent);</span><br></pre></td></tr></table></figure>
+<h2 id="获取正在运行的App"><a href="#获取正在运行的App" class="headerlink" title="获取正在运行的App"></a>获取正在运行的App</h2><p>如何通过代码拿到正在前台展示的app，也是困难重重，对于一无所知的我依然是先网上搜一堆demo，然后测试。<br>搜素的结果大体分为3种，主要分布在不同的sdk版本中，已经过时的有<code>getRunningTasks</code>和<code>getRunningAppProcesses</code>，在新版sdk中都普遍使用<code>UsageStatsManager</code>，使用<code>UsageStatsManager</code>时需要申请权限，而且通过它获取app的方法网上也有好几种，我对比了几种使用的是<code>queryUsageStats</code>方法，还可以使用<code>queryEvents</code>方法，不过我测试发现<code>queryEvents</code>状态变更没有<code>queryUsageStats</code>及时。（不要问我为什么测试了这么多方法。。）</p>
+<p>整体思路是通过<code>queryUsageStats</code>查询一段时间内的App使用信息，然后对App的最后更新时间进行排序，时间最大的就是正在前台展示的App。代码示例如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 获取UsageStats集合</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> List&lt;UsageStats&gt;  <span class="title">getUsageStatsList</span><span class="params">(Context context, <span class="keyword">long</span> startTime, <span class="keyword">long</span> endTime)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (android.os.Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.LOLLIPOP) &#123;</span><br><span class="line">        UsageStatsManager manager = (UsageStatsManager) context.getApplicationContext().getSystemService(Context.USAGE_STATS_SERVICE);</span><br><span class="line">        List&lt;UsageStats&gt;  usageStatses = manager.queryUsageStats(UsageStatsManager.INTERVAL_BEST, startTime, endTime);</span><br><span class="line">        <span class="keyword">if</span> (usageStatses == <span class="keyword">null</span> || usageStatses.size() == <span class="number">0</span>) &#123;<span class="comment">// 没有权限，获取不到数据</span></span><br><span class="line">            Log.i(<span class="string">"AppUtil getUsageStatsList "</span>, <span class="string">"no permission for UsageStatsManager"</span>);</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> usageStatses;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 对最后更新时间进行排序获取前台App</span></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> UsageStats <span class="title">getForegroundUsageStats</span><span class="params">(Context context, <span class="keyword">long</span> startTime, <span class="keyword">long</span> endTime)</span> </span>&#123;</span><br><span class="line">    UsageStats usageStatsResult = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">if</span> (android.os.Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.LOLLIPOP) &#123;</span><br><span class="line">        List&lt;UsageStats&gt; usageStatses = getUsageStatsList(context, startTime, endTime);</span><br><span class="line">        <span class="keyword">if</span> (usageStatses == <span class="keyword">null</span> || usageStatses.isEmpty()) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span> (UsageStats usageStats : usageStatses) &#123;</span><br><span class="line">            <span class="comment">// 通过反射获取App的事件类型</span></span><br><span class="line">            <span class="keyword">int</span> lastEvent = <span class="number">1</span>;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                Field mLastEventField = UsageStats.class.getField(<span class="string">"mLastEvent"</span>);</span><br><span class="line">                mLastEventField.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">                lastEvent = mLastEventField.getInt(usageStats);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (NoSuchFieldException e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (IllegalAccessException e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (usageStatsResult == <span class="keyword">null</span> || usageStatsResult.getLastTimeUsed() &lt; usageStats.getLastTimeUsed()) &#123;</span><br><span class="line">                usageStatsResult = usageStats;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> usageStatsResult;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="定时周期执行任务"><a href="#定时周期执行任务" class="headerlink" title="定时周期执行任务"></a>定时周期执行任务</h2><p>由于这只是个坑娃的App，所以这里直接简单粗暴的使用定时任务来check前台App是否为所要监控的App，而没有使用各种Trigger。<br>Android中的定时任务主要是<code>Timer</code>和<code>AlarmManager</code>，推荐使用<code>AlarmManager</code>，而且不需要申请权限。</p>
+<p><code>AlarmManager</code>结合<code>Service</code>使用，在高版本的sdk中，<code>AlarmManager</code>没有重复执行的功能，需要在<code>Service</code>再次调用<code>AlarmManager</code>从而起到重复执行任务的功能。而且在高版中为了节省电量也进行了很多优化，要想精准出发定时器需要使用<code>setExactAndAllowWhileIdle</code>方法，具体代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);</span><br><span class="line"><span class="comment">// CheckService是定时器触发之后要具体执行的任务逻辑</span></span><br><span class="line">Intent intent = <span class="keyword">new</span> Intent(context, CheckService.class);</span><br><span class="line">pendingIntent = PendingIntent.getService(context, <span class="number">0</span>, intent, <span class="number">0</span>);</span><br><span class="line"><span class="comment">// AlarmManager.ELAPSED_REALTIME_WAKEUP是为了能主动唤醒CPU</span></span><br><span class="line">am.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP,</span><br><span class="line">                    SystemClock.elapsedRealtime(), pendingIntent);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 在CheckService的onStartCommand方法中执行定时任务逻辑，并且执行完之后继续设置定时器，起到重复执行的效果</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CheckService</span> <span class="keyword">extends</span> <span class="title">Service</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">onStartCommand</span><span class="params">(Intent intent, <span class="keyword">int</span> flags, <span class="keyword">int</span> startId)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// check前台App是否为需要监控的App，如果是执行相应的操作</span></span><br><span class="line">        <span class="comment">// 再次调用定时器</span></span><br><span class="line">        am.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP,</span><br><span class="line">                    SystemClock.elapsedRealtime() + TIME_INTERVAL, pendingIntent);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>注意两次调用定时器的不同，在<code>CheckService</code>中调用时Trigger为<code>SystemClock.elapsedRealtime() + TIME_INTERVAL</code>，代表延后<code>TIME_INTERVAL</code>之后触发。</p>
+<h2 id="后台唤醒"><a href="#后台唤醒" class="headerlink" title="后台唤醒"></a>后台唤醒</h2><p>后台唤醒是指正在后台运行的App由于某种原因被切换到前台。</p>
+<p>如果是在低版本的sdk中可以使用<code>getRunningTasks</code>，拿到对应package的task信息，其中包括taskId，然后调用<code>moveTaskToFront</code>方法将其任务切换到前台，但是<code>getRunningTasks</code>已被标注为过时的，所以在上面获取前台App时也没用该方法。</p>
+<p>这里使用了新建Activity的方法，具体代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">toRunningForeground</span><span class="params">(String packageNameTarget)</span> </span>&#123;</span><br><span class="line">    PackageManager packageManager = getPackageManager();</span><br><span class="line"></span><br><span class="line">    Intent intent = packageManager.getLaunchIntentForPackage(packageNameTarget);</span><br><span class="line">    intent.addCategory(Intent.CATEGORY_LAUNCHER);</span><br><span class="line">    intent.setFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED | Intent.FLAG_ACTIVITY_NEW_TASK);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**android.intent.action.MAIN：打开另一程序</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    intent.setAction(<span class="string">"android.intent.action.MAIN"</span>);</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * FLAG_ACTIVITY_SINGLE_TOP:</span></span><br><span class="line"><span class="comment">     * 如果当前栈顶的activity就是要启动的activity,则不会再启动一个新的activity</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);</span><br><span class="line">    activity.startActivity(intent);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="踩坑实录"><a href="#踩坑实录" class="headerlink" title="踩坑实录"></a>踩坑实录</h2><p>主要功能开发完成，并在IDE中正常运行，下面就要实机测试了，前方冰冷的洪水迎面拍来！！！</p>
+<p>将App安装到平板上之后，进行测试发现应该切换倒计时页面时并没有正常切换，于是下面就开始了取经之后：</p>
+<ol>
+<li>sdk版本不兼容<br>因为Android sdk各版本有可能不兼容，所以首先怀疑是不是sdk的问题，于是在IDE中设置了对应版本，发现确实没有生效，于是搜索对应sdk后台切换前台的相关问题，发现可能是权限问题，sdk 29之后限制了App的相应权限，需要申请浮窗权限，申请代码如下：</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">requestOverlayPermission</span><span class="params">(Context context)</span> </span>&#123;</span><br><span class="line">    Intent intent = <span class="keyword">new</span> Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);</span><br><span class="line">    context.startActivity(intent);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li><p>获取当前App<br>申请相应权限之后，在IDE中可以正常运行，再次部署到平板上进行测试，发现依然没有生效，继续排查。<br>在IDE中多次排查时偶然发现获取当前App时，有次拿到了<code>com.xx.android.launcher</code>，以为是获取前台App不准确原因造成的，于是就用了好多种方法进行测试，发现始终未生效。但是在真机测试的过程中，发现一个规律，<strong>只要插上usb，App就运行正常</strong>，在IDE中查看App在平板上的运行日志也正常，可是拔掉usb就不生效，也看不到当时的日志，于是就想打印些关键信息在平板上查看进行排查问题。</p>
+</li>
+<li><p>真机上查看运行日志<br>看一些日志教程好复杂，专门搞一下真的不值得呀，于是想到是不是可以把关系信息写到一个可读的文件里，于是将其写入，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">writeFile</span><span class="params">(Context context, String filename, String filecontent)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    FileOutputStream output = context.openFileOutput(filename, Context.MODE_APPEND);</span><br><span class="line">    output.write(filecontent.getBytes());</span><br><span class="line">    output.close();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>使用时只传入文件名就行，默认写到<code>/data/data/app/com.xx/files</code>目录下，去平板上找这个目录，却没有找到。。。不过连上usb可以在IDE的<code>Device File Explorer</code>中找到，于是再次的测试流程就是拔掉usb进行测试，然后连上usb进行文件查看运行信息。</p>
+<ol start="4">
+<li>怀疑AlarmManger在后台不生效<br>查看App写入文件的信息之后，发现定时器只是第一次启动了，随后的定时器并未触发。<br>在使用<code>AlarmManger</code>时也没有要求申请什么权限，搜索之后也没有找到任何线索，于是资源一些专业人士，朋友说可能是定时器触发间隔时间太短，系统给优化了，并附上了源码中的方法注释，可信度很高呀，我也很开心，要搞定了，可是修改安装之后依然是暴击呀。</li>
+</ol>
+<p>此时真的陷入了死胡同，没有任何线索，一连好几天没有任何进展，偶然在手机上查看应用权限的时候，想到是不是平板自动启停的原因，于是将App的自动管理切换为手动管理，再次进行测试，生效了。</p>
+<p>太艰辛了，为了坑个娃太不容易了。。。</p>
+<p>这个App目前只是处于原始社会版，希望有能力的猿爸们加入，我们一起将其完善，帮助下一代养成一个好的自律能力，此App已在github上开源，欢迎贡献，项目地址<a href="https://github.com/hunshenshi/timeup.git" target="_blank" rel="noopener">https://github.com/hunshenshi/timeup.git</a></p>
+<h2 id="后记"><a href="#后记" class="headerlink" title="后记"></a>后记</h2><p>其实写这个App并不完全是为了完全阻止他玩平板，只是为了培养他解决问题，善于思考的能力，让他知道如何去达到自己的目的。因为这个App本身比较简单，可能只能阻止他几天，然后他会发现这个App的逻辑漏洞，然后我再想办法把这个漏洞堵上，继续等待他发现新的漏洞，希望在这个过程中能培养他的好奇欲。</p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>您的肯定，是我装逼的最大的动力！</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/path/to/wechat-reward-image/wechatpay.png" alt="混绅士 WeChat Pay">
+          <p>微信打赏</p>
+        </div>
+      
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+  <ul class="post-copyright">
+    <li class="post-copyright-author">
+      <strong>本文作者：</strong>
+      混绅士
+    </li>
+    
+    <!--add wordcount and min2 read by szw-->
+    <li class="post-copyright-author">
+      <strong>本文字数：</strong>
+      4,871
+    </li>
+    <li class="post-copyright-author">
+      <strong>阅读时长：</strong>
+      23
+    </li>
+
+    <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="http://bigdatadecode.club/android-app-timeup.html" title="坑娃-防沉迷App">http://bigdatadecode.club/android-app-timeup.html</a>
+    </li>
+    <li class="post-copyright-license">
+      <strong>版权声明： </strong>
+      本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0</a> 许可协议。转载请注明出处！
+    </li>
+  </ul>
+
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/android/" rel="tag"># android</a>
+          
+            <a href="/tags/app/" rel="tag"># app</a>
+          
+            <a href="/tags/防沉迷/" rel="tag"># 防沉迷</a>
+          
+            <a href="/tags/生活/" rel="tag"># 生活</a>
+          
+        </div>
+      
+
+       
+         
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/elasticsearch-op.html" rel="next" title="elasticsearch运维踩坑">
+                <i class="fa fa-chevron-left"></i> elasticsearch运维踩坑
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+  <div class="bdsharebuttonbox">
+    <a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+    <a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a>  
+    <a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a>      
+    <a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a>
+    <a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a>
+    <a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a>
+    <a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a>
+    <a href="#" class="bds_more" data-cmd="more"></a>
+    <a class="bds_count" data-cmd="count"></a>
+  </div>
+  <script>
+    window._bd_share_config = {
+      "common": {
+        "bdText": "",
+        "bdMini": "1",
+        "bdMiniList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "bdPic": ""
+      },
+      "image": {
+        "viewList": ["tsina", "weixin", "sqq", "douban", "qzone", "twi", "fbook"],
+        "viewText": "分享到：",
+        "viewSize": "16"
+      },
+      "slide": {
+        "bdImg": "5",
+        "bdPos": "left",
+        "bdTop": "100"
+      }
+    }
+  </script>
+
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>       
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/uploads/avatar.png" alt="混绅士">
+          <p class="site-author-name" itemprop="name">混绅士</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">111</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">18</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">181</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <!-- <i class="fa  fa-fw fa-globe"></i> -->
+              <!-- modify icon to fire by szw -->
+              <i class="fa fa-fire fa-" aria-hidden="true"></i>
+              热文推荐
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                </li>
+              
+                <!-- delete li's class by szw -->
+                <li>
+                  <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                </li>
+              
+            </ul>
+          </div>
+
+
+        
+
+        
+            <div class="links-of-blogroll motion-element links-of-blogroll-block">
+              <div class="links-of-blogroll-title">
+                <!-- modify icon to fire by szw -->
+                <i class="fa fa-history fa-" aria-hidden="true"></i>
+                近期文章
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                
+                  <li>
+                    <a href="/android-app-timeup.html" title="坑娃-防沉迷App" target="_blank">坑娃-防沉迷App</a>
+                  </li>
+                
+                  <li>
+                    <a href="/elasticsearch-op.html" title="elasticsearch运维踩坑" target="_blank">elasticsearch运维踩坑</a>
+                  </li>
+                
+                  <li>
+                    <a href="/golang-point-address.html" title="golang指针*和取址&傻傻分不清楚" target="_blank">golang指针*和取址&傻傻分不清楚</a>
+                  </li>
+                
+                  <li>
+                    <a href="/golang-cache2go-sec.html" title="golang随波逐流之cache2go知识点解读" target="_blank">golang随波逐流之cache2go知识点解读</a>
+                  </li>
+                
+                  <li>
+                    <a href="/golang-cache2go-src.html" title="golang随波逐流之cache2go源码解读" target="_blank">golang随波逐流之cache2go源码解读</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+ 
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#调研–准备工作"><span class="nav-number">1.</span> <span class="nav-text">调研–准备工作</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#第一个Android-Application"><span class="nav-number">2.</span> <span class="nav-text">第一个Android Application</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#App保活"><span class="nav-number">3.</span> <span class="nav-text">App保活</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#获取正在运行的App"><span class="nav-number">4.</span> <span class="nav-text">获取正在运行的App</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#定时周期执行任务"><span class="nav-number">5.</span> <span class="nav-text">定时周期执行任务</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#后台唤醒"><span class="nav-number">6.</span> <span class="nav-text">后台唤醒</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#踩坑实录"><span class="nav-number">7.</span> <span class="nav-text">踩坑实录</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#后记"><span class="nav-number">8.</span> <span class="nav-text">后记</span></a></li></ol></div>
+            
+
+          </div>
+
+          <div class="post-toc-wrap sidebar-panel sidebar-panel-active" style="margin: 0 2px; text-align: left;">
+            
+              <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+                <div class="links-of-blogroll-title">
+                  <!-- <i class="fa  fa-fw fa-globe"></i> -->
+                  <!-- modify icon to fire by szw -->
+                  <i class="fa fa-fire fa-" aria-hidden="true"></i>
+                  热文推荐
+                </div>
+                <ul class="links-of-blogroll-list">
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark Streaming 消费kafka到HDFS.html" title="Spark Streaming 消费kafka到HDFS" target="_blank">Spark Streaming 消费kafka到HDFS</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/HDFS write解析.html" title="HDFS write解析" target="_blank">HDFS write解析</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Spark编译与部署.html" title="Spark编译与部署" target="_blank">Spark编译与部署</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/MapReduce源码解析--环形缓冲区.html" title="MapReduce源码解析--环形缓冲区" target="_blank">MapReduce源码解析--环形缓冲区</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/Flume简介及初次使用.html" title="Flume简介及初次使用" target="_blank">Flume简介及初次使用</a>
+                    </li>
+                  
+                    <!-- delete li's class by szw -->
+                    <li>
+                      <a href="http://bigdatadecode.club/实时抓取MySQL的更新数据到Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop" target="_blank">实时抓取MySQL的更新数据到Hadoop</a>
+                    </li>
+                  
+                </ul>
+              </div>
+            
+  
+            
+                <div class="links-of-blogroll motion-element links-of-blogroll-block">
+                  <div class="links-of-blogroll-title">
+                    <!-- modify icon to fire by szw -->
+                    <i class="fa fa-history fa-" aria-hidden="true"></i>
+                    近期文章
+                  </div>
+                  <ul class="links-of-blogroll-list">
+                    
+                    
+                      <li>
+                        <a href="/android-app-timeup.html" title="坑娃-防沉迷App" target="_blank">坑娃-防沉迷App</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/elasticsearch-op.html" title="elasticsearch运维踩坑" target="_blank">elasticsearch运维踩坑</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/golang-point-address.html" title="golang指针*和取址&傻傻分不清楚" target="_blank">golang指针*和取址&傻傻分不清楚</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/golang-cache2go-sec.html" title="golang随波逐流之cache2go知识点解读" target="_blank">golang随波逐流之cache2go知识点解读</a>
+                      </li>
+                    
+                      <li>
+                        <a href="/golang-cache2go-src.html" title="golang随波逐流之cache2go源码解读" target="_blank">golang随波逐流之cache2go源码解读</a>
+                      </li>
+                    
+                  </ul>
+                </div>
+              
+          </div>
+
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+
+  </aside>
+
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">混绅士</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+<!--add total count by szw-->
+<div class="theme-info">
+  <div class="powered-by"></div>
+  <span class="post-count">博客全站共678.7k字</span>
+</div>
+        
+<div class="busuanzi-count">
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv">
+      <i class="fa fa-user">本站访客数</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+      人次
+    </span>
+  
+
+  
+    <span class="site-pv">
+      <i class="fa fa-eye">本站总访问量</i>
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+      次
+    </span>
+  
+</div>
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.0"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("nP29Qpe35cHgQTQIFL94dGoW-gzGzoHsz", "eVPY9SfyVH11gSsbPBEcAQM0");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+</body>
+</html>
