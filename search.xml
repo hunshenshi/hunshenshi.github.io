@@ -110,97 +110,6 @@
     </entry>
     
     <entry>
-      <title><![CDATA[clickhouse功能调研]]></title>
-      <url>http://bigdatadecode.club/clickhouse-survey.html</url>
-      <content type="html"><![CDATA[<p>ClickHouse近几年在各大厂都被普遍使用，最近也关注下，尝试使用下，看看能否解决目前架构上的瓶颈。</p>
-<p>调研一个新技术，即使网上有再多的科普文章，要想真正的理解这个技术还是需要亲自去尝试使用下的。接下来就部署个小集群，进行一些关键的功能测试。</p>
-<h2 id="软件下载"><a href="#软件下载" class="headerlink" title="软件下载"></a>软件下载</h2><p>ClickHouse官方没有提供安装包，使用<a href="https://packagecloud.io/Altinity/clickhouse-altinity-stable" target="_blank" rel="noopener">https://packagecloud.io/Altinity/clickhouse-altinity-stable</a>提供的安装包，下载如下文件：</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">clickhouse-client-20.8.4.11-1.el7.x86_64.rpm</span><br><span class="line">clickhouse-common-static-20.8.4.11-1.el7.x86_64.rpm</span><br><span class="line">clickhouse-server-20.8.4.11-1.el7.x86_64.rpm</span><br><span class="line">clickhouse-server-common-20.8.4.11-1.el7.x86_64.rpm</span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>ClickHouse的集群模式需要ZooKeeper，这里也下载ZooKeeper，在官网下载就行，下载个稳定版就好。</p>
-</blockquote>
-<h2 id="部署"><a href="#部署" class="headerlink" title="部署"></a>部署</h2><h3 id="ClickHouse单机部署"><a href="#ClickHouse单机部署" class="headerlink" title="ClickHouse单机部署"></a>ClickHouse单机部署</h3><p>单机部署比较简单，本文下载的是rpm包，直接执行rpm安装命令即可。<br>上文中</p>
-<p>发表时需要改ip<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">修改配置文件</span><br><span class="line"></span><br><span class="line">mkdir -p /data11/<span class="built_in">log</span>/clickhouse-server</span><br><span class="line">chmod -R 777 /data11/<span class="built_in">log</span>/</span><br><span class="line">chown -R clickhouse:clickhouse /data11/<span class="built_in">log</span>/clickhouse-server</span><br><span class="line"><span class="comment"># 自动创建</span></span><br><span class="line">mkdir /data11/clickhouse</span><br><span class="line"></span><br><span class="line">[root@bjsc01-video-bigdata120071172 ~]<span class="comment"># service clickhouse-server start</span></span><br><span class="line">Start clickhouse-server service: Path to data directory <span class="keyword">in</span> /etc/clickhouse-server/config.xml: /data11/clickhouse/</span><br><span class="line">DONE</span><br><span class="line">clickhouse-client -h127.0.0.1</span><br><span class="line"></span><br><span class="line">只改/etc/clickhouse-server/config.xml中</span><br><span class="line">    日志目录</span><br><span class="line">    &lt;macros&gt;</span><br><span class="line">        &lt;shard&gt;02&lt;/shard&gt;</span><br><span class="line">        &lt;replica&gt;10.120.71.173&lt;/replica&gt;</span><br><span class="line">    &lt;/macros&gt;</span><br><span class="line"></span><br><span class="line">clickhouse-client -h 10.37.129.10 --multiquery/-n</span><br></pre></td></tr></table></figure></p>
-<p>分布式表<br>1、表名必须是一样的 – 导致如果一个实例下有分配两个副本，需要创建两个数据库分别存放不同副本(需要在配置文件中指定副本所在数据库)<br>2、</p>
-<p>测试(5个实例)<br>1、1分片1副本<br>create database test;<br>use test;<br>3个实例上分别执行<br>CREATE TABLE test.local_table11<br>(<br>    EventDate DateTime,<br>    CounterID UInt32,<br>    UserID UInt32<br>) ENGINE = ReplicatedMergeTree(‘/clickhouse/tables/{shard}/local_table11’, ‘{replica}’)<br>PARTITION BY toYYYYMM(EventDate)<br>ORDER BY (CounterID, EventDate, intHash32(UserID))<br>SAMPLE BY intHash32(UserID);</p>
-<p>3个实例上分别执行<br>create database test_dist;<br>CREATE TABLE test_dist.table11_all as test.local_table11 ENGINE = Distributed(‘cluster_3shards_1replicas’, ‘test’, ‘local_table11’, UserID);</p>
-<p>insert into test_dist.table11_all values (‘2018-01-01 01:01:01’,1,1);<br>insert into test_dist.table11_all values (‘2018-02-02 02:02:02’,2,2);<br>insert into test_dist.table11_all values (‘2018-03-03 03:03:03’,3,3);<br>insert into test_dist.table11_all values (‘2018-06-06 06:06:06’,6,6);</p>
-<p>2、创建3分片2副本的分布式表<br>create database szw_shard_1;<br>create database szw_shard_2;<br>create database szw_shard_3;</p>
-<p>node1执行<br>CREATE TABLE szw_shard_1.table32_local<br>(<br>    EventDate DateTime,<br>    CounterID UInt32,<br>    UserID UInt32<br>) ENGINE = ReplicatedMergeTree(‘/clickhouse/tables/01/table32_local’, ‘10.120.71.172’)<br>PARTITION BY toYYYYMM(EventDate)<br>ORDER BY (CounterID, EventDate, intHash32(UserID))<br>SAMPLE BY intHash32(UserID);</p>
-<p>node2执行<br>CREATE TABLE szw_shard_1.table32_local<br>(<br>    EventDate DateTime,<br>    CounterID UInt32,<br>    UserID UInt32<br>) ENGINE = ReplicatedMergeTree(‘/clickhouse/tables/01/table32_local’, ‘10.120.71.173’)<br>PARTITION BY toYYYYMM(EventDate)<br>ORDER BY (CounterID, EventDate, intHash32(UserID))<br>SAMPLE BY intHash32(UserID);</p>
-<p>node2执行<br>CREATE TABLE szw_shard_2.table32_local<br>(<br>    EventDate DateTime,<br>    CounterID UInt32,<br>    UserID UInt32<br>) ENGINE = ReplicatedMergeTree(‘/clickhouse/tables/02/table32_local’, ‘10.120.71.173’)<br>PARTITION BY toYYYYMM(EventDate)<br>ORDER BY (CounterID, EventDate, intHash32(UserID))<br>SAMPLE BY intHash32(UserID);</p>
-<p>node3执行<br>CREATE TABLE szw_shard_2.table32_local<br>(<br>    EventDate DateTime,<br>    CounterID UInt32,<br>    UserID UInt32<br>) ENGINE = ReplicatedMergeTree(‘/clickhouse/tables/02/table32_local’, ‘10.120.71.155’)<br>PARTITION BY toYYYYMM(EventDate)<br>ORDER BY (CounterID, EventDate, intHash32(UserID))<br>SAMPLE BY intHash32(UserID);</p>
-<p>node3执行<br>CREATE TABLE szw_shard_3.table32_local<br>(<br>    EventDate DateTime,<br>    CounterID UInt32,<br>    UserID UInt32<br>) ENGINE = ReplicatedMergeTree(‘/clickhouse/tables/03/table32_local’, ‘10.120.71.155’)<br>PARTITION BY toYYYYMM(EventDate)<br>ORDER BY (CounterID, EventDate, intHash32(UserID))<br>SAMPLE BY intHash32(UserID);</p>
-<p>node1执行<br>CREATE TABLE szw_shard_3.table32_local<br>(<br>    EventDate DateTime,<br>    CounterID UInt32,<br>    UserID UInt32<br>) ENGINE = ReplicatedMergeTree(‘/clickhouse/tables/03/table32_local’, ‘10.120.71.172’)<br>PARTITION BY toYYYYMM(EventDate)<br>ORDER BY (CounterID, EventDate, intHash32(UserID))<br>SAMPLE BY intHash32(UserID);</p>
-<p>3个实例上执行<br>CREATE TABLE test_dist.szw_all (<br>    EventDate DateTime,<br>    CounterID UInt32,<br>    UserID UInt32<br>) ENGINE = Distributed(‘cluster_3shards_2replicas’, ‘’, ‘table32_local’, UserID);</p>
-<p>insert into test_dist.szw_all values (‘2018-01-01 01:01:01’,1,1);<br>insert into test_dist.szw_all values (‘2018-02-02 02:02:02’,2,2);<br>insert into test_dist.szw_all values (‘2018-03-03 03:03:03’,3,3);</p>
-<p>insert into szw_shard_3.table32_local values (‘2018-05-05 05:05:05’,5,5);</p>
-<p>CREATE TABLE test_dist.szw_rand_all (<br>    EventDate DateTime,<br>    CounterID UInt32,<br>    UserID UInt32<br>) ENGINE = Distributed(‘cluster_3shards_2replicas’, ‘’, ‘table32_local’, rand());</p>
-<p>3、创建2分片2副本的分布式表–使用宏变量 – 不能使用<br>create database test;<br>use test;<br>4个实例上分别执行<br>CREATE TABLE test.table22_local<br>(<br>    EventDate DateTime,<br>    CounterID UInt32,<br>    UserID UInt32<br>) ENGINE = ReplicatedMergeTree(‘/clickhouse/tables/{shard}/table22_local’, ‘{replica}’)<br>PARTITION BY toYYYYMM(EventDate)<br>ORDER BY (CounterID, EventDate, intHash32(UserID))<br>SAMPLE BY intHash32(UserID);</p>
-<p>4个实例上分别执行<br>create database test_dist;<br>CREATE TABLE test_dist.table22_all as test.table22_local ENGINE = Distributed(‘cluster_2shards_2replicas’, ‘test’, ‘table22_local’, UserID);</p>
-<p>insert into test_dist.table22_all values (‘2018-01-01 01:01:01’,1,1);<br>insert into test_dist.table22_all values (‘2018-02-02 02:02:02’,2,2);<br>insert into test_dist.table22_all values (‘2018-03-03 03:03:03’,3,3);<br>insert into test_dist.table22_all values (‘2018-06-06 06:06:06’,6,6);</p>
-<p>drop table test_dist.table12_all</p>
-<p>查看table有多少个分片</p>
-<p>4、5个实例，2分片2副本 – 不使用宏变量 (最佳方案？？？？？？)<br>create database test;<br>use test;<br>实例1上分别执行<br>CREATE TABLE test.table22_1_local<br>(<br>    EventDate DateTime,<br>    CounterID UInt32,<br>    UserID UInt32<br>) ENGINE = ReplicatedMergeTree(‘/clickhouse/tables/01/table22_1_local’, ‘10.120.71.172’)<br>PARTITION BY toYYYYMM(EventDate)<br>ORDER BY (CounterID, EventDate, intHash32(UserID))<br>SAMPLE BY intHash32(UserID);</p>
-<p>实例2上分别执行<br>CREATE TABLE test.table22_1_local<br>(<br>    EventDate DateTime,<br>    CounterID UInt32,<br>    UserID UInt32<br>) ENGINE = ReplicatedMergeTree(‘/clickhouse/tables/01/table22_1_local’, ‘10.120.71.173’)<br>PARTITION BY toYYYYMM(EventDate)<br>ORDER BY (CounterID, EventDate, intHash32(UserID))<br>SAMPLE BY intHash32(UserID);</p>
-<p>实例3上分别执行<br>CREATE TABLE test.table22_1_local<br>(<br>    EventDate DateTime,<br>    CounterID UInt32,<br>    UserID UInt32<br>) ENGINE = ReplicatedMergeTree(‘/clickhouse/tables/02/table22_1_local’, ‘10.120.71.155’)<br>PARTITION BY toYYYYMM(EventDate)<br>ORDER BY (CounterID, EventDate, intHash32(UserID))<br>SAMPLE BY intHash32(UserID);</p>
-<p>实例4上分别执行<br>CREATE TABLE test.table22_1_local<br>(<br>    EventDate DateTime,<br>    CounterID UInt32,<br>    UserID UInt32<br>) ENGINE = ReplicatedMergeTree(‘/clickhouse/tables/02/table22_1_local’, ‘10.120.71.154’)<br>PARTITION BY toYYYYMM(EventDate)<br>ORDER BY (CounterID, EventDate, intHash32(UserID))<br>SAMPLE BY intHash32(UserID);</p>
-<p>实例5上执行<br>create database test_dist;<br>CREATE TABLE test_dist.table22_1_all(<br>    EventDate DateTime,<br>    CounterID UInt32,<br>    UserID UInt32<br>) ENGINE = Distributed(‘cluster_2shards_2replicas’, ‘test’, ‘table22_1_local’, UserID);</p>
-<p>insert into test.table22_1_local values (‘2018-01-01 01:01:01’,1,1);<br>insert into test.table22_1_local values (‘2018-02-02 02:02:02’,2,2);<br>insert into test.table22_1_local values (‘2018-03-03 03:03:03’,3,3);<br>insert into test.table22_1_local values (‘2018-06-06 06:06:06’,6,6);</p>
-<p>insert into test_dist.table22_1_all values (‘2018-01-01 01:01:01’,1,1);<br>insert into test_dist.table22_1_all values (‘2018-02-02 02:02:02’,2,2);<br>insert into test_dist.table22_1_all values (‘2018-03-03 03:03:03’,3,3);<br>insert into test_dist.table22_1_all values (‘2018-06-06 06:06:06’,6,6);</p>
-<p>echo “insert into test.table22_1_local values (‘2018-01-01 01:01:01’,1,1)” | curl ‘<a href="http://10.120.71.172:9090/?user=replica-write&amp;password=pass&#39;" target="_blank" rel="noopener">http://10.120.71.172:9090/?user=replica-write&amp;password=pass&#39;</a> –data-binary @-<br>echo “insert into test.table22_1_local values (‘2018-02-02 02:02:02’,2,2)” | curl ‘<a href="http://10.120.71.172:9090/?user=replica-write&amp;password=pass&#39;" target="_blank" rel="noopener">http://10.120.71.172:9090/?user=replica-write&amp;password=pass&#39;</a> –data-binary @-<br>echo “insert into test.table22_1_local values (‘2018-03-03 03:03:03’,3,3)” | curl ‘<a href="http://10.120.71.172:9090/?user=replica-write&amp;password=pass&#39;" target="_blank" rel="noopener">http://10.120.71.172:9090/?user=replica-write&amp;password=pass&#39;</a> –data-binary @-<br>echo “insert into test.table22_1_local values (‘2018-04-04 04:04:04’,4,4)” | curl ‘<a href="http://10.120.71.172:9090/?user=replica-write&amp;password=pass&#39;" target="_blank" rel="noopener">http://10.120.71.172:9090/?user=replica-write&amp;password=pass&#39;</a> –data-binary @-</p>
-<p>echo “select * from test.table22_1_local” | curl ‘<a href="http://10.120.71.172:9090/?user=replica-write&amp;password=pass&#39;" target="_blank" rel="noopener">http://10.120.71.172:9090/?user=replica-write&amp;password=pass&#39;</a> –data-binary @-</p>
-<p>– 无法读，表不存在<br>echo “select * from test_dist.table22_1_all” | curl ‘<a href="http://10.120.71.172:9090/?user=replica-write&amp;password=pass&#39;" target="_blank" rel="noopener">http://10.120.71.172:9090/?user=replica-write&amp;password=pass&#39;</a> –data-binary @-</p>
-<p>echo “select * from test_dist.table22_1_all” | curl ‘<a href="http://10.120.71.172:9090/?user=distributed-read&amp;password=pass&#39;" target="_blank" rel="noopener">http://10.120.71.172:9090/?user=distributed-read&amp;password=pass&#39;</a> –data-binary @-</p>
-<p>drop table test.table22_1_local</p>
-<p>5、创建1分片2副本的分布式表<br>create database test;<br>use test;<br>实例1上分别执行<br>CREATE TABLE test.table12_local<br>(<br>    EventDate DateTime,<br>    CounterID UInt32,<br>    UserID UInt32<br>) ENGINE = ReplicatedMergeTree(‘/clickhouse/tables/01/table12_local’, ‘10.120.71.155’)<br>PARTITION BY toYYYYMM(EventDate)<br>ORDER BY (CounterID, EventDate, intHash32(UserID))<br>SAMPLE BY intHash32(UserID);</p>
-<p>实例2上分别执行<br>CREATE TABLE test.table12_local<br>(<br>    EventDate DateTime,<br>    CounterID UInt32,<br>    UserID UInt32<br>) ENGINE = ReplicatedMergeTree(‘/clickhouse/tables/01/table12_local’, ‘10.120.71.154’)<br>PARTITION BY toYYYYMM(EventDate)<br>ORDER BY (CounterID, EventDate, intHash32(UserID))<br>SAMPLE BY intHash32(UserID);</p>
-<p>2个实例上分别执行<br>create database test_dist;<br>CREATE TABLE test_dist.table12_all as test.table12_local ENGINE = Distributed(‘cluster_1shards_2replicas’, ‘test’, ‘table12_local’, UserID);</p>
-<p>insert into test_dist.table12_all values (‘2018-01-01 01:01:01’,1,1);<br>insert into test.table12_local values (‘2018-02-02 02:02:02’,2,2);<br>insert into test_dist.table12_all values (‘2018-03-03 03:03:03’,3,3);<br>insert into test_dist.table12_all values (‘2018-06-06 06:06:06’,6,6);</p>
-<h2 id="chproxy部署"><a href="#chproxy部署" class="headerlink" title="chproxy部署"></a>chproxy部署</h2><p>配置文件</p>
-<p>启动<br>curl ‘<a href="http://10.120.71.172:9090/metrics&#39;" target="_blank" rel="noopener">http://10.120.71.172:9090/metrics&#39;</a></p>
-<p>读写<br>echo ‘SELECT * from test_dist.szw_all’ | curl ‘<a href="http://10.120.71.172:9090/?user=replica&amp;password=pass&#39;" target="_blank" rel="noopener">http://10.120.71.172:9090/?user=replica&amp;password=pass&#39;</a> –data-binary @-</p>
-<p>echo ‘SELECT * from test_dist.szw_all’ | curl ‘<a href="http://10.120.71.172:9090/?user=distributed&amp;password=pass&#39;" target="_blank" rel="noopener">http://10.120.71.172:9090/?user=distributed&amp;password=pass&#39;</a> –data-binary @-</p>
-<p>echo “insert into test_dist.szw_all values (‘2018-02-02 02:02:02’,2,2)” | curl ‘<a href="http://10.120.71.172:9090/?user=replica&amp;password=pass&#39;" target="_blank" rel="noopener">http://10.120.71.172:9090/?user=replica&amp;password=pass&#39;</a> –data-binary @-</p>
-<p>echo “insert into test_dist.szw_all values (‘2018-03-03 03:03:03’,3,3)” | curl ‘<a href="http://10.120.71.172:9090/?user=distributed&amp;password=pass&#39;" target="_blank" rel="noopener">http://10.120.71.172:9090/?user=distributed&amp;password=pass&#39;</a> –data-binary @-</p>
-<p>===========<br>echo “insert into test_dist.szw_all values (‘2018-04-04 04:04:04’,4,4)” | curl ‘<a href="http://10.120.71.172:9090/?user=replica&amp;password=pass&#39;" target="_blank" rel="noopener">http://10.120.71.172:9090/?user=replica&amp;password=pass&#39;</a> –data-binary @-</p>
-<p>echo “insert into test_dist.szw_all values (‘2018-06-06 06:06:06’,6,6)” | curl ‘<a href="http://10.120.71.172:9090/?user=replica&amp;password=pass&#39;" target="_blank" rel="noopener">http://10.120.71.172:9090/?user=replica&amp;password=pass&#39;</a> –data-binary @-</p>
-<p>echo “insert into test_dist.szw_all values (‘2018-07-07 07:07:07’,7,7)” | curl ‘<a href="http://10.120.71.172:9090/?user=replica&amp;password=pass&#39;" target="_blank" rel="noopener">http://10.120.71.172:9090/?user=replica&amp;password=pass&#39;</a> –data-binary @-</p>
-<p>echo “insert into test_dist.szw_all values (‘2018-08-08 08:08:08’,8,8)” | curl ‘<a href="http://10.120.71.172:9090/?user=replica&amp;password=pass&#39;" target="_blank" rel="noopener">http://10.120.71.172:9090/?user=replica&amp;password=pass&#39;</a> –data-binary @-</p>
-<p>###########<br>echo “insert into test_dist.szw_rand_all values (‘2018-09-09 09:09:09’,9,9)” | curl ‘<a href="http://10.120.71.172:9090/?user=replica&amp;password=pass&#39;" target="_blank" rel="noopener">http://10.120.71.172:9090/?user=replica&amp;password=pass&#39;</a> –data-binary @-</p>
-<p>echo “insert into test_dist.szw_rand_all values (‘2018-10-10 10:10:10’,10,10)” | curl ‘<a href="http://10.120.71.172:9090/?user=replica&amp;password=pass&#39;" target="_blank" rel="noopener">http://10.120.71.172:9090/?user=replica&amp;password=pass&#39;</a> –data-binary @-</p>
-<p>echo “insert into test_dist.szw_rand_all values (‘2018-11-11 11:11:11’,11,11)” | curl ‘<a href="http://10.120.71.172:9090/?user=replica&amp;password=pass&#39;" target="_blank" rel="noopener">http://10.120.71.172:9090/?user=replica&amp;password=pass&#39;</a> –data-binary @-</p>
-<p>echo “insert into test_dist.szw_rand_all values (‘2018-12-12 12:12:12’,12,12)” | curl ‘<a href="http://10.120.71.172:9090/?user=replica&amp;password=pass&#39;" target="_blank" rel="noopener">http://10.120.71.172:9090/?user=replica&amp;password=pass&#39;</a> –data-binary @-</p>
-<p>如果通过chproxy代码写入，如何验证分布式写还是写的本地表</p>
-<p> export GOPROXY=”<a href="https://goproxy.io&quot;" target="_blank" rel="noopener">https://goproxy.io&quot;</a>  go代理<br> export GOPROXY=direct </p>
-<h2 id="压测"><a href="#压测" class="headerlink" title="压测"></a>压测</h2><p> Queries / second</p>
-<p> spark.createDataFrame(data).write.mode(SaveMode.Append).option(“batchsize”, “50000”).option(“isolationLevel”, “NONE”).option(“numPartitions”, “1”).jdbc(dbUrl, “table”, dbProp) </p>
-<p>max_execution_time: 5m chproxy 超时导致kill query</p>
-<h2 id="多磁盘"><a href="#多磁盘" class="headerlink" title="多磁盘"></a>多磁盘</h2><p>SELECT database, table, partition, name, active FROM system.parts WHERE table = ‘ontime22_local’<br>SELECT<br>    database,<br>    table,<br>    partition,<br>    partition_id,<br>    name,<br>    active,<br>    path<br>FROM system.parts<br>WHERE table = ‘szw_live_m1_brokenpush’</p>
-]]></content>
-      
-        <categories>
-            
-            <category> bigdata </category>
-            
-        </categories>
-        
-        
-        <tags>
-            
-            <tag> BigData </tag>
-            
-            <tag> 部署 </tag>
-            
-            <tag> clickhouse </tag>
-            
-            <tag> 调研 </tag>
-            
-        </tags>
-        
-    </entry>
-    
-    <entry>
       <title><![CDATA[elasticsearch运维踩坑]]></title>
       <url>http://bigdatadecode.club/elasticsearch-op.html</url>
       <content type="html"><![CDATA[<p>接触ES也小半年了，ES虽然使用方便，运维简单但是集群规模和数据量大的话运维也很头疼，这里梳理下这半年的运维经验。</p>
@@ -2840,9 +2749,9 @@ Caused by: java.io.IOException: error=13, Permission denied
             
             <tag> BigData </tag>
             
-            <tag> 调研 </tag>
-            
             <tag> Druid </tag>
+            
+            <tag> 调研 </tag>
             
         </tags>
         

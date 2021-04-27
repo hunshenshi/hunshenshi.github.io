@@ -326,32 +326,6 @@
 
       <h2 class="post-title">
         
-            <a class="post-title-link" href="/clickhouse-survey.html" itemprop="url">
-              
-                <span itemprop="name">clickhouse功能调研</span>
-              
-            </a>
-        
-      </h2>
-
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated" datetime="2020-11-05T22:33:12+08:00" content="2020-11-05">
-          11-05
-        </time>
-      </div>
-
-    </header>
-  </article>
-
-
-    
-      
-
-  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <h2 class="post-title">
-        
             <a class="post-title-link" href="/elasticsearch-op.html" itemprop="url">
               
                 <span itemprop="name">elasticsearch运维踩坑</span>
@@ -415,7 +389,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">113</span>
+                <span class="site-state-item-count">112</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -437,7 +411,7 @@
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">182</span>
+                <span class="site-state-item-count">181</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
@@ -520,15 +494,15 @@
                   </li>
                 
                   <li>
-                    <a href="/clickhouse-survey.html" title="clickhouse功能调研" target="_blank">clickhouse功能调研</a>
-                  </li>
-                
-                  <li>
                     <a href="/elasticsearch-op.html" title="elasticsearch运维踩坑" target="_blank">elasticsearch运维踩坑</a>
                   </li>
                 
                   <li>
                     <a href="/golang-point-address.html" title="golang指针*和取址&傻傻分不清楚" target="_blank">golang指针*和取址&傻傻分不清楚</a>
+                  </li>
+                
+                  <li>
+                    <a href="/golang-cache2go-sec.html" title="golang随波逐流之cache2go知识点解读" target="_blank">golang随波逐流之cache2go知识点解读</a>
                   </li>
                 
               </ul>
@@ -583,7 +557,7 @@
 <!--add total count by szw-->
 <div class="theme-info">
   <div class="powered-by"></div>
-  <span class="post-count">博客全站共683.0k字</span>
+  <span class="post-count">博客全站共679.7k字</span>
 </div>
         
 <div class="busuanzi-count">
@@ -954,40 +928,6 @@
 
     $(function() {
       var Counter = AV.Object.extend("Counter");
-      if ($('.leancloud_visitors').length == 1) {
-        addCount(Counter);
-      } else if ($('.post-title-link').length > 1) {
-        showTime(Counter);
-      }
-    });
-  </script>
-
-
-
-  
-<script>
-(function(){
-    var bp = document.createElement('script');
-    var curProtocol = window.location.protocol.split(':')[0];
-    if (curProtocol === 'https') {
-        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
-    }
-    else {
-        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
-    }
-    var s = document.getElementsByTagName("script")[0];
-    s.parentNode.insertBefore(bp, s);
-})();
-</script>
-
-
-  
-
-  
-
-</body>
-</html>
-ct.extend("Counter");
       if ($('.leancloud_visitors').length == 1) {
         addCount(Counter);
       } else if ($('.post-title-link').length > 1) {
