@@ -4,6 +4,63 @@
   
     
     <entry>
+      <title><![CDATA[openGauss极简版安装使用]]></title>
+      <url>http://bigdatadecode.club/openGauss-deploy.html</url>
+      <content type="html"><![CDATA[<p>openGauss是GaussDB的开源版，从<a href="https://opengauss.org/zh/download.html" target="_blank" rel="noopener">官网</a>下载即可。</p>
+<p>这里只是为了测试一些基本功能，所以只下载了极简版。下面记录下安装步骤和遇到的问题。</p>
+<a id="more"></a>
+<h2 id="部署"><a href="#部署" class="headerlink" title="部署"></a>部署</h2><p>GaussDB安装不能用root用户，先新建一个专用用户<code>gaussdb</code>，执行命令<code>groupadd gaussdb &amp;&amp; useradd -d /home/gaussdb -m gaussdb -g gaussdb</code><br>解压安装包，执行命令<code>tar -jxvf openGauss-2.0.0-CentOS-64bit.tar.bz2 -C gaussdb-2.0.0</code><br>然后进入<code>simpleInstall</code>目录，执行<code>sh install.sh -w xx</code>命令进行安装。</p>
+<p>如果上述流程正常，则GaussDB安装初步完成。但是我没有这么顺利，遇到些问题。</p>
+<h3 id="问题1"><a href="#问题1" class="headerlink" title="问题1"></a>问题1</h3><p>执行<code>install.sh</code>命令时，报错<code>SEMMNI</code>参数设置不对，错误信息如下：<br><code>On systemwide basis, the maximum number of SEMMNI is not correct. the current SEMMNI value is: 128. Please check it.</code></p>
+<blockquote>
+<p>解决<br>SEMMNI是在<code>/proc/sys/kernel/sem</code>文件中配置的，修改下就好了，需要注意的是修改方式不能直接vim，需要用echo命令写入，否则会写入不成功。<br>执行命令<code>echo 250    32000    32    2048 &gt; /proc/sys/kernel/sem</code></p>
+</blockquote>
+<p>安装成功之后，需要先验证下能否正常使用，比较安装不报错和能正常使用是两回事。</p>
+<p>执行<code>gsql -d postgres -p 5432</code>，其中端口<code>5432</code>是默认端口，具体端口信息可以在<code>${GAUSSDB_HOME}/data/single_node/postgresql.conf</code>中查看。</p>
+<p>又报错了。。</p>
+<h3 id="问题2"><a href="#问题2" class="headerlink" title="问题2"></a>问题2</h3><p>是openssl的问题，错误信息如下：<br><code>openssl: error while loading shared libraries: libssl.so.1.1: cannot open shared object file: No such file or directory</code></p>
+<blockquote>
+<p>解决<br>执行<code>openssl version</code>查看当前openssl的版本，我的版本是1.0.2，需要先将openssl升级到1.1，如果还报上面的错，在执行如下命令：</p>
+</blockquote>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ln -s /usr/local/lib64/libssl.so.1.1 /usr/lib64/libssl.so.1.1</span><br><span class="line">ln -s /usr/local/lib64/libcrypto.so.1.1 /usr/lib64/libcrypto.so.1.1</span><br></pre></td></tr></table></figure>
+<p>这个问题解决完就可以正常使用了，一些常用命令有<code>\c</code>切换数据库，<code>\l</code>查看数据库、<code>\dt</code>查看表、<code>\d tablename</code>查看表结构。</p>
+<h2 id="远程连接"><a href="#远程连接" class="headerlink" title="远程连接"></a>远程连接</h2><p>管理员帐号无法进行远程连接，新建个用户用于测试远程连接功能，新建用户命令如下：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">CREATE USER test PASSWORD 'Test@123';</span><br><span class="line"><span class="meta">#</span><span class="bash"> 将 school库赋权给<span class="built_in">test</span>用户</span></span><br><span class="line">GRANT ALL PRIVILEGES ON DATABASE school to test;</span><br><span class="line"><span class="meta">#</span><span class="bash"> 更改<span class="built_in">test</span>角色</span></span><br><span class="line">ALTER ROLE test CREATEDB;</span><br><span class="line"><span class="meta">#</span><span class="bash"> 赋予用户权限</span></span><br><span class="line">GRANT ALL PRIVILEGES To test;</span><br></pre></td></tr></table></figure>
+<p>使用新建的用户连接测试，执行命令<code>gsql -h xx.xx.xx.xx -d school -U test -p 5432 -r</code><br>报错无法连接，报权限错误，执行命令<code>gs_guc set -N all -I all -h &quot;host all test 192.168.xx.xx/32 sha256&quot;</code>，悲催的是又报错了，错误信息如下：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">realpath(/home/gaussdb/gaussdb-2.0.0/bin/cluster_static_config) failed : 没有那个文件或目录!</span><br><span class="line">The gs_guc run with the following arguments: [gs_guc -N all -I all -h host all jack 192.168.xx.xx/32 sha256 set ].</span><br><span class="line">gs_guc: malloc 0</span><br></pre></td></tr></table></figure>
+<p>之所以没有这个文件是因为极简版中很多命令都没有，比如<code>gs_om</code>。</p>
+<p>极简版少很多命令文件怎么解决，我只能从新安装个企业版？好麻烦。突然想到在搜索<code>gs_guc</code>这个命令的时候，它修改的是<code>pg_hba.conf</code>这个配置文件，我是不是可以绕过<code>gs_guc</code>命令直接修改配置文件就可以解决，立马去实践。</p>
+<p><code>pg_hba.conf</code>在<code>${GAUSSDB_HOME}/data/single_node</code>中，通过vim修改，增加<code>host    all             all             192.168.xx.xx/32            sha256</code><br>修改完之后重启下服务就行，搞笑的事情发生了，重启服务需要用到<code>gs_om</code>命令，可是没有咋办。。。</p>
+<p>极简版是通过执行<code>install.sh</code>命令进行安装启动的，那么这个里面应该有启动命令，果然发现了，极简版的启停命令为：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">gs_ctl start -D /home/gaussdb/gaussdb-2.0.0/data/single_node -Z single_node</span><br><span class="line">gs_ctl stop -D /home/gaussdb/gaussdb-2.0.0/data/single_node -Z single_node</span><br></pre></td></tr></table></figure>
+<p>终于搞定了，可以远程连接了。</p>
+<h2 id="JDBC连接测试"><a href="#JDBC连接测试" class="headerlink" title="JDBC连接测试"></a>JDBC连接测试</h2><p>代码用官方的就行，加个依赖包，官方也提供了。<br>关键代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 创建数据库连接</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Connection <span class="title">GetConnection</span><span class="params">(String username, String passwd)</span> </span>&#123;</span><br><span class="line">    String driver = <span class="string">"org.postgresql.Driver"</span>;</span><br><span class="line">    String sourceURL = <span class="string">"jdbc:postgresql://192.168.xx.xx:5432/school?useUnicode=true&amp;characterEncoding=utf8"</span>;</span><br><span class="line">    Connection conn = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">//加载数据库驱动。</span></span><br><span class="line">        Class.forName(driver).newInstance();</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        e.printStackTrace();</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">//创建数据库连接。</span></span><br><span class="line">        conn = DriverManager.getConnection(sourceURL, username, passwd);</span><br><span class="line">        System.out.println(<span class="string">"Connection succeed!"</span>);</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        e.printStackTrace();</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> conn;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h2 id="幸运之想"><a href="#幸运之想" class="headerlink" title="幸运之想"></a>幸运之想</h2><p>整个安装测试过程比较坎坷但也很幸运，所遇的问题都能比较简单，比较容易搞定。</p>
+<p>安装使用过程中遇到些问题，有的问题比较普遍可以通过搜索引擎解决，但是有些问题比较独特，无法通过搜索引擎解决，此时就需要我们有解决问题的能力，这个能力从何而来，我认为能力是从思路中而来，而思路又是从经验见识中而来。所以呢还是那句老话，遇到问题不要慌，要多想想，要记住一点，问题肯定是能解决的，只是有的问题解决完就没有了，而有的问题解决完一个又会出现N个。</p>
+<p>也许现在说这些都是风凉话，但现在想想如果当时解决远程连接问题时，没有去多想下，可能就直接更换企业版，然后安装部署，遇到新的问题继续解决问题。<br>但是我很庆幸我没有立马去更换企业版，而是多想了一步，并靠着自己的经验把遇到的问题给解决了，节省了一些时间也增加了自己独立解决问题的信心。</p>
+]]></content>
+      
+        <categories>
+            
+            <category> BigData </category>
+            
+        </categories>
+        
+        
+        <tags>
+            
+            <tag> BigData </tag>
+            
+            <tag> GaussDB </tag>
+            
+            <tag> deploy </tag>
+            
+        </tags>
+        
+    </entry>
+    
+    <entry>
       <title><![CDATA[姗姗来迟的果实]]></title>
       <url>http://bigdatadecode.club/my-book.html</url>
       <content type="html"><![CDATA[<p>2021年也接近一半了，过去的2020年对谁都是不平凡的一年，对我尤是。<br>2020年在各位编辑老师的帮助下，对书进行了微调，终于在2021年要跟读者见面了，虽然整个战线由于疫情原因被拉了很长，但现在心里依然很激动。</p>
