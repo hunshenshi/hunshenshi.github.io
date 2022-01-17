@@ -176,7 +176,7 @@
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git rm --cached &lt;文件名&gt; 删除文件的缓存</span><br><span class="line">git rm --cached -r &lt;目录名&gt; 删除目录下的所有文件的缓存</span><br></pre></td></tr></table></figure>
 <p>然后将代码进行提交</p>
 <h2 id="fork分支同步源分支"><a href="#fork分支同步源分支" class="headerlink" title="fork分支同步源分支"></a>fork分支同步源分支</h2><ol>
-<li>Clone your fork:<br>git clone <a href="mailto:&#x67;&#x69;&#x74;&#64;&#103;&#x69;&#x74;&#104;&#x75;&#98;&#46;&#x63;&#111;&#109;">&#x67;&#x69;&#x74;&#64;&#103;&#x69;&#x74;&#104;&#x75;&#98;&#46;&#x63;&#111;&#109;</a>:YOUR-USERNAME/YOUR-FORKED-REPO.git</li>
+<li>Clone your fork:<br>git clone <a href="mailto:&#x67;&#x69;&#116;&#64;&#x67;&#105;&#116;&#x68;&#117;&#x62;&#x2e;&#99;&#111;&#x6d;">&#x67;&#x69;&#116;&#64;&#x67;&#105;&#116;&#x68;&#117;&#x62;&#x2e;&#99;&#111;&#x6d;</a>:YOUR-USERNAME/YOUR-FORKED-REPO.git</li>
 <li>Add remote from original repository in your forked repository:<br>cd into/cloned/fork-repo<br>git remote add upstream git://github.com/ORIGINAL-DEV-USERNAME/REPO-YOU-FORKED-FROM.git<br>git fetch upstream</li>
 <li>Updating your fork from original repo to keep up with their changes:<br>git pull upstream master</li>
 </ol>
@@ -188,7 +188,7 @@
 <li>pull会使用git merge导致冲突，需要将冲突的文件resolve掉，然后执行<code>git add -u</code>, 最后<code>git commit</code>之后才能成功pull。</li>
 <li>如果想放弃本地的文件修改，可以使用<code>git reset --hard FETCH_HEAD</code>，FETCH_HEAD表示上一次成功git pull之后形成的commit点。然后git pull。</li>
 </ol>
-<h2 id="clone-hadoop"><a href="#clone-hadoop" class="headerlink" title="clone hadoop"></a>clone hadoop</h2><p>git clone <a href="mailto:&#x67;&#x69;&#x74;&#64;&#103;&#x69;&#116;&#104;&#117;&#98;&#x2e;&#99;&#x6f;&#x6d;">&#x67;&#x69;&#x74;&#64;&#103;&#x69;&#116;&#104;&#117;&#98;&#x2e;&#99;&#x6f;&#x6d;</a>:hunshenshi/hadoop.git<br>git remote add upstream <a href="mailto:&#103;&#105;&#116;&#x40;&#103;&#105;&#x74;&#104;&#x75;&#x62;&#x2e;&#x63;&#x6f;&#x6d;">&#103;&#105;&#116;&#x40;&#103;&#105;&#x74;&#104;&#x75;&#x62;&#x2e;&#x63;&#x6f;&#x6d;</a>:apache/hadoop.git</p>
+<h2 id="clone-hadoop"><a href="#clone-hadoop" class="headerlink" title="clone hadoop"></a>clone hadoop</h2><p>git clone <a href="mailto:&#x67;&#x69;&#x74;&#x40;&#103;&#x69;&#116;&#x68;&#x75;&#x62;&#x2e;&#99;&#111;&#109;">&#x67;&#x69;&#x74;&#x40;&#103;&#x69;&#116;&#x68;&#x75;&#x62;&#x2e;&#99;&#111;&#109;</a>:hunshenshi/hadoop.git<br>git remote add upstream <a href="mailto:&#x67;&#x69;&#116;&#x40;&#103;&#x69;&#x74;&#104;&#x75;&#x62;&#46;&#99;&#x6f;&#x6d;">&#x67;&#x69;&#116;&#x40;&#103;&#x69;&#x74;&#104;&#x75;&#x62;&#46;&#99;&#x6f;&#x6d;</a>:apache/hadoop.git</p>
 <p>如果要提交patch，先同步原Hadoop仓库代码</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git checkout trunk</span><br><span class="line">git pull upstream trunk</span><br><span class="line">git push origin trunk    <span class="comment"># 本地和仓库同步代码</span></span><br></pre></td></tr></table></figure>
 <p>然后创建分支进行提交</p>
