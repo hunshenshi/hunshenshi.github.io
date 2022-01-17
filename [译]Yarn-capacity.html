@@ -1,0 +1,190 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>YARN Capacity Scheduler | big data decode club</title><meta name="keywords" content="Hadoop,BigData,YARN,Capacity"><meta name="author" content="混绅士"><meta name="copyright" content="混绅士"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="这是一篇译文，原文地址 主要介绍了Capacity Scheduler相关的内容。 Capacity Scheduler在资源分配时主要考虑两个主要属性：用户名和应用程序ID。在指定最小用户百分比和用户限制因素的队列中，用户之间共享资源时，关注的是用户名本身。在队列中，应用程序获取资源分配由叶子队列排序策略驱动：FIFO或FAIR，它只关心应用程序而不关心哪个用户正在运行它。在FIFO中，资源首先">
+<meta property="og:type" content="article">
+<meta property="og:title" content="YARN Capacity Scheduler">
+<meta property="og:url" content="http://bigdatadecode.club/[%E8%AF%91]Yarn-capacity.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="这是一篇译文，原文地址 主要介绍了Capacity Scheduler相关的内容。 Capacity Scheduler在资源分配时主要考虑两个主要属性：用户名和应用程序ID。在指定最小用户百分比和用户限制因素的队列中，用户之间共享资源时，关注的是用户名本身。在队列中，应用程序获取资源分配由叶子队列排序策略驱动：FIFO或FAIR，它只关心应用程序而不关心哪个用户正在运行它。在FIFO中，资源首先">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+<meta property="article:published_time" content="2019-07-28T15:35:23.000Z">
+<meta property="article:modified_time" content="2019-08-12T15:45:21.000Z">
+<meta property="article:author" content="混绅士">
+<meta property="article:tag" content="Hadoop">
+<meta property="article:tag" content="BigData">
+<meta property="article:tag" content="YARN">
+<meta property="article:tag" content="Capacity">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><link rel="shortcut icon" href="/favicon.ico"><link rel="canonical" href="http://bigdatadecode.club/[%E8%AF%91]Yarn-capacity"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="baidu-site-verification" content="27E5EbutCm"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'YARN Capacity Scheduler',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2019-08-12 23:45:21'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="big data decode club" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/uploads/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><div class="data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">big data decode club</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">YARN Capacity Scheduler</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2019-07-28T15:35:23.000Z" title="发表于 2019-07-28 23:35:23">2019-07-28</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2019-08-12T15:45:21.000Z" title="更新于 2019-08-12 23:45:21">2019-08-12</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Hadoop/">Hadoop</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">3.3k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>9分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="YARN Capacity Scheduler"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>这是一篇译文，<a target="_blank" rel="noopener" href="https://hortonworks.com/blog/yarn-capacity-scheduler/">原文地址</a></p>
+<p>主要介绍了Capacity Scheduler相关的内容。</p>
+<p>Capacity Scheduler在资源分配时主要考虑两个主要属性：<em>用户名和应用程序ID</em>。在指定最小用户百分比和用户限制因素的队列中，用户之间共享资源时，关注的是用户名本身。在队列中，应用程序获取资源分配由叶子队列排序策略驱动：FIFO或FAIR，它只关心应用程序而不关心哪个用户正在运行它。在FIFO中，资源首先被分配给队列中最先提交的应用程序，并且只有当它不再需要任何请求时，下一个应用程序才会获得分配。对于使用最少资源的FAIR应用程序，首先询问是否存在待处理的分配，如果存在则分配，则如果不存在，则检查具有最少资源的下一个应用程序；这有助于与通常使用它们的应用程序平均共享队列。</p>
+<span id="more"></span>
+
+<h2 id="容量和分层设计"><a href="#容量和分层设计" class="headerlink" title="容量和分层设计"></a>容量和分层设计</h2><p>​YARN对其可分配的资源定义了最小分配量和最大分配量，目前这些资源包括内存和内核。可调度资源是由NodeManage提供的，来自所有节点的资源聚合为可被Capacity调度的总资源，总资源组成root队列。</p>
+<p>​Capacity调度的基础设置是如何布置队列以及为它们分配资源。队列以分层设计布局，最顶层的父节点是集群队列的“根”，可以从根分配子队列，或者可以在自己队列的基础上再次分配子队列。资源被分配给这些队列，作为层次结构中父级资源的最小和最大百分比。 最小容量是如果群集上的所有队列都已运行，并且集群总资源已用完，此时各队列应该可以使用的资源量。 最大容量是类似弹性的容量，允许队列利用不用于填充其他队列中的最小容量需求的资源。<br><img src="/blogimgs/capacity/queue.png" alt="队列设计" title="队列设计"></p>
+<h2 id="最低用户百分比和用户限制因素"><a href="#最低用户百分比和用户限制因素" class="headerlink" title="最低用户百分比和用户限制因素"></a>最低用户百分比和用户限制因素</h2><p>​最小用户百分比和用户限制因子是控制如何将正在使用的队列中的资源分配给他们的方法。 最小用户百分比是单个用户在请求时应访问的最小资源量百分比，是一个软限制。 例如，10％的最小用户百分比意味着10个用户将获得10％; 这个值不是硬性规定的，因为如果其中一个用户要求更少，我们可能会将更多用户放入队列。</p>
+<p>​用户限制因子是一种控制单个用户可以使用的最大资源量的方法。 用户限制因子设置为队列最小容量的倍数。如果用户限制因子为1表示用户可以使用队列的整个最小容量， 如果用户限制因子大于1，则用户可能会增长到最大容量，如果该值设置为小于1，例如0.5，则用户只能获得队列最小容量的一半。 如果您希望用户能够增长到队列设置的最大容量，则大于1的值将允许用户多次超过最小容量。<br><img src="/blogimgs/capacity/user.png" alt="限制因子" title="限制因子"></p>
+<p>​最初可能不直观的常见设计点是按工作负载而不是应用程序创建队列，然后使用用户限制因子来防止单个用户<strong>通过使用小于1.0的值单独接管队列</strong>。 此模型支持更简单的操作，不允许通过为每个LoB创建一个队列来创建队列，而是通过按工作负载创建队列来创建可预测的队列行为。 一旦群集完全使用并且应用程序排队等待运行时，较低的用户限制因素将是控制租户之间资源共享的关键。</p>
+<p>​最初，由于使用较小的用户限制来限制用户资源，这可能无法在其Hadoop平台旅程开始时提供群集利用率，有许多方法，但需要考虑的是，最初允许单个租户接管一个小集群（比如10个节点），这可能是合理的，但是当扩展平台占用空间时，降低用户限制因子，以便每个租户保留与添加新节点之前相同数量的可分配资源。 这可以让用户保持最初的体验，但是无法接管整个集群，因为随着整个群集的增长，新用户可以轻松获得分配的容量，同时不会降低原始用户的体验。</p>
+<h2 id="队列设计"><a href="#队列设计" class="headerlink" title="队列设计"></a>队列设计</h2><p>​队列设计时需要考虑如下相关场景：</p>
+<ul>
+<li><strong>即时查询</strong><br>主要是些临时统计需求，任务的出现没有规律，主要集中在工作时间，由用户主动触发</li>
+<li><strong>紧急需求</strong><br>主要用于处理一些紧急需求，比如紧急补数</li>
+<li><strong>机器学习</strong><br>这部分需求是需要大量的资源并且可能会长时间占用资源，但是紧急度和运行时长要求不是很高</li>
+<li><strong>实时计算</strong><br>这部分需求是长时间运行并且没有明确的结束标识，对实时要求较高，不能容忍延迟，需要严格保证资源不被其它需求抢占</li>
+<li><strong>批处理</strong><br>是指一些常规数据ETL，主要关注任务的吞吐量而不是当个任务是否延迟</li>
+</ul>
+<p>​队列中资源使用模型可以认为是一些containers像常量那样一直存在和新启动的。 这种使用模型对于具有良好行为的集群非常重要，因为队列可以快速重新平衡到其最小容量，并公平地平衡其用户之间的队列容量。 不好的使用模式是长期存在的容器，资源一直在被自己使用并且永远不会释放，这样它可以阻止资源的适当重新平衡，在某些情况下它可以完全阻止其他应用程序启动或其他队列恢复其最小容量。 当不使用抢占时，如果队列扩容弹性空间但从不释放其容器，则弹性空间永远不会被返回给其他队列来保证他们的最小容量。 如果在队列中运行的应用程序具有长期存在容器，请特别注意并考虑使用诸如用户限制因子，抢占或甚至没有弹性容量的专用队列等功能来减轻其对其他用户的影响的方法。</p>
+<h2 id="CAPACITY调度特性"><a href="#CAPACITY调度特性" class="headerlink" title="CAPACITY调度特性"></a>CAPACITY调度特性</h2><h3 id="CPU调度"><a href="#CPU调度" class="headerlink" title="CPU调度"></a>CPU调度</h3><p>​默认情况下Capacity调度不支持CPU调度。如果开启CPU调度的话，可能会降低批处理任务的吞吐量。支持CPU调度的算法是Dominant Resource Fairness (DRF)。</p>
+<p>​CPU调度主要包含两部分：</p>
+<ol>
+<li>分配和放置</li>
+<li>强制限制</li>
+</ol>
+<p>​只要开启CPU调度即可解决分配和放置问题，调度器会使用DRF算法和VCores Node Manager的汇报结果。 这解决了一些新问题，例如用户使用1个或2个executors来调度他的Spark应用程序，但是每个executor分配8个core，然后由于可用内存过多而继续向这个节点分配任务，由于core的限制影响这些任务的运行。 通过启用简单的CPU调度，如果正在使用所有core，则不再将其他任务分配到该节点上，并找到群集中其它节点来放置任务。</p>
+<p>​至于强制限制可以通过Cgroup来解决。Cgroup可以让YARN确保分配给某个container的vcore个数不会超过请求的数量。可以启用未使用时共享vcores，也可以仅严格执行已安排的内容。 节点管理器还可以配置为服务器上允许所有任务总和的最大CPU使用量，这样可以保证操作系统的功能正常使用core。</p>
+<h3 id="抢占"><a href="#抢占" class="headerlink" title="抢占"></a>抢占</h3><p>​当应用程序在队列A中使用了弹性容量，此时另一个队列B提交了一个应用程序，队列B的资源被队列A的任务抢先使用中，此时正常情况下队列B中的应用程序必须等待队列A中的任务释放自由之后才能运行。如果开启抢占功能，就可以立马回收其他队列中的资源，以便满足队列的最小容量需求。抢占功能并不会彻底杀死一个应用程序，优先抢占map任务的资源，最后才是reduce的资源，因为被kill掉的任务必须重新运行，reduce比map要重复更多的工作。 从排序的角度来看，抢占时优先考虑最新的应用程序和大多数超额订阅的应用程序。</p>
+<p>​抢占有些功能并不能像用户预期的那样发挥作用。<strong>最常见的行为是认为队列可以在其自身内部抢占以平衡所有用户的资源。 这种假设是错误的，因为抢占只能在队列之间</strong>，在队列中用户之间的资源平衡需要查看其他控制方式，例如用户限制因子和队列FIFO / FAIR策略。</p>
+<!--
+另一个行为是，如果资源不能提供足够的资源来满足另一个资源分配请求，则Preemption不会抢占资源。 虽然对于具有较大最大容器大小的小型集群而言，大型集群通常不会出现问题但是Preemption未配置为回收最大可能容量的容器，因此根本不会执行任何操作。 用于控制此行为的主要属性是每轮总抢占率和自然终止因子。 每轮总抢占率是群集中可以立即被抢占的资源的百分比，自然终止因子是所请求的总群集（100％）中资源的百分比将被抢占到每轮总抢占数。
+-->
+
+<h3 id="队列的排序策略"><a href="#队列的排序策略" class="headerlink" title="队列的排序策略"></a>队列的排序策略</h3><p>​Capacity调度目前支持两种排序策略：FIFO和FAIR。队列默认使用的是FIFO，但是这不是用户所希望的排序策略。在叶子队列中配置FIFO或者FAIR，可以在应用程序的吞吐量和共享公平之间合理选择。关于排序策略的一个重要事情是，排序是针对队列中的应用程序级别，而不关心哪个用户拥有应用程序。</p>
+<p>​FIFO策略是按照应用程序提交的顺序来排序的。如果应用程序有未完成的资源请求，则会根据先到先得的原则分配。 这样做的结果是，如果应用程序有足够的未完成请求，它们将在完成之前多次请求，可能会使用整个队列，它们将阻止其他应用程序启动。 用户甚至可以使用自己的应用程序占满整个集群资源而阻止其它应用程序提交，正是这种行为对用户来说是最不可接受的。</p>
+<p>​使用FAIR策略能很容易的解决上面的问题。在子队列上使用FAIR策略时，应首先对应用程序已占用的资源量进行评估，资源使用最少的应用程序会优先分配请求。 这样，进入队列的没有进行资源分配的新应用程序将首先进行资源分配。 一旦队列中的所有应用程序都得到资源，这样就在用户之间得到平衡。</p>
+<p>​最重要的是，只有在队列中有良好的资源交互时才会出现此行为。由于队列内部不存在抢占资源，因此无法在队列中强制重新分配资源，而且FAIR排序策略仅涉及新资源分配而非当前已使用资源的再分配；这是什么意思？ 如果队列中资源被当前任务使用且任务永远不会完成或长时间运行而不允许在队列中发生容器结束，那么将保留资源并仍然阻止应用程序执行。</p>
+<h3 id="默认队列映射"><a href="#默认队列映射" class="headerlink" title="默认队列映射"></a>默认队列映射</h3><p>​通常是在配置文件中指定用户提交的队列，Capacity调度可以使用<strong>默认队列映射</strong>通过用户名或者用户组将用户路由到指定的队列。但是需要注意的是默认队列的路由规则是哪个规则先满足就使用那个规则进行路由。也就是说如果组用户映射规则在用户映射规则前面，则先使用组用户映射规则对用户进行路由。</p>
+<h3 id="优先级"><a href="#优先级" class="headerlink" title="优先级"></a>优先级</h3><p>​当资源在队列之间分配时，<strong>具有最低相对容量的队列首先获得资源</strong>。如果你想让某个队列总是比其它队列优先获得资源，那么最简单的方法就是提高这个队列的优先级。</p>
+<p>​在这两个队列之上提供了如何使用未经队列优先级修改的相对容量的示例。在这种情况下，即使队列A小于队列B并且队列B使用更多绝对资源，也会选择继续接收它们，因为它的相对容量低于队列A的相对容量。如果所需行为需要队列A始终接收资源分配首先，队列优先级应该增加到高于队列B的优先级。当分配优先级时，更高的值表示更高的优先级。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">混绅士</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://bigdatadecode.club/[%E8%AF%91]Yarn-capacity.html">http://bigdatadecode.club/[%E8%AF%91]Yarn-capacity.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://bigdatadecode.club" target="_blank">big data decode club</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Hadoop/">Hadoop</a><a class="post-meta__tags" href="/tags/BigData/">BigData</a><a class="post-meta__tags" href="/tags/YARN/">YARN</a><a class="post-meta__tags" href="/tags/Capacity/">Capacity</a></div><div class="post_share"></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/path/to/wechat-reward-image/wechatpay.png" target="_blank"><img class="post-qr-code-img" src="/path/to/wechat-reward-image/wechatpay.png" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/golang-newbie.html"><img class="prev-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">golang新手入门</div></div></a></div><div class="next-post pull-right"><a href="/YARN-Resource-Localization.html"><img class="next-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Resource Localization in YARN</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/Application-fail-RM-change.html" title="Application运行失败导致RM主备切换"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2018-11-27</div><div class="title">Application运行失败导致RM主备切换</div></div></a></div><div><a href="/YARN-Lost-Node%E6%98%BE%E7%A4%BA%E5%BC%82%E5%B8%B8.html" title="YARN Lost Node显示异常"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2018-09-15</div><div class="title">YARN Lost Node显示异常</div></div></a></div><div><a href="/YARN-Resource-Localization.html" title="Resource Localization in YARN"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2019-05-20</div><div class="title">Resource Localization in YARN</div></div></a></div><div><a href="/YARNSrcAMAssignPolicy.html" title="YARN源码分析之ApplicationMaster分配策略"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2017-06-08</div><div class="title">YARN源码分析之ApplicationMaster分配策略</div></div></a></div><div><a href="/YARNSrcApplicationMasterArch.html" title="YARN源码分析之ApplicationMaster架构"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2017-09-13</div><div class="title">YARN源码分析之ApplicationMaster架构</div></div></a></div><div><a href="/YARNSrcApplicationMasterStart.html" title="YARN源码分析之ApplicationMaster启动流程"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2017-06-19</div><div class="title">YARN源码分析之ApplicationMaster启动流程</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/uploads/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">混绅士</div><div class="author-info__description">Any answers you can find in source code.</div></div><div class="card-info-data is-center"><div class="card-info-data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="card-info-data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="card-info-data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%B9%E9%87%8F%E5%92%8C%E5%88%86%E5%B1%82%E8%AE%BE%E8%AE%A1"><span class="toc-number">1.</span> <span class="toc-text">容量和分层设计</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9C%80%E4%BD%8E%E7%94%A8%E6%88%B7%E7%99%BE%E5%88%86%E6%AF%94%E5%92%8C%E7%94%A8%E6%88%B7%E9%99%90%E5%88%B6%E5%9B%A0%E7%B4%A0"><span class="toc-number">2.</span> <span class="toc-text">最低用户百分比和用户限制因素</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%98%9F%E5%88%97%E8%AE%BE%E8%AE%A1"><span class="toc-number">3.</span> <span class="toc-text">队列设计</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#CAPACITY%E8%B0%83%E5%BA%A6%E7%89%B9%E6%80%A7"><span class="toc-number">4.</span> <span class="toc-text">CAPACITY调度特性</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#CPU%E8%B0%83%E5%BA%A6"><span class="toc-number">4.1.</span> <span class="toc-text">CPU调度</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8A%A2%E5%8D%A0"><span class="toc-number">4.2.</span> <span class="toc-text">抢占</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%98%9F%E5%88%97%E7%9A%84%E6%8E%92%E5%BA%8F%E7%AD%96%E7%95%A5"><span class="toc-number">4.3.</span> <span class="toc-text">队列的排序策略</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%BB%98%E8%AE%A4%E9%98%9F%E5%88%97%E6%98%A0%E5%B0%84"><span class="toc-number">4.4.</span> <span class="toc-text">默认队列映射</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BC%98%E5%85%88%E7%BA%A7"><span class="toc-number">4.5.</span> <span class="toc-text">优先级</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/scratch-extensions-demo.html" title="scratch自定义扩展"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="scratch自定义扩展"/></a><div class="content"><a class="title" href="/scratch-extensions-demo.html" title="scratch自定义扩展">scratch自定义扩展</a><time datetime="2021-12-14T14:30:20.000Z" title="发表于 2021-12-14 22:30:20">2021-12-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/metabase-import-ide.html" title="metabase导入IDE调试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="metabase导入IDE调试"/></a><div class="content"><a class="title" href="/metabase-import-ide.html" title="metabase导入IDE调试">metabase导入IDE调试</a><time datetime="2021-12-13T15:31:22.000Z" title="发表于 2021-12-13 23:31:22">2021-12-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/flink-connector-example.html" title="Flink Connector调研"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Connector调研"/></a><div class="content"><a class="title" href="/flink-connector-example.html" title="Flink Connector调研">Flink Connector调研</a><time datetime="2021-11-10T14:30:20.000Z" title="发表于 2021-11-10 22:30:20">2021-11-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink standlone模式下Flinkx测试"/></a><div class="content"><a class="title" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试">Flink standlone模式下Flinkx测试</a><time datetime="2021-11-06T15:05:20.000Z" title="发表于 2021-11-06 23:05:20">2021-11-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/openGauss-deploy.html" title="openGauss极简版安装使用"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="openGauss极简版安装使用"/></a><div class="content"><a class="title" href="/openGauss-deploy.html" title="openGauss极简版安装使用">openGauss极简版安装使用</a><time datetime="2021-05-13T14:35:20.000Z" title="发表于 2021-05-13 22:35:20">2021-05-13</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2022 By 混绅士</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">本地搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div></div></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

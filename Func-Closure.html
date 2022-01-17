@@ -1,0 +1,185 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>函数式编程之闭包 | big data decode club</title><meta name="keywords" content="函数式,闭包"><meta name="author" content="混绅士"><meta name="copyright" content="混绅士"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="维基百科中是这样定义闭包的：在计算机科学中，闭包（英语：Closure），又称词法闭包（Lexical Closure）或函数闭包（function closures），是引用了自由变量的函数。这个被引用的自由变量将和这个函数一同存在，即使已经离开了创造它的环境也不例外。 这里有两点需要把握，自由变量和函数。则判断是不是闭包首先判断是不是函数，如果都不是函数那么肯定不是闭包，是函数再继续判断是否有">
+<meta property="og:type" content="article">
+<meta property="og:title" content="函数式编程之闭包">
+<meta property="og:url" content="http://bigdatadecode.club/Func-Closure.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="维基百科中是这样定义闭包的：在计算机科学中，闭包（英语：Closure），又称词法闭包（Lexical Closure）或函数闭包（function closures），是引用了自由变量的函数。这个被引用的自由变量将和这个函数一同存在，即使已经离开了创造它的环境也不例外。 这里有两点需要把握，自由变量和函数。则判断是不是闭包首先判断是不是函数，如果都不是函数那么肯定不是闭包，是函数再继续判断是否有">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+<meta property="article:published_time" content="2018-12-27T15:15:23.000Z">
+<meta property="article:modified_time" content="2018-12-27T15:15:23.000Z">
+<meta property="article:author" content="混绅士">
+<meta property="article:tag" content="函数式">
+<meta property="article:tag" content="闭包">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><link rel="shortcut icon" href="/favicon.ico"><link rel="canonical" href="http://bigdatadecode.club/Func-Closure"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="baidu-site-verification" content="27E5EbutCm"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '函数式编程之闭包',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: false,
+  postUpdate: '2018-12-27 23:15:23'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="big data decode club" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/uploads/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><div class="data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">big data decode club</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">函数式编程之闭包</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2018-12-27T15:15:23.000Z" title="发表于 2018-12-27 23:15:23">2018-12-27</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2018-12-27T15:15:23.000Z" title="更新于 2018-12-27 23:15:23">2018-12-27</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Language/">Language</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">808</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>2分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="函数式编程之闭包"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p><a target="_blank" rel="noopener" href="https://zh.wikipedia.org/wiki/%E9%97%AD%E5%8C%85_(%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%A7%91%E5%AD%A6)">维基百科</a>中是这样定义闭包的：<br>在计算机科学中，闭包（英语：Closure），又称词法闭包（Lexical Closure）或函数闭包（function closures），是<strong>引用了自由变量的函数</strong>。<em>这个被引用的自由变量将和这个函数一同存在，即使已经离开了创造它的环境也不例外</em>。</p>
+<p>这里有两点需要把握，<strong>自由变量和函数</strong>。则判断是不是闭包首先判断是不是函数，如果都不是函数那么肯定不是闭包，是函数再继续判断是否有自由变量。<br>自由变量就是这里的重点了。。。</p>
+<span id="more"></span>
+
+<p>个人简单粗暴的将<em>自由变量</em>理解为<strong>当前函数引用的外部变量</strong>。</p>
+<p>这里先举个例子简单感受下，看个golang代码：</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">f</span><span class="params">(i <span class="keyword">int</span>)</span> <span class="title">func</span><span class="params">()</span> <span class="title">int</span></span> &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="function"><span class="keyword">func</span><span class="params">()</span> <span class="title">int</span></span> &#123;</span><br><span class="line">        i++</span><br><span class="line">        <span class="keyword">return</span> i</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>f是个function，此方法是返回一个function(由于f返回的function无法在外部访问，没有必要给他起名字，所以就直接返回一个匿名函数)。<br>其中变量i是f的参数，是f的局部变量，匿名函数在f的命名空间内，可以引用变量i，这个匿名函数就是一个闭包。</p>
+<p>我们根据闭包的定义理解下这个f的返回值。</p>
+<blockquote>
+<p>变量i是f的局部变量，正常情况下f执行结束之后i会被回收，会随着f的结束而消失。但是这里f返回的匿名函数引用了i，这个i就作为了这个匿名函数的外部变量，也就成了一个自由变量，此自由变量会与匿名函数一同存在，即使已经离开了创造它的环境也不例外，形成了一个实体，也就是闭包。</p>
+</blockquote>
+<p>再看个代码，我们把定义扩展下，代码如下：</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">c1 := f(<span class="number">0</span>)</span><br><span class="line">c2 := f(<span class="number">0</span>)</span><br><span class="line">fmt.Println(c1())    <span class="comment">// reference to i, i = 0, return 1</span></span><br><span class="line">fmt.Println(c1())    <span class="comment">// reference to i, i = 1, return 2</span></span><br><span class="line">fmt.Println(c2())    <span class="comment">// reference to another i, i = 0, return 1</span></span><br></pre></td></tr></table></figure>
+<p>如果你看过其它关于闭包的资料，你可能有这个印象，<em>闭包运行时可以有多个实例</em>。<br>根据上面的代码解释下，<br>f是一个函数，<strong>函数是一些可执行的代码，这些代码在函数被定义后就确定了，不会在执行时发生变化，所以一个函数只有一个实例</strong>。f(0)返回一个闭包，c1和c2引用的i是f(0)传进去的0，c1和c2第一次执行时，自由变量都为0，执行结束在匿名函数内递增变为1，引用环境发生了变化，第二次执行c1时，闭包中的引用环境已经由i=0变为了i=1，所以经过递增变为了2。这里两次调用c1得到不通的结果，这也就是说闭包在运行时会根据不同的引用环境产生不通的实例。</p>
+<p>所谓引用环境是指在程序执行中的某个点所处于活跃状态的约束所组成的集合。其中的约束是指一个变量的名字和其所代表的对象之间的联系。</p>
+<!-- 变量i是函数f中的局部变量，假设这个变量是在函数f的栈中分配的，是不可以的。因为函数f返回以后，对应的栈就失效了，f返回的那个函数中变量i就引用一个失效的位置了。所以闭包的环境中引用的变量不能够在栈上分配。所以将i分配到heap上，这也就是说闭包容易造成内存泄漏-->
+
+<!--
+## 闭包的用途
+一个显而易见的用途就是--**简化代码**，再者就是容易**模块化，代码能够高度复用**，假如有这样一个场景，需要对列表中的数据进行累加和累积时
+
+nums = [10,3,22,34,17]
+sum = 0
+nums.each{|n| sum += n}
+print sum
+
+那么为什么要把引用环境与函数组合起来呢？这主要是因为在支持嵌套作用域的语言中，有时不能简单直接地确定函数的引用环境。
+
+而且闭包是只有被调用的时候才会被执行。
+
+闭包不是私有，闭的意思不是"封闭内部状态",而是"封闭外部状态"。一个函数如何能封闭外部状态呢？当外部状态的scope失效的时候，还有一份留在内部状态里。
+
+闭包，常指有权访问其外部作用域中变量和参数的函数
+
+[](https://www.zhihu.com/question/34210214)
+-->
+<p><a target="_blank" rel="noopener" href="https://tiancaiamao.gitbooks.io/go-internals/content/zh/03.6.html">参考1</a><br><a target="_blank" rel="noopener" href="https://www.ibm.com/developerworks/cn/linux/l-cn-closure/index.html">参考2</a></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">混绅士</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://bigdatadecode.club/Func-Closure.html">http://bigdatadecode.club/Func-Closure.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://bigdatadecode.club" target="_blank">big data decode club</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%87%BD%E6%95%B0%E5%BC%8F/">函数式</a><a class="post-meta__tags" href="/tags/%E9%97%AD%E5%8C%85/">闭包</a></div><div class="post_share"></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/path/to/wechat-reward-image/wechatpay.png" target="_blank"><img class="post-qr-code-img" src="/path/to/wechat-reward-image/wechatpay.png" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/Docker-Log-Action.html"><img class="prev-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">Docker容器log采集实践</div></div></a></div><div class="next-post pull-right"><a href="/Voting-Dapp-Demo.html"><img class="next-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">全栈Voting Dapp Demo</div></div></a></div></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/uploads/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">混绅士</div><div class="author-info__description">Any answers you can find in source code.</div></div><div class="card-info-data is-center"><div class="card-info-data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="card-info-data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="card-info-data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div></div><div class="sticky_layout"><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/scratch-extensions-demo.html" title="scratch自定义扩展"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="scratch自定义扩展"/></a><div class="content"><a class="title" href="/scratch-extensions-demo.html" title="scratch自定义扩展">scratch自定义扩展</a><time datetime="2021-12-14T14:30:20.000Z" title="发表于 2021-12-14 22:30:20">2021-12-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/metabase-import-ide.html" title="metabase导入IDE调试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="metabase导入IDE调试"/></a><div class="content"><a class="title" href="/metabase-import-ide.html" title="metabase导入IDE调试">metabase导入IDE调试</a><time datetime="2021-12-13T15:31:22.000Z" title="发表于 2021-12-13 23:31:22">2021-12-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/flink-connector-example.html" title="Flink Connector调研"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Connector调研"/></a><div class="content"><a class="title" href="/flink-connector-example.html" title="Flink Connector调研">Flink Connector调研</a><time datetime="2021-11-10T14:30:20.000Z" title="发表于 2021-11-10 22:30:20">2021-11-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink standlone模式下Flinkx测试"/></a><div class="content"><a class="title" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试">Flink standlone模式下Flinkx测试</a><time datetime="2021-11-06T15:05:20.000Z" title="发表于 2021-11-06 23:05:20">2021-11-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/openGauss-deploy.html" title="openGauss极简版安装使用"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="openGauss极简版安装使用"/></a><div class="content"><a class="title" href="/openGauss-deploy.html" title="openGauss极简版安装使用">openGauss极简版安装使用</a><time datetime="2021-05-13T14:35:20.000Z" title="发表于 2021-05-13 22:35:20">2021-05-13</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2022 By 混绅士</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">本地搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div></div></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

@@ -1,0 +1,247 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>NameNode元数据及checkpoint分析 | big data decode club</title><meta name="keywords" content="Hadoop,BigData,Checkpoint,FSImage,Edits"><meta name="author" content="混绅士"><meta name="copyright" content="混绅士"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="NamNodeNameNode 的主要作用是  负责管理文件系统的命名空间、集群配置信息和存储块的复制； 维护着整个文件系统的文件目录树和文件根目录的元信息和每个文件对应的数据块列表； 接收用户的操作请求； 管理文件与block之间的关系，block与DataNode之间的关系；  NameNode 的启动流程为：  Loading fsimage - 从fsimage file中读取最新的文件系">
+<meta property="og:type" content="article">
+<meta property="og:title" content="NameNode元数据及checkpoint分析">
+<meta property="og:url" content="http://bigdatadecode.club/NameNode%E5%85%83%E6%95%B0%E6%8D%AE%E5%8F%8Acheckpoint%E5%88%86%E6%9E%90.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="NamNodeNameNode 的主要作用是  负责管理文件系统的命名空间、集群配置信息和存储块的复制； 维护着整个文件系统的文件目录树和文件根目录的元信息和每个文件对应的数据块列表； 接收用户的操作请求； 管理文件与block之间的关系，block与DataNode之间的关系；  NameNode 的启动流程为：  Loading fsimage - 从fsimage file中读取最新的文件系">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+<meta property="article:published_time" content="2016-08-02T08:12:31.000Z">
+<meta property="article:modified_time" content="2016-08-02T08:12:31.000Z">
+<meta property="article:author" content="混绅士">
+<meta property="article:tag" content="Hadoop">
+<meta property="article:tag" content="BigData">
+<meta property="article:tag" content="Checkpoint">
+<meta property="article:tag" content="FSImage">
+<meta property="article:tag" content="Edits">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><link rel="shortcut icon" href="/favicon.ico"><link rel="canonical" href="http://bigdatadecode.club/NameNode%E5%85%83%E6%95%B0%E6%8D%AE%E5%8F%8Acheckpoint%E5%88%86%E6%9E%90"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="baidu-site-verification" content="27E5EbutCm"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'NameNode元数据及checkpoint分析',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2016-08-02 16:12:31'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="big data decode club" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/uploads/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><div class="data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">big data decode club</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">NameNode元数据及checkpoint分析</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2016-08-02T08:12:31.000Z" title="发表于 2016-08-02 16:12:31">2016-08-02</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2016-08-02T08:12:31.000Z" title="更新于 2016-08-02 16:12:31">2016-08-02</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Hadoop/">Hadoop</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">2.4k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>8分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="NameNode元数据及checkpoint分析"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h2 id="NamNode"><a href="#NamNode" class="headerlink" title="NamNode"></a>NamNode</h2><p>NameNode 的主要作用是</p>
+<ol>
+<li>负责管理文件系统的命名空间、集群配置信息和存储块的复制；</li>
+<li>维护着整个文件系统的文件目录树和文件根目录的元信息和每个文件对应的数据块列表；</li>
+<li>接收用户的操作请求；</li>
+<li>管理文件与block之间的关系，block与DataNode之间的关系；</li>
+</ol>
+<p>NameNode 的启动流程为：</p>
+<ol>
+<li>Loading fsimage - 从fsimage file中读取最新的文件系统的元数据快照(最近生成的fsimage_xx)</li>
+<li>Loading edits - 读取包含fsimage_xx之后的所有tx的edit logs并将edit logs中的操作从新操作一遍更新到元数据中，则此时NN更新到上次停止时的状态。</li>
+<li>checkpoint - 将当前状态写入新的checkpoint中，即产生一个新的fsimage_xx文件</li>
+<li>Safe mode - 等待各个<em>datanodes report</em>各自的block信息，形成blockMap，然后退出安全模式。</li>
+</ol>
+<p>此时NN启动结束，等待接受用户的操作请求，并把各种操作写入新的edit log中，定期进行checkpoint，对元数据进行快照。</p>
+<span id="more"></span>
+
+<h2 id="NameNode-元数据"><a href="#NameNode-元数据" class="headerlink" title="NameNode 元数据"></a>NameNode 元数据</h2><p>NameNode的所有操作及整个集群的状态都存储在_元数据_中。NN的元数据存储是由fsimage和edits文件组成。fsimage存放上次checkpoint生成的文件系统元数据，Edits存放文件系统_操作日志_。checkpoint的过程，就是合并fsimage和Edits文件，然后生成最新的fsimage的过程。</p>
+<p>NameNode在执行HDFS客户端提交的创建文件或者移动文件这样的_写操作_的时候，会首先把这些操作记录在Edit Log 文件之中，然后再更新内存中的文件系统镜像。内存中的_文件系统镜像_用于NameNode向客户端提供_读服务_，而 EditLog仅仅只是在数据恢复的时候起作用。记录在 EditLog之中的每一个操作又称为一个事务，每个事务有一个整数形式的事务id作为编号。EditLog会被切割为很多段，每一段称为一个Segment。正在写入的EditLog Segment处于in-progress状态，其文件名形如edits_inprogress_${start_txid}，其中${start_txid}表示这个segment的起始事务id。而已经写入完成的EditLog Segment处于finalized状态，其文件名形如edits_${start_txid}-${end_txid}，其中${start_txid}表示这个segment的起始事务id，${end_txid}表示这个segment 的结束事务id。</p>
+<p>NameNode会定期对内存中的文件系统镜像进行checkpoint操作，在磁盘上生成FSImage文件，FSImage文件的文件名形如fsimage_${end_txid}，其中${end_txid}表示这个fsimage文件的结束事务id。在NameNode启动的时候会进行数据恢复，首先把FSImage文件加载到内存中形成文件系统镜像，然后再把EditLog之中__FsImage的结束事务id之后的EditLog__回放到这个文件系统镜像上。</p>
+<h2 id="元数据在磁盘中的目录结构"><a href="#元数据在磁盘中的目录结构" class="headerlink" title="元数据在磁盘中的目录结构"></a>元数据在磁盘中的目录结构</h2><h3 id="NameNode中dfs-namenode-name-dir下的元数据"><a href="#NameNode中dfs-namenode-name-dir下的元数据" class="headerlink" title="NameNode中dfs.namenode.name.dir下的元数据"></a>NameNode中dfs.namenode.name.dir下的元数据</h3><p>NameNode元数据会周期性的固化到磁盘，所在磁盘目录是在<code>hdfs-site.xml</code>中由<code>dfs.namenode.name.dir</code>配置的。目录结构如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&gt; ll <span class="variable">$dfs</span>.namenode.name.dir</span><br><span class="line">drwxrwxr-x 2 hadoop hadoop 4096 Aug  1 19:03 current</span><br><span class="line">-rw-rw-r-- 1 hadoop hadoop   14 Jul 29 15:49 in_use.lock</span><br></pre></td></tr></table></figure>
+<p>current里的内容如下：<br><img src="/blogimgs/namenode-checkpoint/namenode-metadata-dir.png" alt="current目录" title="current目录"></p>
+<p>上面是将fsimage和edits都放在一个目录中，也可以通过配置将fsimage和edits分别放在不同的目录中。下面就具体介绍下目录中各个文件的作用：</p>
+<ul>
+<li>in_use.lock – 看名字可以得知这是一个锁文件，由NameNode持有，用来阻止多个NameNode同时修改该目录</li>
+<li>VERSION - Java属性文件，内容大致如下</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#Fri Jul 29 15:50:00 CST 2016</span></span><br><span class="line">namespaceID=1793378918</span><br><span class="line">clusterID=CID-0bcbc37e-90e2-40c5-91c2-101db9fc4f9b</span><br><span class="line">cTime=0</span><br><span class="line">storageType=NAME_NODE</span><br><span class="line">blockpoolID=BP-2041947102-172.16.2.126-1451322470514</span><br><span class="line">layoutVersion=-60</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>layoutVersion – HDFS元数据格式化的版本。如果给HDFS添加新的feature而需要改变元数据的格式化版本，则改变此属性，版本号是递减的。</li>
+<li>storageType – 说明这个文件存储的是什么进程的数据结构信息。(NAME_NODE或者JOURNAL_NODE，JOURNAL_NODE是JouranlNode的元数据，在DataNode中是DATA_NODE)</li>
+<li>cTime – 文件系统创建的时间，随着HDFS的升级而改变。(这里没有对HDFS升级，则记录值为0)</li>
+<li>namespaceID/clusterID/blockpoolID – 这些都唯一标识了HDFS集群。这些标识主要是用来防止DataNode注册到别的其它集群的NameNode中。这些标识符在联邦部署中尤其重要。在联邦模式下，每个NameSpace都唯一的namespaceID，管理着对应的唯一blockpoolID，而clusterID则是整个联邦集群的唯一逻辑单元，集群中所有的节点都相同。</li>
+<li>seen_txid – 这个文件里记录了最后一次checkpoint(将edits合并到fsimage中)或者edit回滚(将edits_inprogress_xx文件回滚成一个新的edits文件)之后的transactionID。注意这里记录的不是NameNode接受的最后一个transactionID，此文件不会在每次transaction都会更新，只在checkpoint和edit回滚时更新**(但是通过观察2.6.0版本的本地元数据磁盘目录中记录的此值，是实时更新的，每次transaction都会更新，这个具体随后更代码看下什么情况，在此只做记录下)**。此文件的目的是在NameNode启动过程中发现edits文件丢失的情况。如果edits文件丢失，NameNode启动的过程中加载fsimage文件，此时fsimage并不是最新的NameNode状态，而此时又缺失一些edits文件，但NameNode并不知道，而是正常启动了，此时就会造成一些数据丢失。seen_txid能用来防止这种情况发生，如果发现seen_txid中记录的值和edits的值不一样，则启动失败。</li>
+</ul>
+<h3 id="JournalNode下的元数据"><a href="#JournalNode下的元数据" class="headerlink" title="JournalNode下的元数据"></a>JournalNode下的元数据</h3><p>在HA模式下，edits由一组独立的守护进程JournalNodes进行收集。JournalNode的元数据目录配置在hdfs-site.xml的<code>dfs.journalnode.edits.dir</code>。JournalNode的元数据包含一个VERSION文件，多个edits_xx文件和一个edits_inprogress_xx，还包含一些与HA实现相关的文件，这些文件主要是为了防止脑裂，<em>但是JournalNode并不包含fsimage和seen_txid</em>。</p>
+<p>下面主要介绍下与NameNode元数据不一样的文件：</p>
+<ul>
+<li>committed-txid – 记录由NameNode提交的最后一个transaction ID</li>
+<li>last-promised-epoch – 这个文件记录了epoch，epoch是一个单调递增的数字。当standby变为active时，JournalNode会会增加epoch并存储。NameNode主要通过该值来告诉JournalNode谁是active，小于该值的NameNode禁止对JournalNode元数据写操作，写请求被忽略。</li>
+<li>last-writer-epoch – 和上面的值类似，该文件记录下最后一次发生写操作的epoch。</li>
+<li>paxos – 此目录包含一些临时文件，主要在实现paxos分布式算法协议中使用。这个目录通常是空的。</li>
+</ul>
+<h2 id="Checkpoint"><a href="#Checkpoint" class="headerlink" title="Checkpoint"></a>Checkpoint</h2><blockquote>
+<p>每个写操作都会写入Edit log中，随着时间的积累edit log会变的很大，极端情况下不仅会占满整个磁盘，而且在NN启动的时候会延长启动时间，因为NN需要将edits log中的操作重新执行一遍。这就需要checkpoint定期对元数据进行合并。</p>
+</blockquote>
+<p>Checkpoint主要是将fsimage和edit log的内容进行合并生成一个新的fsimage。这样在NN启动的时候就不用将巨大的edits里的事务再次执行一遍了，而是直接加载合并之后的新fsimage，然后重新执行未被合并的edits文件就可以了。</p>
+<p><em>创建新fsimage的过程需要大量的I/O、内存等资源，而且namesystem在Checkpoint的时候会限制用户的访问。则NN将Checkpoint过程放在SecondaryNameNode或者StandbyNameNode中。</em></p>
+<p>Checkpoint的触发条件有两个，满足其中一个即可：</p>
+<ol>
+<li>两次checkpoint的时间间隔达到阈值，由属性<code>dfs.namenode.checkpoint.period</code>控制，默认是3600s</li>
+<li>新生成的edit log中积累的事务数量达到了阈值，由属性<code>dfs.namenode.checkpoint.txns</code>控制，默认1000000</li>
+</ol>
+<p>SecondaryNameNode或者StandbyNameNode周期性的去检查是否符合触发Checkpoint的条件，间隔周期是由<code>dfs.namenode.checkpoint.check.period</code>控制的，默认是60s</p>
+<blockquote>
+<p>Fsimage回滚条件</p>
+</blockquote>
+<ol>
+<li>fsimage会在每次checkpoint时生成一个新的fsimage</li>
+<li>NN重启的时候也会生成一个新的fsimage</li>
+</ol>
+<p><em>fsimage默认会保存两个</em>，由属性<code>dfs.namenode.num.checkpoints.retained</code>控制</p>
+<blockquote>
+<p>Edits log回滚条件</p>
+</blockquote>
+<ol>
+<li>NameNode(active)周期性的检查当前的事务数是否超过了edits回滚阈值。<br>间隔周期是由<code>dfs.namenode.edit.log.autoroll.check.interval.ms</code>控制，默认是300000ms。<br>回滚的阈值是<code>dfs.namenode.edit.log.autoroll.multiplier.threshold</code>和<code>dfs.namenode.checkpoint.txns</code>的乘积，<code>dfs.namenode.edit.log.autoroll.multiplier.threshold</code>默认是2.0f</li>
+<li>在HA模式下，standby NN会周期的让active NN对edits进行回滚，间隔周期由<code>dfs.ha.log-roll.period</code><br>控制，默认是120s</li>
+</ol>
+<p>standby NN之所以周期的让active NN回滚edits log是因为standby NN不会读取_inprogress_的edits，只是周期（<code>dfs.ha.tail-edits.period</code>，默认是60s）的去检测已经完成的edits文件，并将该edits文件通过JournalNode读取到内存更新fsimage在内存中的状态。</p>
+<p><strong>HA模式下，client只和active进行通信，将写操作信息分别写入本地的edits中和JournalNode中的edits中，standby NN周期的去JournalNode中读取进行同步。只有在active宕机之后，standby才对外提供服务，平时只是实现了active的热备</strong></p>
+<p>edits log默认会保存<code>dfs.namenode.num.extra.edits.retained</code>条事务，默认是1000000条</p>
+<h2 id="查看fsimage和edits内容的命令"><a href="#查看fsimage和edits内容的命令" class="headerlink" title="查看fsimage和edits内容的命令"></a>查看fsimage和edits内容的命令</h2><blockquote>
+<p>查看fsimage命令</p>
+</blockquote>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hdfs oiv -p XML -i fsimage -o fsimage.xml</span><br></pre></td></tr></table></figure>
+<p><code>-i</code>是输入的fsimage文件名，<code>-o</code>是输出的文件名，<code>-p</code>是输出的格式。具体的细节可以查看官网或者使用help命令查看。</p>
+<blockquote>
+<p>查看edits命令</p>
+</blockquote>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hdfs oev -i edits -o edits.xml</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">混绅士</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://bigdatadecode.club/NameNode%E5%85%83%E6%95%B0%E6%8D%AE%E5%8F%8Acheckpoint%E5%88%86%E6%9E%90.html">http://bigdatadecode.club/NameNode%E5%85%83%E6%95%B0%E6%8D%AE%E5%8F%8Acheckpoint%E5%88%86%E6%9E%90.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://bigdatadecode.club" target="_blank">big data decode club</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Hadoop/">Hadoop</a><a class="post-meta__tags" href="/tags/BigData/">BigData</a><a class="post-meta__tags" href="/tags/Checkpoint/">Checkpoint</a><a class="post-meta__tags" href="/tags/FSImage/">FSImage</a><a class="post-meta__tags" href="/tags/Edits/">Edits</a></div><div class="post_share"></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/path/to/wechat-reward-image/wechatpay.png" target="_blank"><img class="post-qr-code-img" src="/path/to/wechat-reward-image/wechatpay.png" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/Hadoop%20RPC%20%E8%A7%A3%E6%9E%90.html"><img class="prev-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">Hadoop RPC 解析</div></div></a></div><div class="next-post pull-right"><a href="/HDFS%20ReplicationMonitor%E5%89%AF%E6%9C%AC%E7%9B%91%E6%8E%A7%E7%BA%BF%E7%A8%8B%E8%A7%A3%E6%9E%90.html"><img class="next-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">HDFS ReplicationMonitor副本监控线程解析</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/%5B%E8%AF%91%5DFSImage-protocol.html" title="Use protobuf to FSImage"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2019-05-10</div><div class="title">Use protobuf to FSImage</div></div></a></div><div><a href="/Application-fail-RM-change.html" title="Application运行失败导致RM主备切换"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2018-11-27</div><div class="title">Application运行失败导致RM主备切换</div></div></a></div><div><a href="/HDFS%20HA%E7%9B%B8%E5%85%B3%E7%9A%84%E5%87%A0%E4%B8%AA%E9%97%AE%E9%A2%98%E5%92%8C%E7%A4%BA%E4%BE%8B%E5%9C%BA%E6%99%AF.html" title="HDFS HA相关的几个问题和示例场景"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-11-19</div><div class="title">HDFS HA相关的几个问题和示例场景</div></div></a></div><div><a href="/HDFS%20HA%E6%9C%BA%E5%88%B6%E8%A7%A3%E6%9E%90.html" title="HDFS HA机制解析"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-07-14</div><div class="title">HDFS HA机制解析</div></div></a></div><div><a href="/HDFS%20ReplicationMonitor%E5%89%AF%E6%9C%AC%E7%9B%91%E6%8E%A7%E7%BA%BF%E7%A8%8B%E8%A7%A3%E6%9E%90.html" title="HDFS ReplicationMonitor副本监控线程解析"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-08-01</div><div class="title">HDFS ReplicationMonitor副本监控线程解析</div></div></a></div><div><a href="/HDFS%20read%E8%A7%A3%E6%9E%90.html" title="HDFS read解析(一)之Open文件流"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-11-21</div><div class="title">HDFS read解析(一)之Open文件流</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/uploads/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">混绅士</div><div class="author-info__description">Any answers you can find in source code.</div></div><div class="card-info-data is-center"><div class="card-info-data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="card-info-data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="card-info-data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#NamNode"><span class="toc-number">1.</span> <span class="toc-text">NamNode</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#NameNode-%E5%85%83%E6%95%B0%E6%8D%AE"><span class="toc-number">2.</span> <span class="toc-text">NameNode 元数据</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%83%E6%95%B0%E6%8D%AE%E5%9C%A8%E7%A3%81%E7%9B%98%E4%B8%AD%E7%9A%84%E7%9B%AE%E5%BD%95%E7%BB%93%E6%9E%84"><span class="toc-number">3.</span> <span class="toc-text">元数据在磁盘中的目录结构</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#NameNode%E4%B8%ADdfs-namenode-name-dir%E4%B8%8B%E7%9A%84%E5%85%83%E6%95%B0%E6%8D%AE"><span class="toc-number">3.1.</span> <span class="toc-text">NameNode中dfs.namenode.name.dir下的元数据</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#JournalNode%E4%B8%8B%E7%9A%84%E5%85%83%E6%95%B0%E6%8D%AE"><span class="toc-number">3.2.</span> <span class="toc-text">JournalNode下的元数据</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Checkpoint"><span class="toc-number">4.</span> <span class="toc-text">Checkpoint</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9F%A5%E7%9C%8Bfsimage%E5%92%8Cedits%E5%86%85%E5%AE%B9%E7%9A%84%E5%91%BD%E4%BB%A4"><span class="toc-number">5.</span> <span class="toc-text">查看fsimage和edits内容的命令</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/scratch-extensions-demo.html" title="scratch自定义扩展"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="scratch自定义扩展"/></a><div class="content"><a class="title" href="/scratch-extensions-demo.html" title="scratch自定义扩展">scratch自定义扩展</a><time datetime="2021-12-14T14:30:20.000Z" title="发表于 2021-12-14 22:30:20">2021-12-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/metabase-import-ide.html" title="metabase导入IDE调试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="metabase导入IDE调试"/></a><div class="content"><a class="title" href="/metabase-import-ide.html" title="metabase导入IDE调试">metabase导入IDE调试</a><time datetime="2021-12-13T15:31:22.000Z" title="发表于 2021-12-13 23:31:22">2021-12-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/flink-connector-example.html" title="Flink Connector调研"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Connector调研"/></a><div class="content"><a class="title" href="/flink-connector-example.html" title="Flink Connector调研">Flink Connector调研</a><time datetime="2021-11-10T14:30:20.000Z" title="发表于 2021-11-10 22:30:20">2021-11-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink standlone模式下Flinkx测试"/></a><div class="content"><a class="title" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试">Flink standlone模式下Flinkx测试</a><time datetime="2021-11-06T15:05:20.000Z" title="发表于 2021-11-06 23:05:20">2021-11-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/openGauss-deploy.html" title="openGauss极简版安装使用"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="openGauss极简版安装使用"/></a><div class="content"><a class="title" href="/openGauss-deploy.html" title="openGauss极简版安装使用">openGauss极简版安装使用</a><time datetime="2021-05-13T14:35:20.000Z" title="发表于 2021-05-13 22:35:20">2021-05-13</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2022 By 混绅士</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">本地搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div></div></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

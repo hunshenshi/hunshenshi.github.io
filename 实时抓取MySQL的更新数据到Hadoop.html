@@ -1,0 +1,505 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>实时抓取MySQL的更新数据到Hadoop | big data decode club</title><meta name="keywords" content="BigData,MySQL,canal,实时,更新数据"><meta name="author" content="混绅士"><meta name="copyright" content="混绅士"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="关系型数据库和Hadoop生态的沟通越来越密集，时效要求也越来越高。本篇就来调研下实时抓取MySQL更新数据到HDFS。  本篇仅作为调研报告。  初步调研了canal(Ali)+kafka connect+kafka、maxwell(Zendesk)+kafka和mysql_streamer(Yelp)+kafka。这几个工具抓取MySQL的方式都是通过扫描binlog，模拟MySQL mast">
+<meta property="og:type" content="article">
+<meta property="og:title" content="实时抓取MySQL的更新数据到Hadoop">
+<meta property="og:url" content="http://bigdatadecode.club/%E5%AE%9E%E6%97%B6%E6%8A%93%E5%8F%96MySQL%E7%9A%84%E6%9B%B4%E6%96%B0%E6%95%B0%E6%8D%AE%E5%88%B0Hadoop.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="关系型数据库和Hadoop生态的沟通越来越密集，时效要求也越来越高。本篇就来调研下实时抓取MySQL更新数据到HDFS。  本篇仅作为调研报告。  初步调研了canal(Ali)+kafka connect+kafka、maxwell(Zendesk)+kafka和mysql_streamer(Yelp)+kafka。这几个工具抓取MySQL的方式都是通过扫描binlog，模拟MySQL mast">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+<meta property="article:published_time" content="2017-02-28T05:02:21.000Z">
+<meta property="article:modified_time" content="2022-01-17T08:58:24.284Z">
+<meta property="article:author" content="混绅士">
+<meta property="article:tag" content="BigData">
+<meta property="article:tag" content="MySQL">
+<meta property="article:tag" content="canal">
+<meta property="article:tag" content="实时">
+<meta property="article:tag" content="更新数据">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><link rel="shortcut icon" href="/favicon.ico"><link rel="canonical" href="http://bigdatadecode.club/%E5%AE%9E%E6%97%B6%E6%8A%93%E5%8F%96MySQL%E7%9A%84%E6%9B%B4%E6%96%B0%E6%95%B0%E6%8D%AE%E5%88%B0Hadoop"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="baidu-site-verification" content="27E5EbutCm"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '实时抓取MySQL的更新数据到Hadoop',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2022-01-17 16:58:24'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="big data decode club" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/uploads/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><div class="data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">big data decode club</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">实时抓取MySQL的更新数据到Hadoop</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2017-02-28T05:02:21.000Z" title="发表于 2017-02-28 13:02:21">2017-02-28</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2022-01-17T08:58:24.284Z" title="更新于 2022-01-17 16:58:24">2022-01-17</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/BigData/">BigData</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">4.6k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>15分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="实时抓取MySQL的更新数据到Hadoop"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>关系型数据库和Hadoop生态的沟通越来越密集，时效要求也越来越高。本篇就来调研下实时抓取MySQL更新数据到HDFS。</p>
+<blockquote>
+<p>本篇仅作为调研报告。</p>
+</blockquote>
+<p>初步调研了canal(Ali)+kafka connect+kafka、maxwell(Zendesk)+kafka和mysql_streamer(Yelp)+kafka。<em>这几个工具抓取MySQL的方式都是通过扫描binlog，模拟MySQL master和slave(Mysql Replication架构–解决了：数据多点备份，提高数据可用性；读写分流，提高集群的并发能力。（并非是负载均衡）；让一些非实时的数据操作，转移到slaves上进行。)之间的协议来实现实时更新的</em>。</p>
+<span id="more"></span>
+
+<p>先科普下Canal</p>
+<h2 id="Canal简介"><a href="#Canal简介" class="headerlink" title="Canal简介"></a>Canal简介</h2><h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p><img src="/blogimgs/mysqlToHdfs/canal%E5%8E%9F%E7%90%86%E5%9B%BE.jpg" alt="Canal原理图" title="Canal原理图"><br>原理相对比较简单：</p>
+<ol>
+<li>canal模拟mysql slave的交互协议，伪装自己为mysql slave，向mysql master发送dump协议</li>
+<li>mysql master收到dump请求，开始推送(<em>slave拉取，不是master主动push给slaves</em>)binary log给slave(也就是canal)</li>
+<li>canal解析binary log对象(原始为byte流)</li>
+</ol>
+<h3 id="架构"><a href="#架构" class="headerlink" title="架构"></a>架构</h3><p><img src="/blogimgs/mysqlToHdfs/canal%E6%9E%B6%E6%9E%84%E5%9B%BE.jpg" alt="Canal架构图" title="Canal架构图"></p>
+<p>组件说明：</p>
+<ol>
+<li>server代表一个canal运行实例，对应于一个jvm</li>
+<li>instance对应于一个数据队列(1个server对应1..n个instance)</li>
+</ol>
+<p>而instance模块又由eventParser(数据源接入，模拟slave协议和master进行交互，协议解析)、eventSink(Parser和Store连接器，进行数据过滤，加工，分发的工作)、eventStore(数据存储)和metaManager(增量订阅&amp;消费信息管理器)组成。</p>
+<ul>
+<li><p>EventParser在向mysql发送dump命令之前会先从Log Position中获取上次解析成功的位置(如果是第一次启动，则<strong>获取初始指定位置</strong>或者当前数据段binlog位点)。mysql接受到dump命令后，由EventParser从mysql上pull binlog数据进行解析并传递给EventSink(<em>传递给EventSink模块进行数据存储，是一个阻塞操作，直到存储成功</em>)，传送成功之后更新Log Position。流程图如下：<br><img src="/blogimgs/mysqlToHdfs/eventParser.jpg" alt="EventParser流程图" title="EventParser流程图"></p>
+</li>
+<li><p>EventSink起到一个类似channel的功能，可以对数据进行<em>过滤、分发/路由(1:n)、归并(n:1)和加工</em>。EventSink是连接EventParser和EventStore的桥梁。</p>
+</li>
+<li><p>EventStore实现模式是内存模式，内存结构为环形队列，由三个指针(Put、Get和Ack)标识数据存储和读取的位置。</p>
+</li>
+<li><p>MetaManager是增量订阅&amp;消费信息管理器，增量订阅和消费之间的协议包括get/ack/rollback，分别为：</p>
+</li>
+</ul>
+<blockquote>
+<p>Message getWithoutAck(int batchSize)，允许指定batchSize，一次可以获取多条，每次返回的对象为Message，包含的内容为：batch id[唯一标识]和entries[具体的数据对象]<br>void rollback(long batchId)，顾命思议，回滚上次的get请求，重新获取数据。基于get获取的batchId进行提交，避免误操作<br>void ack(long batchId)，顾命思议，确认已经消费成功，通知server删除数据。基于get获取的batchId进行提交，避免误操作</p>
+</blockquote>
+<p>增量订阅和消费之间的协议交互如下：<br><img src="/blogimgs/mysqlToHdfs/publishSubscribe.jpg" alt="增量订阅和消费协议" title="增量订阅和消费协议"></p>
+<p>canal的get/ack/rollback协议和常规的jms协议有所不同，<em>允许get/ack异步处理</em>，比如可以连续调用get多次，后续异步按顺序提交ack/rollback，项目中称之为流式api.</p>
+<p>流式api设计的好处：</p>
+<ul>
+<li>get/ack异步化，减少因ack带来的网络延迟和操作成本 (99%的状态都是处于正常状态，异常的rollback属于个别情况，没必要为个别的case牺牲整个性能)</li>
+<li>get获取数据后，业务消费存在瓶颈或者需要多进程/多线程消费时，可以不停的轮询get数据，不停的往后发送任务，提高并行化. (在实际业务中的一个case：业务数据消费需要跨中美网络，所以一次操作基本在200ms以上，为了减少延迟，所以需要实施并行化)</li>
+</ul>
+<p>流式api设计示意图如下：<br><img src="/blogimgs/mysqlToHdfs/%E6%B5%81%E5%BC%8Fapi.jpg" alt="流式api" title="流式api"></p>
+<ul>
+<li>每次get操作都会在meta中产生一个mark，mark标记会递增，保证运行过程中mark的唯一性</li>
+<li>每次的get操作，都会在上一次的mark操作记录的cursor继续往后取，如果mark不存在，则在last ack cursor继续往后取</li>
+<li>进行ack时，需要按照mark的顺序进行数序ack，不能跳跃ack. ack会删除当前的mark标记，并将对应的mark位置更新为last ack cusor</li>
+<li>一旦出现异常情况，客户端可发起rollback情况，重新置位：删除所有的mark, 清理get请求位置，下次请求会从last ack cursor继续往后取</li>
+</ul>
+<blockquote>
+<p>这个流式api是不是类似hdfs write在pipeline中传输packet的形式，先将packet放入dataQueue，然后向下游传输，此时将packet放入ackQueue等到下游返回的ack，这也是异步的。</p>
+</blockquote>
+<h3 id="HA机制"><a href="#HA机制" class="headerlink" title="HA机制"></a>HA机制</h3><p>canal是支持HA的，其实现机制也是依赖zookeeper来实现的，用到的特性有watcher和EPHEMERAL节点(和session生命周期绑定)，与HDFS的HA类似。</p>
+<p>canal的ha分为两部分，<em>canal server和canal client分别有对应的ha实现</em></p>
+<ul>
+<li>canal server: 为了减少对mysql dump的请求，<em>不同</em>server上的instance(<em>不同server上的相同instance</em>)要求同一时间只能有一个处于running，其他的处于standby状态(standby是instance的状态)。</li>
+<li><em>canal client</em>: 为了保证有序性，一份instance同一时间只能由一个canal client进行get/ack/rollback操作，否则客户端接收无法保证有序。</li>
+</ul>
+<p>server ha的架构图如下：<br><img src="/blogimgs/mysqlToHdfs/ha.jpg" alt="ha" title="ha"><br>大致步骤：</p>
+<ol>
+<li>canal server要启动某个<em>canal instance</em>时都先向zookeeper_进行一次尝试启动判断_(实现：创建EPHEMERAL节点，谁创建成功就允许谁启动)</li>
+<li>创建zookeeper节点成功后，对应的canal server就启动对应的canal instance，_没有创建成功的canal instance就会处于standby状态_。</li>
+<li>一旦zookeeper发现canal server A创建的_instance节点_消失后，立即通知其他的canal server再次进行步骤1的操作，重新选出一个canal server启动instance。</li>
+<li>canal client每次进行connect时，会首先向zookeeper询问当前是谁启动了canal instance，然后和其建立链接，一旦链接不可用，会重新尝试connect。</li>
+</ol>
+<p><strong>Canal Client的方式和canal server方式类似，也是利用zookeeper的抢占EPHEMERAL节点的方式进行控制.</strong></p>
+<h2 id="Canal部署及使用"><a href="#Canal部署及使用" class="headerlink" title="Canal部署及使用"></a>Canal部署及使用</h2><h3 id="MySQL配置"><a href="#MySQL配置" class="headerlink" title="MySQL配置"></a>MySQL配置</h3><p>canal同步数据需要扫描MySQL的binlog日志，而binlog默认是关闭的，需要开启，并且为了保证<em>同步数据的一致性</em>，使用的日志格式为*row-based replication(RBR)*，在<code>my.conf</code>中开启binlog，</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">[mysqld]</span><br><span class="line">log-bin=mysql-bin <span class="comment">#添加这一行就ok</span></span><br><span class="line"><span class="comment"># log-bin=/data/mysql/logs/mysql-bin.log # 指定log地址</span></span><br><span class="line">binlog-format=ROW <span class="comment">#选择row模式</span></span><br><span class="line">server_id=1 <span class="comment">#配置mysql replaction需要定义，不能和canal的slaveId重复</span></span><br><span class="line"></span><br><span class="line"><span class="comment">######</span></span><br><span class="line">server_id=1</span><br><span class="line">log_bin=mysql-bin</span><br><span class="line">binlog_format=ROW</span><br><span class="line">expire_logs_days=30</span><br><span class="line">binlog_do_db=db_a</span><br><span class="line">binlog_do_db=db_b</span><br><span class="line"></span><br><span class="line"><span class="comment">#server_id：MySQL5.7及以上版本开启binlog必须要配置这个选项。对于MySQL集群，不同节点的server_id必须不同。对于单实例部署则没有要求。</span></span><br><span class="line"><span class="comment">#log_bin：指定binlog文件名和储存位置。如果不指定路径，默认位置为/var/lib/mysql/。</span></span><br><span class="line"><span class="comment">#binlog_format：binlog格式。有3个值可以选择：ROW：记录哪条数据被修改和修改之后的数据，会产生大量日志。STATEMENT：记录修改数据的SQL，日志量较小。MIXED：混合使用上述两个模式。CDC要求必须配置为ROW。</span></span><br><span class="line"><span class="comment">#expire_logs_days：bin_log过期时间，超过该时间的log会自动删除。</span></span><br><span class="line"><span class="comment">#binlog_do_db：binlog记录哪些数据库。如果需要配置多个库，如例子中配置多项。切勿使用逗号分隔。</span></span><br><span class="line"></span><br><span class="line">show variables like <span class="string">&#x27;%bin%&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p>更改my.conf之后，需要<em>重启MySQL</em>，重启的方式有很多找到合适自己的就行。</p>
+<h3 id="Canal配置"><a href="#Canal配置" class="headerlink" title="Canal配置"></a>Canal配置</h3><p>由上面的介绍得知Canal由<code>Server</code>和<code>Instance</code>组成，而Server中又可以包含很多个Instance，<em>一个Instance对应一个数据库实例</em>，则Canal将配置分为两类，一类是server的配置，名字为<code>canal.properties</code>，另一类是instance的配置，名字为<code>instance.properties</code>，一般会在conf目录下新建一个instance同名的目录，将其放入此目录中。</p>
+<p>先介绍canal.properties中的几个关键属性</p>
+<table>
+<thead>
+<tr>
+<th>参数名字</th>
+<th>参数说明</th>
+<th>默认值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>canal.destinations</td>
+<td>当前server上部署的instance列表</td>
+<td>无</td>
+</tr>
+<tr>
+<td>canal.conf.dir</td>
+<td>conf/目录所在的路径</td>
+<td>../conf</td>
+</tr>
+<tr>
+<td>canal.instance.global.spring.xml</td>
+<td>全局的spring配置方式的组件文件</td>
+<td>classpath:spring/file-instance.xml <br> (spring目录相对于canal.conf.dir)</td>
+</tr>
+<tr>
+<td>canal.zkServers</td>
+<td>canal server链接zookeeper集群的链接信息</td>
+<td>无</td>
+</tr>
+<tr>
+<td>canal.zookeeper.flush.period</td>
+<td>canal持久化数据到zookeeper上的更新频率，单位毫秒</td>
+<td>1000</td>
+</tr>
+<tr>
+<td>canal.file.data.dir</td>
+<td>canal持久化数据到file上的目录</td>
+<td>../conf (默认和instance.properties为同一目录，方便运维和备份)</td>
+</tr>
+<tr>
+<td>canal.file.flush.period</td>
+<td>canal持久化数据到file上的更新频率，单位毫秒</td>
+<td>1000</td>
+</tr>
+<tr>
+<td>canal.instance.memory.batch.mode</td>
+<td>canal内存store中数据缓存模式 <br> 1. ITEMSIZE : 根据buffer.size进行限制，只限制记录的数量 <br> 2. MEMSIZE : 根据buffer.size * buffer.memunit的大小，限制缓存记录的大小</td>
+<td>MEMSIZE</td>
+</tr>
+<tr>
+<td>canal.instance.memory.buffer.size</td>
+<td>canal内存store中可缓存buffer记录数，需要为2的指数</td>
+<td>16384</td>
+</tr>
+<tr>
+<td>canal.instance.memory.buffer.memunit</td>
+<td>内存记录的单位大小，默认1KB，和buffer.size组合决定最终的内存使用大小</td>
+<td>1024</td>
+</tr>
+</tbody></table>
+<p>下面看下instance.properties，这里的属性较少：</p>
+<table>
+<thead>
+<tr>
+<th>参数名字</th>
+<th>参数说明</th>
+<th>默认值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>canal.instance.mysql.slaveId</td>
+<td>mysql集群配置中的serverId概念，需要保证和当前mysql集群中id唯一</td>
+<td>1234</td>
+</tr>
+<tr>
+<td>canal.instance.master.address</td>
+<td>mysql主库链接地址</td>
+<td>127.0.0.1:3306</td>
+</tr>
+<tr>
+<td>canal.instance.master.journal.name</td>
+<td>mysql主库链接时起始的binlog文件</td>
+<td>无</td>
+</tr>
+<tr>
+<td>canal.instance.master.position</td>
+<td>mysql主库链接时起始的binlog偏移量</td>
+<td>无</td>
+</tr>
+<tr>
+<td>canal.instance.master.timestamp</td>
+<td>mysql主库链接时起始的binlog的时间戳</td>
+<td>无</td>
+</tr>
+<tr>
+<td>canal.instance.dbUsername</td>
+<td>mysql数据库帐号</td>
+<td>canal</td>
+</tr>
+<tr>
+<td>canal.instance.dbPassword</td>
+<td>mysql数据库密码</td>
+<td>canal</td>
+</tr>
+<tr>
+<td>canal.instance.defaultDatabaseName</td>
+<td>mysql链接时默认schema</td>
+<td>无</td>
+</tr>
+<tr>
+<td>canal.instance.connectionCharset</td>
+<td>mysql 数据解析编码</td>
+<td>UTF-8</td>
+</tr>
+<tr>
+<td>canal.instance.filter.regex</td>
+<td>mysql 数据解析关注的表，Perl正则表达式. <br> 多个正则之间以逗号(,)分隔，转义符需要双斜杠</td>
+<td>.*\\..*</td>
+</tr>
+</tbody></table>
+<p>除了上面两个配置文件，conf目录下还有一个目录需要强调下，那就是spring目录，里面存放的是instance.xml配置文件，目前默认支持的instance.xml有<em>memory-instance.xml、file-instance.xml、default-instance.xml和group-instance.xml</em>。这里主要维护的增量订阅和消费的关系信息(<em>解析位点和消费位点</em>)。</p>
+<p>对应的两个位点组件，目前都有几种实现：</p>
+<ul>
+<li>memory (memory-instance.xml中使用)</li>
+<li>zookeeper</li>
+<li>mixed</li>
+<li>file (file-instance.xml中使用，集合了file+memory模式，先写内存，定时刷新数据到本地file上)</li>
+<li>period (default-instance.xml中使用，集合了zookeeper+memory模式，先写内存，定时刷新数据到zookeeper上)</li>
+</ul>
+<blockquote>
+<p>分别介绍下这几种配置的功能</p>
+</blockquote>
+<ul>
+<li>memory-instance.xml：</li>
+</ul>
+<p><em>所有的组件(parser , sink , store)都选择了内存版模式</em>，记录位点的都选择了memory模式，重启后又会回到初始位点进行解析</p>
+<p>特点：速度最快，依赖最少(不需要zookeeper)</p>
+<p>场景：一般应用在quickstart，或者是出现问题后，进行数据分析的场景，不应该将其应用于生产环境</p>
+<ul>
+<li>file-instance.xml：</li>
+</ul>
+<p>所有的组件(parser , sink , store)都选择了基于file持久化模式(<em>组件内容持久化的file存在哪里？？？</em>)，注意，不支持HA机制.</p>
+<p>特点：支持单机持久化</p>
+<p>场景：生产环境，无HA需求，简单可用.</p>
+<ul>
+<li>default-instance.xml：</li>
+</ul>
+<p>所有的组件(parser , sink , store)都选择了持久化模式，目前持久化的方式主要是写入zookeeper，保证数据集群共享.(<em>所有组件持久化的内容只有位置信息吧？？？</em>)</p>
+<p>特点：支持HA</p>
+<p>场景：生产环境，集群化部署.</p>
+<ul>
+<li>group-instance.xml：</li>
+</ul>
+<p>主要针对需要进行多库合并时，可以将多个物理instance合并为一个逻辑instance，提供客户端访问。</p>
+<p>场景：分库业务。 比如产品数据拆分了4个库，每个库会有一个instance，如果不用group，业务上要消费数据时，需要启动4个客户端，分别链接4个instance实例。使用group后，可以在canal server上合并为一个逻辑instance，只需要启动1个客户端，链接这个逻辑instance即可.</p>
+<h3 id="canal-example-部署"><a href="#canal-example-部署" class="headerlink" title="canal example 部署"></a>canal example 部署</h3><ul>
+<li>在需要同步的MySQL数据库中创建一个用户，用来replica数据，这里新建的用户名和密码都为<code>canal</code>，命令如下：</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">CREATE USER canal IDENTIFIED BY <span class="string">&#x27;canal&#x27;</span>;  </span><br><span class="line">GRANT SELECT, REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO <span class="string">&#x27;canal&#x27;</span>@<span class="string">&#x27;%&#x27;</span>;</span><br><span class="line">-- GRANT ALL PRIVILEGES ON *.* TO <span class="string">&#x27;canal&#x27;</span>@<span class="string">&#x27;%&#x27;</span> ;</span><br><span class="line">FLUSH PRIVILEGES;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>Mysql创建<code>canal</code>用户并为其赋所需权限之后，需要对Canal的配置文件(<em>canal.properties和instance.properties</em>)进行设置。</li>
+</ul>
+<p>canal.properties和instance.properties里采用默认配置即可(<em>这里只是运行个样例，生产中可以参考具体的参数属性进行设置</em>)，</p>
+<ul>
+<li>Canal配置好之后，启动Canal client(<em>client的作用是将Canal里的解析的binlog日志固化到存储介质中</em>)。</li>
+</ul>
+<p>client组件Canal本身是不提供的，需要根据api进行开发，这里将官方提供的client代码打包成jar进行消费Canal信息。</p>
+<h3 id="canal-HA配置"><a href="#canal-HA配置" class="headerlink" title="canal HA配置"></a>canal HA配置</h3><p>canal的HA机制是依赖zk来实现的，需要更改canal.properties文件，修改内容如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># zk集群地址</span></span><br><span class="line">canal.zkServers=10.20.144.51:2181</span><br><span class="line"><span class="comment"># 选择记录方式</span></span><br><span class="line">canal.instance.global.spring.xml = classpath:spring/default-instance.xml</span><br></pre></td></tr></table></figure>
+
+<p>更改两台canal机器上instance实例的配置instance.properties，修改内容如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">canal.instance.mysql.slaveId = 1234 <span class="comment">##另外一台机器改成1235，保证slaveId不重复即可</span></span><br><span class="line">canal.instance.master.address = 10.20.144.15:3306</span><br></pre></td></tr></table></figure>
+
+<p>配置好之后启动canal进程，在两台服务器上执行<code>sh bin/startup.sh</code></p>
+<p>client进行消费时，可以直接指定zookeeper地址和instance name，也可以让canal client会自动从zookeeper中的running节点，获取当前服务的工作节点，然后与其建立链接。</p>
+<h2 id="maxwell简介"><a href="#maxwell简介" class="headerlink" title="maxwell简介"></a>maxwell简介</h2><p>maxwell实时抓取mysql数据的原理也是基于binlog，和canal相比，maxwell更像是<code>canal server + 实时client</code>。(数据抽取 + 数据转换)</p>
+<p>maxwell集成了kafka producer，直接从binlog获取数据更新并写入kafka，而canal则<strong>需要自己开发实时client将canal读取的binlog内容写入kafka中</strong>。</p>
+<p>maxwell特色：</p>
+<ul>
+<li>支持bootstrap启动，同步历史数据</li>
+<li>集成kafka，直接将数据落地到kafka</li>
+<li>已将binlog中的DML和DDL进行了模式匹配，将其解码为有schema的json(<em>有利于后期将其重组为nosql支持的语言</em>)<br>{“database”:”test”,”table”:”e”,”type”:”update”,”ts”:1488857869,”xid”:8924,”commit”:true,”data”:{“id”:1,”m”:5.556666,”torvalds”:null},”old”:{“m”:5.55}}</li>
+</ul>
+<p>缺点：</p>
+<ul>
+<li>一个MySQL实例需要对应一个maxwell进程</li>
+<li>bootstrap的方案使用的是<code>select * </code></li>
+</ul>
+<p>maxwell的配置文件只有一个<em>config.properties</em>，在home目录。其中除了需要配置mysql master的地址、kafka地址还需要配置一个用于存放maxwell相关信息的mysql地址，maxwell会把读取binlog关系的信息，如binlog name、position。</p>
+<h2 id="工具对比"><a href="#工具对比" class="headerlink" title="工具对比"></a>工具对比</h2><p>以上是Canal的原理及部署，其余类似maxwell和mysql_streamer对mysql进行实时数据抓取的原理一样就不再进行一一介绍，这里只对他们进行下对比：</p>
+<table>
+<thead>
+<tr>
+<th>特色</th>
+<th>Canal</th>
+<th>Maxwell</th>
+<th>mysql_streamer</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>语言</td>
+<td>Java</td>
+<td>Java</td>
+<td>Python</td>
+</tr>
+<tr>
+<td>活跃度</td>
+<td>活跃</td>
+<td>活跃</td>
+<td>不活跃</td>
+</tr>
+<tr>
+<td>HA</td>
+<td>支持</td>
+<td>定制</td>
+<td>支持</td>
+</tr>
+<tr>
+<td>数据落地</td>
+<td>定制</td>
+<td>落地到kafka</td>
+<td>落地到kafka</td>
+</tr>
+<tr>
+<td>分区</td>
+<td>支持</td>
+<td>不支持</td>
+<td>不支持</td>
+</tr>
+<tr>
+<td>bootstrap</td>
+<td>不支持</td>
+<td>支持</td>
+<td>支持</td>
+</tr>
+<tr>
+<td>数据格式</td>
+<td>格式自由</td>
+<td>json(格式固定)</td>
+<td>json(格式固定)</td>
+</tr>
+<tr>
+<td>文档</td>
+<td>较详细</td>
+<td>较详细</td>
+<td>略粗</td>
+</tr>
+<tr>
+<td>随机读</td>
+<td>支持</td>
+<td>支持</td>
+<td>支持</td>
+</tr>
+</tbody></table>
+<p><strong>以上只是将mysql里的实时变化数据的binlog以同种形式同步到kafka，但要实时更新到hadoop还需要使用一个实时数据库来存储数据，并自定制开发将kafka中数据解析为nosql数据库可以识别的DML进行实时更新Nosql数据库，使其与MySQL里的数据实时同步。</strong></p>
+<h2 id="基础架构"><a href="#基础架构" class="headerlink" title="基础架构"></a>基础架构</h2><p>架构图如下：<br><img src="/blogimgs/mysqlToHdfs/%E5%9F%BA%E7%A1%80%E6%9E%B6%E6%9E%84%E5%9B%BE.png" alt="基础架构图" title="基础架构图"></p>
+<blockquote>
+<p>虚线框是可选的方案</p>
+</blockquote>
+<h3 id="方案对比"><a href="#方案对比" class="headerlink" title="方案对比"></a>方案对比</h3><ol>
+<li><em>方案1</em>使用阿里开源的Canal进行Mysql binlog数据的抽取，另需<strong>开发一个数据转换工具将从binlog中解析出的数据转换成自带schema的json数据并写入kafka中</strong>。而<em>方案2</em>使用maxwell可<strong>直接完成</strong>对mysql binlog数据的抽取和转换成自带schema的json数据写入到kafka中。</li>
+<li><em>方案1</em>中不支持表中已存在的历史数据进行同步，此功能需要开发(如果使用sqoop进行历史数据同步，不够灵活，会使结果表与原始表结构相同，有区别于数据交换平台所需的schema)。<em>方案2</em>提供同步历史数据的解决方案。</li>
+<li><em>方案1</em>支持HA部署，而<em>方案2</em>不支持HA</li>
+</ol>
+<p>方案1和方案2的区别只在于kafka之前，当数据缓存到kafka之后，需要一个<strong>定制的数据路由组件</strong>来将自带schema的数据解析到目标存储中。<br>数据路由组件主要负责将kafka中的数据实时读出，写入到目标存储中。(如将所有日志数据保存到HDFS中，也可以将数据落地到所有支持jdbc的数据库，落地到HBase，Elasticsearch等。)</p>
+<!-- 开发bootstrap功能(或者使用sqoop将历史数据进行同步，缺点是什么？不够灵活，在hbase之类的数据库中存储的内容会有一个标识属性，防止重复操作) -->
+
+<p>综上，<br>方案1需要开发的功能有：</p>
+<ul>
+<li>bootstrap功能</li>
+<li>实时数据转换工具</li>
+<li>数据路由工具</li>
+</ul>
+<p>方案2需要开发的功能有：</p>
+<ul>
+<li>数据路由工具</li>
+<li>HA模块(初期可暂不支持HA，所以开发紧急度不高)</li>
+</ul>
+<p>数据路由工具是两个方案都需要开发的，则我比较偏向于第二种方案，因为在初期试水阶段可以短期出成果，可以较快的验证想法，并在尝试中能够较快的发现问题，好及时的调整方案。即使方案2中maxwell最终不能满足需求，而使用canal的话，我们也可能将实时数据转换工具的数据输出模式与maxwell一致，这样初始投入人力开发的数据路由工具依然可以继续使用，而不需要重新开发。</p>
+<p>把增量的Log作为一切系统的基础。后续的数据使用方，通过订阅kafka来消费log。</p>
+<p>比如：<br>大数据的使用方可以将数据保存到Hive表或者Parquet文件给Hive或Spark查询；<br>提供搜索服务的使用方可以保存到Elasticsearch或HBase 中；<br>提供缓存服务的使用方可以将日志缓存到Redis或alluxio中；<br>数据同步的使用方可以将数据保存到自己的数据库中；<br>由于kafka的日志是可以重复消费的，并且缓存一段时间，各个使用方可以通过消费kafka的日志来达到既能保持与数据库的一致性，也能保证实时性；</p>
+<p>{“database”:”test”,”table”:”e”,”type”:”update”,”ts”:1488857869,”xid”:8924,”commit”:true,”data”:{“id”:1,”m”:5.556666,”torvalds”:null},”old”:{“m”:5.55}}</p>
+<p>{“database”:”test”,”table”:”e”,”type”:”insert”,”ts”:1488857922,”xid”:8932,”commit”:true,”data”:{“id”:2,”m”:4.2,”torvalds”:null}}</p>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><p><a target="_blank" rel="noopener" href="https://github.com/alibaba/canal/wiki">canal</a><br><a target="_blank" rel="noopener" href="http://maxwells-daemon.io/">maxwell</a><br><a target="_blank" rel="noopener" href="https://github.com/Yelp/mysql_streamer">mysql_streamer</a></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">混绅士</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://bigdatadecode.club/%E5%AE%9E%E6%97%B6%E6%8A%93%E5%8F%96MySQL%E7%9A%84%E6%9B%B4%E6%96%B0%E6%95%B0%E6%8D%AE%E5%88%B0Hadoop.html">http://bigdatadecode.club/%E5%AE%9E%E6%97%B6%E6%8A%93%E5%8F%96MySQL%E7%9A%84%E6%9B%B4%E6%96%B0%E6%95%B0%E6%8D%AE%E5%88%B0Hadoop.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://bigdatadecode.club" target="_blank">big data decode club</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/BigData/">BigData</a><a class="post-meta__tags" href="/tags/MySQL/">MySQL</a><a class="post-meta__tags" href="/tags/canal/">canal</a><a class="post-meta__tags" href="/tags/%E5%AE%9E%E6%97%B6/">实时</a><a class="post-meta__tags" href="/tags/%E6%9B%B4%E6%96%B0%E6%95%B0%E6%8D%AE/">更新数据</a></div><div class="post_share"></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/path/to/wechat-reward-image/wechatpay.png" target="_blank"><img class="post-qr-code-img" src="/path/to/wechat-reward-image/wechatpay.png" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E7%AE%97%E6%B3%95%E4%B9%8Bleetcode%20ZigZag%20Conversion.html"><img class="prev-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">数据结构算法之leetcode ZigZag Conversion</div></div></a></div><div class="next-post pull-right"><a href="/HUE%E7%BC%96%E8%AF%91%E4%B8%8E%E9%83%A8%E7%BD%B2.html"><img class="next-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">HUE编译与部署</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/MysqlToHDFSWithCanal.html" title="利用canal同步mysql到HDFS"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2017-08-02</div><div class="title">利用canal同步mysql到HDFS</div></div></a></div><div><a href="/Application-fail-RM-change.html" title="Application运行失败导致RM主备切换"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2018-11-27</div><div class="title">Application运行失败导致RM主备切换</div></div></a></div><div><a href="/Docker-Log-Action.html" title="Docker容器log采集实践"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2019-01-13</div><div class="title">Docker容器log采集实践</div></div></a></div><div><a href="/Docker_log_collect.html" title="Docker进程log和应用log采集调研"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2018-07-27</div><div class="title">Docker进程log和应用log采集调研</div></div></a></div><div><a href="/Druid%E8%B0%83%E7%A0%94.html" title="Druid调研"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2017-12-22</div><div class="title">Druid调研</div></div></a></div><div><a href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-11-06</div><div class="title">Flink standlone模式下Flinkx测试</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/uploads/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">混绅士</div><div class="author-info__description">Any answers you can find in source code.</div></div><div class="card-info-data is-center"><div class="card-info-data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="card-info-data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="card-info-data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Canal%E7%AE%80%E4%BB%8B"><span class="toc-number">1.</span> <span class="toc-text">Canal简介</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8E%9F%E7%90%86"><span class="toc-number">1.1.</span> <span class="toc-text">原理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9E%B6%E6%9E%84"><span class="toc-number">1.2.</span> <span class="toc-text">架构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#HA%E6%9C%BA%E5%88%B6"><span class="toc-number">1.3.</span> <span class="toc-text">HA机制</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Canal%E9%83%A8%E7%BD%B2%E5%8F%8A%E4%BD%BF%E7%94%A8"><span class="toc-number">2.</span> <span class="toc-text">Canal部署及使用</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#MySQL%E9%85%8D%E7%BD%AE"><span class="toc-number">2.1.</span> <span class="toc-text">MySQL配置</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Canal%E9%85%8D%E7%BD%AE"><span class="toc-number">2.2.</span> <span class="toc-text">Canal配置</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#canal-example-%E9%83%A8%E7%BD%B2"><span class="toc-number">2.3.</span> <span class="toc-text">canal example 部署</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#canal-HA%E9%85%8D%E7%BD%AE"><span class="toc-number">2.4.</span> <span class="toc-text">canal HA配置</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#maxwell%E7%AE%80%E4%BB%8B"><span class="toc-number">3.</span> <span class="toc-text">maxwell简介</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%B7%A5%E5%85%B7%E5%AF%B9%E6%AF%94"><span class="toc-number">4.</span> <span class="toc-text">工具对比</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9F%BA%E7%A1%80%E6%9E%B6%E6%9E%84"><span class="toc-number">5.</span> <span class="toc-text">基础架构</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%96%B9%E6%A1%88%E5%AF%B9%E6%AF%94"><span class="toc-number">5.1.</span> <span class="toc-text">方案对比</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83%E9%93%BE%E6%8E%A5"><span class="toc-number">6.</span> <span class="toc-text">参考链接</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/scratch-extensions-demo.html" title="scratch自定义扩展"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="scratch自定义扩展"/></a><div class="content"><a class="title" href="/scratch-extensions-demo.html" title="scratch自定义扩展">scratch自定义扩展</a><time datetime="2021-12-14T14:30:20.000Z" title="发表于 2021-12-14 22:30:20">2021-12-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/metabase-import-ide.html" title="metabase导入IDE调试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="metabase导入IDE调试"/></a><div class="content"><a class="title" href="/metabase-import-ide.html" title="metabase导入IDE调试">metabase导入IDE调试</a><time datetime="2021-12-13T15:31:22.000Z" title="发表于 2021-12-13 23:31:22">2021-12-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/flink-connector-example.html" title="Flink Connector调研"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Connector调研"/></a><div class="content"><a class="title" href="/flink-connector-example.html" title="Flink Connector调研">Flink Connector调研</a><time datetime="2021-11-10T14:30:20.000Z" title="发表于 2021-11-10 22:30:20">2021-11-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink standlone模式下Flinkx测试"/></a><div class="content"><a class="title" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试">Flink standlone模式下Flinkx测试</a><time datetime="2021-11-06T15:05:20.000Z" title="发表于 2021-11-06 23:05:20">2021-11-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/openGauss-deploy.html" title="openGauss极简版安装使用"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="openGauss极简版安装使用"/></a><div class="content"><a class="title" href="/openGauss-deploy.html" title="openGauss极简版安装使用">openGauss极简版安装使用</a><time datetime="2021-05-13T14:35:20.000Z" title="发表于 2021-05-13 22:35:20">2021-05-13</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2022 By 混绅士</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">本地搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div></div></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

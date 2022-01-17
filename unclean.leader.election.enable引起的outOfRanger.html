@@ -1,0 +1,189 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>unclean.leader.election.enable引起的outOfRanger | big data decode club</title><meta name="keywords" content="kafka,运维,big data,offset resetting"><meta name="author" content="混绅士"><meta name="copyright" content="混绅士"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="前段时间采集平台的数据量发生异常，对数据进行排查发现hdfs上存在历史数据重复消费的问题。  采集平台是由TailDirSource+KafkaChannel将数据写入kafka，然后通过kafkaChannel+HDFSSink将数据写入hdfs   整个采集平台可能出现的故障的地方如下：  taildir重复采集了log  taildir调用kafkachannel向kafka写数据时进行了回">
+<meta property="og:type" content="article">
+<meta property="og:title" content="unclean.leader.election.enable引起的outOfRanger">
+<meta property="og:url" content="http://bigdatadecode.club/unclean.leader.election.enable%E5%BC%95%E8%B5%B7%E7%9A%84outOfRanger.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="前段时间采集平台的数据量发生异常，对数据进行排查发现hdfs上存在历史数据重复消费的问题。  采集平台是由TailDirSource+KafkaChannel将数据写入kafka，然后通过kafkaChannel+HDFSSink将数据写入hdfs   整个采集平台可能出现的故障的地方如下：  taildir重复采集了log  taildir调用kafkachannel向kafka写数据时进行了回">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+<meta property="article:published_time" content="2017-06-19T16:21:14.000Z">
+<meta property="article:modified_time" content="2022-01-17T08:58:24.267Z">
+<meta property="article:author" content="混绅士">
+<meta property="article:tag" content="kafka">
+<meta property="article:tag" content="运维">
+<meta property="article:tag" content="big data">
+<meta property="article:tag" content="offset resetting">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><link rel="shortcut icon" href="/favicon.ico"><link rel="canonical" href="http://bigdatadecode.club/unclean.leader.election.enable%E5%BC%95%E8%B5%B7%E7%9A%84outOfRanger"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="baidu-site-verification" content="27E5EbutCm"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'unclean.leader.election.enable引起的outOfRanger',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2022-01-17 16:58:24'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="big data decode club" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/uploads/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><div class="data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">big data decode club</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">unclean.leader.election.enable引起的outOfRanger</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2017-06-19T16:21:14.000Z" title="发表于 2017-06-20 00:21:14">2017-06-20</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2022-01-17T08:58:24.267Z" title="更新于 2022-01-17 16:58:24">2022-01-17</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Kafka/">Kafka</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">1.1k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>3分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="unclean.leader.election.enable引起的outOfRanger"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>前段时间采集平台的数据量发生异常，对数据进行排查发现hdfs上存在历史数据重复消费的问题。</p>
+<blockquote>
+<p>采集平台是由TailDirSource+KafkaChannel将数据写入kafka，然后通过kafkaChannel+HDFSSink将数据写入hdfs </p>
+</blockquote>
+<p>整个采集平台可能出现的故障的地方如下：</p>
+<ol>
+<li>taildir重复采集了log </li>
+<li>taildir调用kafkachannel向kafka写数据时进行了回滚</li>
+<li>hdfsSink调用kafkachannel消费数据时，进行了重复消费</li>
+<li>hdfsSink写入hdfs时发生了回滚</li>
+</ol>
+<span id="more"></span>
+
+<h2 id="故障分析"><a href="#故障分析" class="headerlink" title="故障分析"></a>故障分析</h2><ol>
+<li>首先检查了下hdfs上的数据量异常的现象，是多余的数据是最新的数据还是历史数据，经数据校验确认数据量暴增是由于历史数据造成的。</li>
+<li>查看业务方服务器上历史log是否发生变化，查证后log的历史文件没有发生变化。</li>
+<li>采集端的flume log无异常，在kafka到hdfs的环节中的flume log中发现<em>info级别的offset重置信息</em>。初步怀疑是offset发生了out of ranger，然后被重置了offset，而这个offset又是比较早的一个offset，导致重新读取了大量的历史数据。<br>log 内容如下：</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">15 五月 2017 17:56:59,396 INFO  [SinkRunner-PollingRunner-DefaultSinkProcessor] (org.apache.kafka.clients.consumer.internals.Fetcher.handleFetchResponse:595)  - Fetch offset 2261734 is out of range, resetting offset</span><br></pre></td></tr></table></figure>
+
+<h2 id="实践验证"><a href="#实践验证" class="headerlink" title="实践验证"></a>实践验证</h2><p>在KafkaOffsetMonitor的log中发现offset重置的记录，</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">2017-05-18 13:25:17 INFO  KafkaOffsetGetter$:68 - Processed commit message: [consumer-group,topic-xx,8] =&gt; OffsetAndMetadata[119088,0e78ce6b-4dca-4cd6-b914-22b78ebbaaff,1495085117090]</span><br><span class="line"><span class="comment"># 下一次记录的offset就发生了重置，内容如下：</span></span><br><span class="line">2017-05-18 13:25:20 INFO  KafkaOffsetGetter$:68 - Processed commit message: [bconsumer-group,topic-xx,8] =&gt; OffsetAndMetadata[418,b0abba89-4f7a-4168-9e90-39a4db2a62f0,1495085120134]</span><br></pre></td></tr></table></figure>
+
+<p>从log中可以看出topic topic-xx的8分区的offset从119088置成了418。</p>
+<p>然后从代码中查找out of ranger相关的代码并结合当前集群的状态进行分析，发现当某个topic的leader和followers的状态不一致时，发生leader切换时，会发送out of range，此时consumer进行消费时发现offset非法，就会被重置为earliest，进行重复消费。</p>
+<h2 id="故障重现"><a href="#故障重现" class="headerlink" title="故障重现"></a>故障重现</h2><p>在测试环境中创建一个topic test，3个分区，2个副本，broker 1为leader，broker 2为follower。<br>写入一些数据flume进行正常消费，消费至最新状态A处之后，将test的follower的broker2停掉，继续向test写入数据，并让consumer再次消费至最新状态B处。</p>
+<blockquote>
+<p>此时停掉的follower broker 2的状态已和leader broker 1的状态不一样，已滞后leader的状态。</p>
+</blockquote>
+<p>现在将follower broker 2启动，此时follower和leader的状态不一样，follower需要和leader进行同步，但当follower与leader未同步成功之前将leader broker 1停掉，然后follower broker 2经过leader的选举机制被迫选为leader(<em>unclean.leader.election.enable为true时，选择第一个启动的副本为leader</em>)，在被选举为leader之前broker 2的状态并没有和broker 1的状态一致，<strong>也就是说broker 2上的LEO并没有同步到B处，而broker 2被选举为了leader，此时producer继续向topic中写数据，写入之后consumer会进行消费，consumer需要消费的offset的B，而broker 2的LEO并没有同步到B处，此时就发生了out of ranger，offset被重置为了earliest</strong>。</p>
+<h2 id="优化方案"><a href="#优化方案" class="headerlink" title="优化方案"></a>优化方案</h2><p>针对以上情况我们进行了一下修改：</p>
+<ol>
+<li>将topic的副本数设置为3(原先为2)，减少ISR列表只有一个leader的几率</li>
+<li>调整<code>min.insync.replicas</code>为2(默认是1)，此参数的意思是当ISR中的个数小于此值时，producer无法写入数据，会抛出异常。此参数还需要结合acks来使用，需要将acks设置为all或者-1(flume中kafkaChannel默认是all)。</li>
+<li>调整<code>unclean.leader.election.enable</code>参数为false(默认为true)，此参数标识当ISR中没有副本时，选举最早启动的broker为leader。</li>
+<li>调整操作磁盘的线程数num.io.threads为24(原来为12)</li>
+<li>对flume taildirSource进行二次开发，在body中添加log所在主机名、log 路径和采集时间。添加这些元数据信息为日后故障排除提供方便。</li>
+<li>kafkachannel中增加producer端重试的metrics统计(第2点中写入失败的次数会在此处记录)该功能提交，<a target="_blank" rel="noopener" href="https://issues.apache.org/jira/browse/FLUME-3104">patch</a> </li>
+<li>集群因为维护需要重启时，先停掉一台broker，然后重启该broker，等到该broker已加入到ISR中之后，再对其它broker进行如上操作，切勿单个broker依次重启。</li>
+</ol>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">混绅士</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://bigdatadecode.club/unclean.leader.election.enable%E5%BC%95%E8%B5%B7%E7%9A%84outOfRanger.html">http://bigdatadecode.club/unclean.leader.election.enable%E5%BC%95%E8%B5%B7%E7%9A%84outOfRanger.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://bigdatadecode.club" target="_blank">big data decode club</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/kafka/">kafka</a><a class="post-meta__tags" href="/tags/%E8%BF%90%E7%BB%B4/">运维</a><a class="post-meta__tags" href="/tags/big-data/">big data</a><a class="post-meta__tags" href="/tags/offset-resetting/">offset resetting</a></div><div class="post_share"></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/path/to/wechat-reward-image/wechatpay.png" target="_blank"><img class="post-qr-code-img" src="/path/to/wechat-reward-image/wechatpay.png" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/Java%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%8F%8AGC%E5%9F%BA%E7%A1%80%E4%BB%8B%E7%BB%8D.html"><img class="prev-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">Java虚拟机及GC基础介绍</div></div></a></div><div class="next-post pull-right"><a href="/YARNSrcApplicationMasterStart.html"><img class="next-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">YARN源码分析之ApplicationMaster启动流程</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/kafka%20channel%E5%86%99%E5%85%A5kafka%E6%8A%A5RecordTooLargeException%E5%BC%82%E5%B8%B8.html" title="kafka channel写入kafka报RecordTooLargeException异常"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2017-05-16</div><div class="title">kafka channel写入kafka报RecordTooLargeException异常</div></div></a></div><div><a href="/kafka-corrupt%20index%20found.html" title="重启Kafka时，加载.index时，报错：Corrupt index found"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2017-05-16</div><div class="title">重启Kafka时，加载.index时，报错：Corrupt index found</div></div></a></div><div><a href="/Spark%20Streaming%20%E6%B6%88%E8%B4%B9kafka%E5%88%B0HDFS.html" title="Spark Streaming 消费kafka到HDFS"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-12-02</div><div class="title">Spark Streaming 消费kafka到HDFS</div></div></a></div><div><a href="/elasticsearch-op.html" title="elasticsearch运维踩坑"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-08-03</div><div class="title">elasticsearch运维踩坑</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/uploads/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">混绅士</div><div class="author-info__description">Any answers you can find in source code.</div></div><div class="card-info-data is-center"><div class="card-info-data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="card-info-data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="card-info-data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%95%85%E9%9A%9C%E5%88%86%E6%9E%90"><span class="toc-number">1.</span> <span class="toc-text">故障分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E8%B7%B5%E9%AA%8C%E8%AF%81"><span class="toc-number">2.</span> <span class="toc-text">实践验证</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%95%85%E9%9A%9C%E9%87%8D%E7%8E%B0"><span class="toc-number">3.</span> <span class="toc-text">故障重现</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BC%98%E5%8C%96%E6%96%B9%E6%A1%88"><span class="toc-number">4.</span> <span class="toc-text">优化方案</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/scratch-extensions-demo.html" title="scratch自定义扩展"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="scratch自定义扩展"/></a><div class="content"><a class="title" href="/scratch-extensions-demo.html" title="scratch自定义扩展">scratch自定义扩展</a><time datetime="2021-12-14T14:30:20.000Z" title="发表于 2021-12-14 22:30:20">2021-12-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/metabase-import-ide.html" title="metabase导入IDE调试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="metabase导入IDE调试"/></a><div class="content"><a class="title" href="/metabase-import-ide.html" title="metabase导入IDE调试">metabase导入IDE调试</a><time datetime="2021-12-13T15:31:22.000Z" title="发表于 2021-12-13 23:31:22">2021-12-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/flink-connector-example.html" title="Flink Connector调研"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Connector调研"/></a><div class="content"><a class="title" href="/flink-connector-example.html" title="Flink Connector调研">Flink Connector调研</a><time datetime="2021-11-10T14:30:20.000Z" title="发表于 2021-11-10 22:30:20">2021-11-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink standlone模式下Flinkx测试"/></a><div class="content"><a class="title" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试">Flink standlone模式下Flinkx测试</a><time datetime="2021-11-06T15:05:20.000Z" title="发表于 2021-11-06 23:05:20">2021-11-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/openGauss-deploy.html" title="openGauss极简版安装使用"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="openGauss极简版安装使用"/></a><div class="content"><a class="title" href="/openGauss-deploy.html" title="openGauss极简版安装使用">openGauss极简版安装使用</a><time datetime="2021-05-13T14:35:20.000Z" title="发表于 2021-05-13 22:35:20">2021-05-13</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2022 By 混绅士</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">本地搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div></div></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

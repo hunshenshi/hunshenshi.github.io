@@ -1,0 +1,178 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>Use protobuf to FSImage | big data decode club</title><meta name="keywords" content="Hadoop,BigData,FSImage,protobuf"><meta name="author" content="混绅士"><meta name="copyright" content="混绅士"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="本篇是一篇译文，主要介绍下FSImage改进为protobuf的设计原理，原文地址。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Use protobuf to FSImage">
+<meta property="og:url" content="http://bigdatadecode.club/[%E8%AF%91]FSImage-protocol.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="本篇是一篇译文，主要介绍下FSImage改进为protobuf的设计原理，原文地址。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+<meta property="article:published_time" content="2019-05-10T15:12:31.000Z">
+<meta property="article:modified_time" content="2019-05-10T17:10:16.000Z">
+<meta property="article:author" content="混绅士">
+<meta property="article:tag" content="Hadoop">
+<meta property="article:tag" content="BigData">
+<meta property="article:tag" content="FSImage">
+<meta property="article:tag" content="protobuf">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><link rel="shortcut icon" href="/favicon.ico"><link rel="canonical" href="http://bigdatadecode.club/[%E8%AF%91]FSImage-protocol"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="baidu-site-verification" content="27E5EbutCm"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Use protobuf to FSImage',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2019-05-11 01:10:16'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="big data decode club" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/uploads/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><div class="data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">big data decode club</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Use protobuf to FSImage</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2019-05-10T15:12:31.000Z" title="发表于 2019-05-10 23:12:31">2019-05-10</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2019-05-10T17:10:16.000Z" title="更新于 2019-05-11 01:10:16">2019-05-11</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Hadoop/">Hadoop</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">1.9k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>5分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="Use protobuf to FSImage"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>本篇是一篇译文，主要介绍下FSImage改进为protobuf的设计原理，<a target="_blank" rel="noopener" href="https://issues.apache.org/jira/secure/attachment/12626179/HDFS-5698-design.pdf">原文地址</a>。</p>
+<span id="more"></span>
+
+<h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>为了能从故障中快速恢复，HDFS会周期性的将内存中的namespace在磁盘上的文件系统中进行持久化。FSImage的性能和扩展性在保证数据的耐用性和可用性上至关重要。随着越来越多的高级功能被引入HDFS中，FSImage已经从一个简单的blob演变为了一个需要存储在磁盘的复杂的数据结构。FSImage有3个方面需要改进：</p>
+<ul>
+<li>效率<br>在生成环境中，我们观察到持久化到磁盘的FSImage大小能达到二三十GB。因为加载和停机时保存FSImage是NameNode的关键环节，其效率对确保NameNode操作的可用性非常重要。</li>
+<li>兼容性<br>FSImage将随着HDFS的各种功能的不断发展和演变。FSImage的实现将能够被各种不同的版本所使用，这在某些功能下非常重要，比如滚动升级。</li>
+<li>互通性<br>FSImage能被第三方工具访问的需求越来越强烈了。例如某个工具可以通过扫描FSImage收集一些统计信息。因此FSImage应该提供一个使第三方工具能与其进行交互的清晰规范。</li>
+</ul>
+<p>当前FSImage模块有大约2500行代码，但是现在的设计与实现并不能解决上面的需求。首先，对于兼容性而言，当前代码中的一些实现并不理想。例如有些属性比如inode IDs和block IDs被编码为了固定长度的整数而不是变长整数。</p>
+<p>其次，代码依赖与分支上的不同布局版本以保持向后兼容。在代码更新时在修改和测试上需要耗费很大的精力。然而，还不支持向前兼容，这使NameNode降级变的很困难</p>
+<p>再次，FSImage的格式仅由代码的具体实现而决定。如果没有正式的FSImage规范，开发人员构建第三方工具时，只能通过offline image viewer来构建，这种方式时低效的而且还容易出错。</p>
+<p>为了解决上面的挑战，我们提议使用Google的Protocol Buffers协议来定义一种新的FSImage格式。Protocol Buffers是可扩展的，与语言无关的，用于序列化结构数据。Protobuf能解决上面的挑战。首先，Protocol使用一个编译器为序列化和反序列化生成高效的代码。其次，它还支持向前和向后兼容。序列化后的每个属性都包含一个唯一的标签，因此反序列化的代码可以同时处理新加的字段和缺失的字段。最后，Protocol Buffers的源码直接定义了FSImage的格式。第三方工具仅根据protocol文件就能知道FSImage的格式。</p>
+<p><a target="_blank" rel="noopener" href="https://issues.apache.org/jira/browse/HDFS-5698">HDFS-5698</a>是关于FSImage新格式的issues。下面的内容介绍了设计的细节，新格式的一些实验参数，未来的方向和结论。</p>
+<h2 id="设计"><a href="#设计" class="headerlink" title="设计"></a>设计</h2><p>下图是新FSImage格式的EBNF语法描述。整个FSImage包括4部分，分别为MAGIC、SECTION、FileSummary和FileSummaryLength，其中SECTION包含N个。<br><img src="/blogimgs/fsimage-proto/EBNF.png" alt="FSImage格式" title="FSImage格式"></p>
+<p>FSImage将数据分成不同的部分。每部分在数据中都是相互独立的。开发人员可以添加新的部分来扩展FSImage。</p>
+<p>FileSummary模块包含4个属性，分别为ondiskVersion、layoutVersion、codec和sections，其中sections中记录了每个section的名字、长度和偏移量。所有的section可以使用指定的codec对其进行压缩。每个section都是单独压缩的，而且section中记录的长度和偏移量都是压缩之后的，因此当读取的时候可以直接通过响应的偏移量而直接定位到某个section。</p>
+<p>当解析FSImage时，先从文件的末尾读取4bytes，读取的4bytes数据记录了FileSummary模块的长度，通过解析FileSummary模块能得到所有section的位置信息，这样设计允许写入时按顺序保留FSImage。</p>
+<h3 id="序列化inode"><a href="#序列化inode" class="headerlink" title="序列化inode"></a>序列化inode</h3><p>FSImage将inode序列化为两种section。<code>INodeSection</code>记录了每个inode(<strong>包括INodeFile和INodeDirectory</strong>)的信息，<code>INodeDirectorySection</code>记录了每个目录的子inodes。这种将inodes当作图而不是树的设计模式有两个优点，第一与实际的图更加匹配，因此当快照存在时，inode不用再形成树。不同的目录能通过<code>INodeReference</code>对象指向同一个inode。第二它将结构扁平化，从而为并行性提供了机会。每个inode都独立的存储在FSImage中，因此可以并行的解析和构建不同的inodes。</p>
+<p>在protobuf的规范中，<code>INodeSection</code>并不包含inode列表，而是在INodeSection随后的protobuf消息中隐式的指定了inode列表。这样做的原因时Protocol Buffers在生成代码的时候需要将所有的属性加载到内存，然而inodes列表可能太大而不能加载到内存。文中的这种设计允许FSImage以递增的方式解析。</p>
+<p>令人惊讶的是，我们的初始分析结果表明序列化权限是代码中的瓶颈。权限是一个元组，包含用户名，组名和表示权限位的16位整数。简单的解决方案是直接序列化两个名称和16位整数。 但是，我们发现FSImage中的名称是高度冗余的，反序列化为Java的String对象需要大量的CPU时间。为了优化此用例，FSImage将名称映射为24位ID，以便可以使用64位整数表示权限。</p>
+<h2 id="实验"><a href="#实验" class="headerlink" title="实验"></a>实验</h2><p>为了评估新FSImage的性能，我们比较了新旧格式的FSImage文件的大小，和持久化和加载FSImage所需要的时间。我们将生产中使用的FSImage缩放到五种不同的尺寸，以评估具有各种尺度集群的性能。所有的测试都运行在相同的机器上。</p>
+<p>图2比较了新旧FSImage的大小。FSImage都是未压缩的。由图中所知新格式的FSImage能够节省6-13%的磁盘空间。<br><img src="/blogimgs/fsimage-proto/fig2.png" alt="图2" title="图2"></p>
+<p>图3展示了新旧FSImage加载和持久化的处理时间，也都是未压缩的。新FSImage有着较好的写性能。<br><img src="/blogimgs/fsimage-proto/fig3.png" alt="图3" title="图3"></p>
+<p>新FSImage读比旧FSImage所耗的时间长，大约为1.5x-2.3x。分析结果表明，解析字节和构造为protocol buffers生成的对象占用大部分时间。 旧格式的代码读取数据并直接构造HDFS中使用的对象，这不会受到这种类型的开销的影响。</p>
+<h2 id="未来工作"><a href="#未来工作" class="headerlink" title="未来工作"></a>未来工作</h2><h3 id="并行化"><a href="#并行化" class="headerlink" title="并行化"></a>并行化</h3><p>新FSImage的设计格式为并行加载提供了机会。新的FSImage单独存储每个inode，因此可以并行的解析数据和重构inode。同样，新FSImage也可以并行的填充不同目录的子节点。</p>
+<p>重建BlockMap占用CPU时间的大约为20％。在新的FSImage格式下，可以将BlockMap的工作负载转移到单独的线程中，从而隐藏延迟。</p>
+<h3 id="直接构建对象"><a href="#直接构建对象" class="headerlink" title="直接构建对象"></a>直接构建对象</h3><p>新的FSImage需要首先通过Protocol Buffers生成的对象，然后根据生成的对象构造HDFS中使用的对象。实验结果显示构造生成的对象需要大量时间。 可以手动解析Protocol Buffers并直接构造对象，从而消除了开销。</p>
+<h2 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h2><p>FSImage的性能和可靠性对于提供HDFS的耐用性和可用性非常重要。本文描述了一种基于Protocol Buffers的新FSImage格式。新格式满足了FSImage的效率，兼容性和互操作性要求。 我们希望新格式可以促进HDFS的创新。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">混绅士</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://bigdatadecode.club/[%E8%AF%91]FSImage-protocol.html">http://bigdatadecode.club/[%E8%AF%91]FSImage-protocol.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://bigdatadecode.club" target="_blank">big data decode club</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Hadoop/">Hadoop</a><a class="post-meta__tags" href="/tags/BigData/">BigData</a><a class="post-meta__tags" href="/tags/FSImage/">FSImage</a><a class="post-meta__tags" href="/tags/protobuf/">protobuf</a></div><div class="post_share"></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/path/to/wechat-reward-image/wechatpay.png" target="_blank"><img class="post-qr-code-img" src="/path/to/wechat-reward-image/wechatpay.png" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/YARN-Resource-Localization.html"><img class="prev-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">Resource Localization in YARN</div></div></a></div><div class="next-post pull-right"><a href="/Consistency-in-Distributed.html"><img class="next-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">分布式一致性协议</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/NameNode%E5%85%83%E6%95%B0%E6%8D%AE%E5%8F%8Acheckpoint%E5%88%86%E6%9E%90.html" title="NameNode元数据及checkpoint分析"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-08-02</div><div class="title">NameNode元数据及checkpoint分析</div></div></a></div><div><a href="/Application-fail-RM-change.html" title="Application运行失败导致RM主备切换"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2018-11-27</div><div class="title">Application运行失败导致RM主备切换</div></div></a></div><div><a href="/HDFS%20HA%E7%9B%B8%E5%85%B3%E7%9A%84%E5%87%A0%E4%B8%AA%E9%97%AE%E9%A2%98%E5%92%8C%E7%A4%BA%E4%BE%8B%E5%9C%BA%E6%99%AF.html" title="HDFS HA相关的几个问题和示例场景"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-11-19</div><div class="title">HDFS HA相关的几个问题和示例场景</div></div></a></div><div><a href="/HDFS%20HA%E6%9C%BA%E5%88%B6%E8%A7%A3%E6%9E%90.html" title="HDFS HA机制解析"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-07-14</div><div class="title">HDFS HA机制解析</div></div></a></div><div><a href="/HDFS%20ReplicationMonitor%E5%89%AF%E6%9C%AC%E7%9B%91%E6%8E%A7%E7%BA%BF%E7%A8%8B%E8%A7%A3%E6%9E%90.html" title="HDFS ReplicationMonitor副本监控线程解析"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-08-01</div><div class="title">HDFS ReplicationMonitor副本监控线程解析</div></div></a></div><div><a href="/HDFS%20read%E8%A7%A3%E6%9E%90.html" title="HDFS read解析(一)之Open文件流"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-11-21</div><div class="title">HDFS read解析(一)之Open文件流</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/uploads/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">混绅士</div><div class="author-info__description">Any answers you can find in source code.</div></div><div class="card-info-data is-center"><div class="card-info-data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="card-info-data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="card-info-data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%83%8C%E6%99%AF"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%AE%BE%E8%AE%A1"><span class="toc-number">2.</span> <span class="toc-text">设计</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BA%8F%E5%88%97%E5%8C%96inode"><span class="toc-number">2.1.</span> <span class="toc-text">序列化inode</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C"><span class="toc-number">3.</span> <span class="toc-text">实验</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9C%AA%E6%9D%A5%E5%B7%A5%E4%BD%9C"><span class="toc-number">4.</span> <span class="toc-text">未来工作</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B9%B6%E8%A1%8C%E5%8C%96"><span class="toc-number">4.1.</span> <span class="toc-text">并行化</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%9B%B4%E6%8E%A5%E6%9E%84%E5%BB%BA%E5%AF%B9%E8%B1%A1"><span class="toc-number">4.2.</span> <span class="toc-text">直接构建对象</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BB%93%E8%AE%BA"><span class="toc-number">5.</span> <span class="toc-text">结论</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/scratch-extensions-demo.html" title="scratch自定义扩展"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="scratch自定义扩展"/></a><div class="content"><a class="title" href="/scratch-extensions-demo.html" title="scratch自定义扩展">scratch自定义扩展</a><time datetime="2021-12-14T14:30:20.000Z" title="发表于 2021-12-14 22:30:20">2021-12-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/metabase-import-ide.html" title="metabase导入IDE调试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="metabase导入IDE调试"/></a><div class="content"><a class="title" href="/metabase-import-ide.html" title="metabase导入IDE调试">metabase导入IDE调试</a><time datetime="2021-12-13T15:31:22.000Z" title="发表于 2021-12-13 23:31:22">2021-12-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/flink-connector-example.html" title="Flink Connector调研"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Connector调研"/></a><div class="content"><a class="title" href="/flink-connector-example.html" title="Flink Connector调研">Flink Connector调研</a><time datetime="2021-11-10T14:30:20.000Z" title="发表于 2021-11-10 22:30:20">2021-11-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink standlone模式下Flinkx测试"/></a><div class="content"><a class="title" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试">Flink standlone模式下Flinkx测试</a><time datetime="2021-11-06T15:05:20.000Z" title="发表于 2021-11-06 23:05:20">2021-11-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/openGauss-deploy.html" title="openGauss极简版安装使用"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="openGauss极简版安装使用"/></a><div class="content"><a class="title" href="/openGauss-deploy.html" title="openGauss极简版安装使用">openGauss极简版安装使用</a><time datetime="2021-05-13T14:35:20.000Z" title="发表于 2021-05-13 22:35:20">2021-05-13</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2022 By 混绅士</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">本地搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div></div></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

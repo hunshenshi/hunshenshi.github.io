@@ -1,0 +1,218 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>HDFS恢复过程1 | big data decode club</title><meta name="keywords" content="Hadoop,BigData,HDFS,Lease Recovery,Block Recovery"><meta name="author" content="混绅士"><meta name="copyright" content="混绅士"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="运行或者移动生产环境中的Hadoop时，对很好的掌握HDFS的恢复过程是非常重要的。HDFS中一个重要的设计需求就是要保证在生产部署中持续正确的操作。尤其复杂的是在网络和节点故障的情况下保证写入HDFS的正确性，租约恢复、block恢复和pipeline恢复保证了写的正确性。理解这些恢复操作何时何地被调用，以及做了什么，能帮助用户或者开发者理解HDFS集群的原理。 在这篇博客中，你会对那些恢复流程">
+<meta property="og:type" content="article">
+<meta property="og:title" content="HDFS恢复过程1">
+<meta property="og:url" content="http://bigdatadecode.club/[%E8%AF%91]HDFS%E6%81%A2%E5%A4%8D%E8%BF%87%E7%A8%8B1.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="运行或者移动生产环境中的Hadoop时，对很好的掌握HDFS的恢复过程是非常重要的。HDFS中一个重要的设计需求就是要保证在生产部署中持续正确的操作。尤其复杂的是在网络和节点故障的情况下保证写入HDFS的正确性，租约恢复、block恢复和pipeline恢复保证了写的正确性。理解这些恢复操作何时何地被调用，以及做了什么，能帮助用户或者开发者理解HDFS集群的原理。 在这篇博客中，你会对那些恢复流程">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+<meta property="article:published_time" content="2016-11-21T10:00:11.000Z">
+<meta property="article:modified_time" content="2016-11-21T10:00:11.000Z">
+<meta property="article:author" content="混绅士">
+<meta property="article:tag" content="Hadoop">
+<meta property="article:tag" content="BigData">
+<meta property="article:tag" content="HDFS">
+<meta property="article:tag" content="Lease Recovery">
+<meta property="article:tag" content="Block Recovery">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><link rel="shortcut icon" href="/favicon.ico"><link rel="canonical" href="http://bigdatadecode.club/[%E8%AF%91]HDFS%E6%81%A2%E5%A4%8D%E8%BF%87%E7%A8%8B1"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="baidu-site-verification" content="27E5EbutCm"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'HDFS恢复过程1',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2016-11-21 18:00:11'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="big data decode club" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/uploads/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><div class="data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">big data decode club</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">HDFS恢复过程1</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2016-11-21T10:00:11.000Z" title="发表于 2016-11-21 18:00:11">2016-11-21</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2016-11-21T10:00:11.000Z" title="更新于 2016-11-21 18:00:11">2016-11-21</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Hadoop/">Hadoop</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">3.2k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>10分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="HDFS恢复过程1"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>运行或者移动生产环境中的Hadoop时，对很好的掌握HDFS的恢复过程是非常重要的。<br>HDFS中一个重要的设计需求就是要保证在生产部署中持续正确的操作。<em>尤其复杂的是在网络和节点故障的情况下保证写入HDFS的正确性，租约恢复、block恢复和pipeline恢复保证了写的正确性。</em>理解这些恢复操作何时何地被调用，以及做了什么，能帮助用户或者开发者理解HDFS集群的原理。</p>
+<p>在这篇博客中，你会对那些恢复流程有个更深入的理解。首先简单介绍下HDFS write pipeline和恢复流程，对block/replica的状态和generation stamps的概念进行解释，然后逐步介绍租约恢复和block恢复。</p>
+<p>这系列文章被分为两篇：第一篇介绍租约恢复和block恢复的细节，第二篇主要介绍pipeline恢复。想了解更多的内容，请参考设计文档：<a target="_blank" rel="noopener" href="https://issues.apache.org/jira/secure/attachment/12445209/appendDesign3.pdf">Append, Hflush, and Read for implementation details</a></p>
+<span id="more"></span>
+
+<h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>HDFS中，文件被分为块存储。HDFS中的文件可以被多client同时读，但只能被一个client写入。block的多副本存储在不同的dn上保证了HDFS的容错需求。其中副本的个数被称为副本因子。当一个新文件的block被创建，或者打开一个已经存在的文件(因为写或者追加)，HDFS写操作会创建一个由dns组成的pipeline来接收并存储副本(副本因子决定了在pipeline中dns的个数)。下图是block写入pipeline的流程：<br><img src="/blogimgs/HDFS%E6%81%A2%E5%A4%8D%E8%BF%87%E7%A8%8B/block2pipeline.png" alt="block写入pipeline" title="block写入pipeline"><br>client读文件时从存放文件block的dns中选择一个dn，并请求从dn上进行数据传输。</p>
+<p>下面两个应用场景突显了容错的重要性：</p>
+<ul>
+<li>HBase的Region Server(RS)写时会先写入WAL，WAL是一个HDFS文件，能够防止数据丢失。如果一个RS宕机，一个新的RS会启动并通过读取WAL文件去重构先前RS的状态。如果在RS宕机的时候，写入pipeline没有完成，在pipeline中的dns上的数据可能并没有同步。为了重构RS正确的状态，HDFS必须保证从WAL中读取数据的正确性。</li>
+<li>Flume客户端需要实时的将数据写入HDFS中，甚至在pipeline中存在一些dn失败或者停止响应的情况下，也必须保证能够持续的写。</li>
+</ul>
+<h2 id="租约恢复、block恢复和pipeline恢复发生在以下的情况下："><a href="#租约恢复、block恢复和pipeline恢复发生在以下的情况下：" class="headerlink" title="租约恢复、block恢复和pipeline恢复发生在以下的情况下："></a>租约恢复、block恢复和pipeline恢复发生在以下的情况下：</h2><ul>
+<li>在client可以往HDFS上写文件之前，必须从nn上得到一个租约(Lease)，这个租约也就相当于一个写锁。租约保证了只有一个client写的语义。如果当前client想要维持写操作，租约必须在预定义的时间周期内更新租约。如果一个租约没有被更新或者持有该租约的client死了，则租约会过期。当租约过期之后，HDFS会关闭租约对应的文件并且会释放代表这个client的租约，然后其它clients就能够写这个文件了。_这个过程被称为租约回收_。</li>
+<li>当租约恢复发生的时候，如果一个文件正在写入的最后一个block没有传播到在pipeline中的所有dn，写入到不同dn上的数据可能不同。在租约恢复导致这个文件被关闭之前，有必要保证最后一个block的所有replicas相同，_这个过程被称为block恢复_。_block恢复只有在租约恢复时被触发_，并且租约恢复只会触发一个文件的最后一个block(<em>如果该block不是COMPLETE状态</em>)进行block恢复。</li>
+<li>在写pipeline操作中，有些dn可能会失败。如果发生失败，底层的写操作不能被简单粗暴的失败。HDFS会尝试恢复这些error，允许client能够继续写入pipeline中。从pipeline中恢复error的流程被称为pipeline恢复。</li>
+</ul>
+<p>下面的章节将对这些过程进行更加深入的介绍。</p>
+<h2 id="Blocks、Replicas和他们的状态"><a href="#Blocks、Replicas和他们的状态" class="headerlink" title="Blocks、Replicas和他们的状态"></a>Blocks、Replicas和他们的状态</h2><p>为了区分Namenode中的blocks和DataNode中的blocks，将NameNode中的blocks称为blocks，将DataNode中的blocks称为replicas。</p>
+<p>DataNode中的replica有如下状态(定义在org.apache.hadoop.hdfs.server.common.HdfsServerConstants.java中)：</p>
+<ul>
+<li>FINALIZED: 当replica是这个状态时，该replica的写入操作已经完成，数据的大小不会发生变化，除非对该replica进行append操作。有一样generation stamp(GS)的block的所有replica是相同的。finalized replica的GS可能会在block恢复中递增。</li>
+<li>RBW(Replica Being Written): 不管是新建一个文件还是重新打开一个文件进行追加，此时任何一个正在被写入的replica都RBW状态。RBW状态的replica总是文件的最后一个block。数据依然正在写入该replica，replica并没有finalized。_RBW replica中的数据(不一定是所有的数据)是可读的_。如果有任何故障发生，RBW状态的replica会尝试保存数据。</li>
+<li>RWR(Replica Waiting to be Recovered): 如果dn宕机或者重启了，其上的所有RBW状态的replicas将会将状态转换为RWR。RWR状态下的replica将会变成过期的，然后被丢弃；或者参与租约恢复中。</li>
+<li>RUR(Replica Under Recovery): 在租约恢复的过程中，任何一个非TEMPORARY状态的replica都有可能转换为RUR状态。</li>
+<li>TEMPORARY: 在block复制(由replication monitor或者balancer引起的block复制操作)中会出现temporary状态的replica。此状态下的replica与RBW状态类似，只是该状态下的数据是不可见的。如果block复制失败，TEMPORARY状态下的replica会被删除。</li>
+</ul>
+<p>block在NameNode中的状态(定义在org.apache.hadoop.hdfs.server.common.HdfsServerConstants.java)如下：</p>
+<ul>
+<li>UNDER_CONSTRUCTION: block正在写入时处于此状态。在UNDER_CONSTRUCTION下的block是被打开文件的最后一个block，该block的长度和generation stamp都是可变的，并且_它的数据(不一定是所有的数据)是可见的_。nn保持写pipeline的跟踪(有效RBW replicas的位置)，和对RWR replicas的定位</li>
+<li>UNDER_RECOVERY: 如果一个文件的租约超期时，该文件的最后一个block是UNDER_CONSTRUCTION，在block恢复开始时，该block会变为UNDER_RECOVERY。</li>
+<li>COMMITTED: COMMITTED意味着一个block的数据和generation stamp不会发生变化(除非再次打开进行追加)，并且比上报FINALIZED状态、有着相同GS/length的replicas的最小副本数少(<em>具体不太明白，可能翻译的有问题，附上原文–and there are fewer than the minimal-replication number of DataNodes that have reported FINALIZED replicas of same GS/length</em>)。为了提供读服务，COMMITTED状态的block必须保持对RBW replicas位置的跟踪和FINALIZED replicas的GS、length的跟踪。当client请求nn增加一个block或者关闭文件时，处于UNDER_CONSTRUCTION状态的block将变为COMMITTED状态。如果一个文件的最后一个block或者倒数第二个block是COMMITTED状态，则该文件不能被关闭，client必须进行重试。</li>
+<li>COMPLETE: 当发现了有着相同GS/length的FINALIZED状态下的replicas满足最小副本数，则该block由COMMITTED转为COMPLETE状态。只有当所有的block都变成COMPLETE时，该文件才能被关闭。即使一个block不满足最小副本数，也可能被强制变为COMPLETE，例如当先前的block还没有到COMPLETE状态，client请求一个新block，此时会将先前的block强制变为COMPLETE状态。</li>
+</ul>
+<p>DataNodes将replica的状态持久化到磁盘，但是NameNode并不会讲block的状态持久化到磁盘。当NameNode重启时，nn会将先前打开文件的最后一个block的状态变为UNDER_CONSTRUCTION，将其余block的状态变为COMPLETE。</p>
+<p>replica和block的状态转换图如下：<br><img src="/blogimgs/HDFS%E6%81%A2%E5%A4%8D%E8%BF%87%E7%A8%8B/replica-state.png" alt="replica-state" title="replica-state"><br><img src="/blogimgs/HDFS%E6%81%A2%E5%A4%8D%E8%BF%87%E7%A8%8B/block-state.png" alt="block-state" title="block-state"></p>
+<h2 id="Generation-Stamp"><a href="#Generation-Stamp" class="headerlink" title="Generation Stamp"></a>Generation Stamp</h2><p>对于每一个block来说，GS是一个单调递增的8-byte数字，由NameNode进行维护。block和replica的GS处于下面的目的被引入：</p>
+<ul>
+<li>检测一个block的陈旧的replica: 也就是说，这个replica的GS小于这个block的GS。这是可能发生的，例如一个追加操作，不知什么原因跳过了此replica，没有更新此replica，使该replica的GS依然是为追加之前的GS，而其余replica的GS现在已经是追加之后的GS。</li>
+<li>当一个DataNode死了一段时间，然后又重新加入了集群，此时在此DataNode上检测过时的replica。</li>
+</ul>
+<p>当下面的情况发生时，一个新的GS会产生：</p>
+<ul>
+<li>创建一个新文件</li>
+<li>client对一个已经存在的文件进行append或者truncate</li>
+<li>client在向dns上写数据时发生错误，会请求一个新的GS</li>
+<li>NameNode对一个文件发起租约恢复操作</li>
+</ul>
+<h2 id="Lease-Recovery-and-Block-Recovery"><a href="#Lease-Recovery-and-Block-Recovery" class="headerlink" title="Lease Recovery and Block Recovery"></a>Lease Recovery and Block Recovery</h2><h3 id="Lease-Manager"><a href="#Lease-Manager" class="headerlink" title="Lease Manager"></a>Lease Manager</h3><p>租约在NameNode上被lease Manager进行管理。NameNode跟踪每个client打开的写文件。client没有必要为它打开的每个写文件进行单独更新租约，而是定期的向NameNode发送一个请求对所有的文件进行租约更新。</p>
+<p>每个NameNode管理一个单独的HDFS namespace，每个HDFS namespace会有一个单独的lease manager来管理与该namespace相关的所有client租约。Federated HDFS集群可能有多个namespace，每个namespaces都有其自己的lease manger。</p>
+<p>lease manager维护这两个超时时间(目前这两个超时时间是不可配置的)，一个是softLimit(1m)，另一个是hardLimit(1h)。lease manager管理的所有租约都遵守相同的softLimit和hardLimit。在softLimit过期之前，持有某文件租约的client独占该文件的写权限。如果softLimit超期并且client并没有更新租约或者关闭了文件，另一个client能强制接管这个租约。如果hardLimit超期并且client没有更新租约，HDFS假设此client已经退出，将自动关闭代表client的文件，从而恢复租约。</p>
+<p>事实上client持有的某个文件租约并不会阻止其它client对此文件进行读，一个文件能同时有多个client进行读，但只能有一个client进行写。</p>
+<p>lease manager内部支持的操作：</p>
+<ul>
+<li>为一个client增加一个租约和路径(如果这个client已经有了一个租约，则增加这个路径到这个租约。否则，创建一个新的租约，并添加路径到租约里面)</li>
+<li>移除client的租约和路径(如果这是租约的最后一个路径，则移除这个租约)</li>
+<li>检查soft/hard limit是否过期，</li>
+<li>和对给定的client进行renew租约。</li>
+</ul>
+<p>lease manager有一个monitor线程，此线程周期性(每2s)的检查所有租约是否hardLimit超期，如果超期，则对租约中的所有文件触发租约恢复。</p>
+<p>HDFS client通过org.apache.hadoop.hdfs.LeaseRenewer.LeaseRenewer类renews它自己的租约。LeaseRenewer对每个NameNode上的每个user运行一个线程去周期性的检查，当间隔超过租约检查的一半，则更新LeaseRenewer对应的所有client的租约。</p>
+<p>(注意: 一个HDFS client只会关联一个NameNode; 请看它的构造器 org.apache.hadoop.hdfs.DFSClient)。 如果同一个应用想要访问联邦集群的不同NS的不同的文件，需要为每一个NameNode创建client。</p>
+<h3 id="Lease-Recovery-Process"><a href="#Lease-Recovery-Process" class="headerlink" title="Lease Recovery Process"></a>Lease Recovery Process</h3><p>租约的恢复过程被NameNode触发用来对给定的client进行恢复租约。在通过监控线程检查到达hardLimit的有效期，或者softLimit过期时，其他客户端尝试接管租约的情况下NameNode会触发Lease Recovery。Lease Recovery会检查相同client打开的每个写文件，如果这个文件的最后一个block不是COMPLETE状态则执行block recovery，并且关闭这个文件。<em>Block Recovery只有在Lease Recovery时会被触发</em>。</p>
+<p>下面是给定文件f的Lease Recovery算法。当client死了，该算法适用于该client打开的每个写文件。</p>
+<p>1、得到包含f最后一个block的dns<br>2、从dns中分配一个dn作为primary dn p<br>3、p从NameNode中得到一个新的GS<br>4、p从每个dn上得到block的信息<br>5、p就是这个block的最小长度<br>6、p更新dns，拥有合法的GS，即新的GS和最小的block长度。<br>7、p确认NameNode更新的结果.<br>8、NameNode更新BlockInfo<br>9、NameNode移除f的租约(其他写的操作现在可以维护这个文件f的租约，进行写入操作)<br>10、NameNode提交这些改变到edit log.<br>第三步到第七步是算法的block recovery部分。如果一个文件需要block recovery，NameNode从拥有该文件最后一个block的replica的DataNodes中挑选一个primary DataNode，使其DataNode协调其余DataNodes进行block recovery。结束之后，这个DataNode想NameNode报告，NameNode更新这个block的内部状态，移除这个租约，最后想edit log提交改变。</p>
+<p>有时管理员在hardLimit未超时之前，需要强制对某个文件进行Lease Recovery，此时可以使用一个CLI<br><code>hdfs debug recoverLease [-path &lt;path&gt;] [-retries &lt;num-retries&gt;]</code></p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p><em>租约恢复，块恢复，和pipeline恢复对HDFS容错至关重要</em>。他们一起保证了HDFS写的持久性和一致性，即使是在网络或者节点异常的情况下。</p>
+<p>在下一篇中将介绍pipeline recovery。</p>
+<p><a target="_blank" rel="noopener" href="http://blog.cloudera.com/blog/2015/02/understanding-hdfs-recovery-processes-part-1/">原文地址</a></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">混绅士</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://bigdatadecode.club/[%E8%AF%91]HDFS%E6%81%A2%E5%A4%8D%E8%BF%87%E7%A8%8B1.html">http://bigdatadecode.club/[%E8%AF%91]HDFS%E6%81%A2%E5%A4%8D%E8%BF%87%E7%A8%8B1.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://bigdatadecode.club" target="_blank">big data decode club</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Hadoop/">Hadoop</a><a class="post-meta__tags" href="/tags/BigData/">BigData</a><a class="post-meta__tags" href="/tags/HDFS/">HDFS</a><a class="post-meta__tags" href="/tags/Lease-Recovery/">Lease Recovery</a><a class="post-meta__tags" href="/tags/Block-Recovery/">Block Recovery</a></div><div class="post_share"></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/path/to/wechat-reward-image/wechatpay.png" target="_blank"><img class="post-qr-code-img" src="/path/to/wechat-reward-image/wechatpay.png" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/Java%20NIO.html"><img class="prev-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">Java NIO</div></div></a></div><div class="next-post pull-right"><a href="/HDFS%20read%E8%A7%A3%E6%9E%90.html"><img class="next-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">HDFS read解析(一)之Open文件流</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/HDFS%20HA%E7%9B%B8%E5%85%B3%E7%9A%84%E5%87%A0%E4%B8%AA%E9%97%AE%E9%A2%98%E5%92%8C%E7%A4%BA%E4%BE%8B%E5%9C%BA%E6%99%AF.html" title="HDFS HA相关的几个问题和示例场景"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-11-19</div><div class="title">HDFS HA相关的几个问题和示例场景</div></div></a></div><div><a href="/HDFS%20HA%E6%9C%BA%E5%88%B6%E8%A7%A3%E6%9E%90.html" title="HDFS HA机制解析"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-07-14</div><div class="title">HDFS HA机制解析</div></div></a></div><div><a href="/HDFS%20ReplicationMonitor%E5%89%AF%E6%9C%AC%E7%9B%91%E6%8E%A7%E7%BA%BF%E7%A8%8B%E8%A7%A3%E6%9E%90.html" title="HDFS ReplicationMonitor副本监控线程解析"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-08-01</div><div class="title">HDFS ReplicationMonitor副本监控线程解析</div></div></a></div><div><a href="/HDFS%20read%E8%A7%A3%E6%9E%90.html" title="HDFS read解析(一)之Open文件流"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-11-21</div><div class="title">HDFS read解析(一)之Open文件流</div></div></a></div><div><a href="/HDFS%20read%E8%A7%A3%E6%9E%902%E4%B9%8B%E4%BB%8E%E6%96%87%E4%BB%B6%E6%B5%81%E4%B8%ADread.html" title="HDFS read解析2之从文件流中read"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-11-15</div><div class="title">HDFS read解析2之从文件流中read</div></div></a></div><div><a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2019-01-30</div><div class="title">HDFS小文件合并实战</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/uploads/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">混绅士</div><div class="author-info__description">Any answers you can find in source code.</div></div><div class="card-info-data is-center"><div class="card-info-data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="card-info-data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="card-info-data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%83%8C%E6%99%AF"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%A7%9F%E7%BA%A6%E6%81%A2%E5%A4%8D%E3%80%81block%E6%81%A2%E5%A4%8D%E5%92%8Cpipeline%E6%81%A2%E5%A4%8D%E5%8F%91%E7%94%9F%E5%9C%A8%E4%BB%A5%E4%B8%8B%E7%9A%84%E6%83%85%E5%86%B5%E4%B8%8B%EF%BC%9A"><span class="toc-number">2.</span> <span class="toc-text">租约恢复、block恢复和pipeline恢复发生在以下的情况下：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Blocks%E3%80%81Replicas%E5%92%8C%E4%BB%96%E4%BB%AC%E7%9A%84%E7%8A%B6%E6%80%81"><span class="toc-number">3.</span> <span class="toc-text">Blocks、Replicas和他们的状态</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Generation-Stamp"><span class="toc-number">4.</span> <span class="toc-text">Generation Stamp</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Lease-Recovery-and-Block-Recovery"><span class="toc-number">5.</span> <span class="toc-text">Lease Recovery and Block Recovery</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Lease-Manager"><span class="toc-number">5.1.</span> <span class="toc-text">Lease Manager</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Lease-Recovery-Process"><span class="toc-number">5.2.</span> <span class="toc-text">Lease Recovery Process</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">6.</span> <span class="toc-text">总结</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/scratch-extensions-demo.html" title="scratch自定义扩展"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="scratch自定义扩展"/></a><div class="content"><a class="title" href="/scratch-extensions-demo.html" title="scratch自定义扩展">scratch自定义扩展</a><time datetime="2021-12-14T14:30:20.000Z" title="发表于 2021-12-14 22:30:20">2021-12-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/metabase-import-ide.html" title="metabase导入IDE调试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="metabase导入IDE调试"/></a><div class="content"><a class="title" href="/metabase-import-ide.html" title="metabase导入IDE调试">metabase导入IDE调试</a><time datetime="2021-12-13T15:31:22.000Z" title="发表于 2021-12-13 23:31:22">2021-12-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/flink-connector-example.html" title="Flink Connector调研"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Connector调研"/></a><div class="content"><a class="title" href="/flink-connector-example.html" title="Flink Connector调研">Flink Connector调研</a><time datetime="2021-11-10T14:30:20.000Z" title="发表于 2021-11-10 22:30:20">2021-11-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink standlone模式下Flinkx测试"/></a><div class="content"><a class="title" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试">Flink standlone模式下Flinkx测试</a><time datetime="2021-11-06T15:05:20.000Z" title="发表于 2021-11-06 23:05:20">2021-11-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/openGauss-deploy.html" title="openGauss极简版安装使用"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="openGauss极简版安装使用"/></a><div class="content"><a class="title" href="/openGauss-deploy.html" title="openGauss极简版安装使用">openGauss极简版安装使用</a><time datetime="2021-05-13T14:35:20.000Z" title="发表于 2021-05-13 22:35:20">2021-05-13</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2022 By 混绅士</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">本地搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div></div></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>HDFS权限 | big data decode club</title><meta name="keywords" content="Hadoop,BigData,HDFS,ACL,permission"><meta name="author" content="混绅士"><meta name="copyright" content="混绅士"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="之前对HDFS更或者说是对Linux中文件的权限没有进行一个完整的学习，只是知道有所有者、所属组和其它权限，具体到某个人的权限有读(r)、写(w)和可执行(x)。遇到没有权限的问题就chmod加个权限，加完之后如果还有问题就给父目录也加一样的权限，如果还不行就给777。这其中应该给什么权限，给什么权限最合适都是一头雾水。今天就说说文件和目录权限的那些事。。。。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="HDFS权限">
+<meta property="og:url" content="http://bigdatadecode.club/HDFS%E6%9D%83%E9%99%90.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="之前对HDFS更或者说是对Linux中文件的权限没有进行一个完整的学习，只是知道有所有者、所属组和其它权限，具体到某个人的权限有读(r)、写(w)和可执行(x)。遇到没有权限的问题就chmod加个权限，加完之后如果还有问题就给父目录也加一样的权限，如果还不行就给777。这其中应该给什么权限，给什么权限最合适都是一头雾水。今天就说说文件和目录权限的那些事。。。。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+<meta property="article:published_time" content="2018-04-21T14:35:20.000Z">
+<meta property="article:modified_time" content="2018-04-21T14:35:20.000Z">
+<meta property="article:author" content="混绅士">
+<meta property="article:tag" content="Hadoop">
+<meta property="article:tag" content="BigData">
+<meta property="article:tag" content="HDFS">
+<meta property="article:tag" content="ACL">
+<meta property="article:tag" content="permission">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><link rel="shortcut icon" href="/favicon.ico"><link rel="canonical" href="http://bigdatadecode.club/HDFS%E6%9D%83%E9%99%90"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="baidu-site-verification" content="27E5EbutCm"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'HDFS权限',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2018-04-21 22:35:20'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="big data decode club" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/uploads/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><div class="data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">big data decode club</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">HDFS权限</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2018-04-21T14:35:20.000Z" title="发表于 2018-04-21 22:35:20">2018-04-21</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2018-04-21T14:35:20.000Z" title="更新于 2018-04-21 22:35:20">2018-04-21</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Hadoop/">Hadoop</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">1.5k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>4分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="HDFS权限"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>之前对HDFS更或者说是对Linux中文件的权限没有进行一个完整的学习，只是知道有所有者、所属组和其它权限，具体到某个人的权限有读(r)、写(w)和可执行(x)。<br>遇到没有权限的问题就<em>chmod</em>加个权限，加完之后如果还有问题就给父目录也加一样的权限，如果还不行就给777。<br>这其中应该给什么权限，给什么权限最合适都是一头雾水。<br><strong>今天就说说文件和目录权限的那些事</strong>。。。。</p>
+<span id="more"></span>
+
+<h2 id="HDFS基于Linux的POSIX-model"><a href="#HDFS基于Linux的POSIX-model" class="headerlink" title="HDFS基于Linux的POSIX model"></a>HDFS基于Linux的POSIX model</h2><blockquote>
+<p>HDFS的权限虽然是基于Linux的POSIX model，但是HDFS中其实并没有真正的用户和组的概念，只是从主机上拿到用户的信息然后对其存储的文件权限进行检查。</p>
+</blockquote>
+<p>HDFS中每个文件和目录都有一个owner和group，并对owner、owner同一个组的user和其它user的权限进行了分离，权限分为<em>rwx</em>。对于文件来说，有<em>r</em>权限则可对此文件<em>可读</em>，有<em>w</em>权限则可对文件进行<em>写和追加</em>，<strong>x权限对文件来说没有实际的意义</strong>。对于目录来说，拥有<em>r</em>权限可以<em>查看目录中内容</em>，比如此目录下的文件或者子目录，拥有<em>w</em>权限可以在此目录中<em>新建或者删除文件和子目录，但不可以改变此目录的名字，因为改变此目录的信息是需要其上层目录的写权限</em>，对于目录来说，个人感觉最重要的应该是<em>x</em>权限，拥有<em>x</em>权限，才可以进入当前目录进行其它操作。</p>
+<blockquote>
+<p>如果没有目录的<em>x</em>权限，你拥有的其它权限并不能发挥相应的作用，因为<em>rw</em>权限都是针对目录中的内容的，当你没有进入目录的权限时，其它权限都是虚无。</p>
+</blockquote>
+<h3 id="sticky-bit"><a href="#sticky-bit" class="headerlink" title="sticky bit"></a>sticky bit</h3><p>HDFS中还有一个sticky bit，此功能只针对目录有效，是一个防删除位。防止*除管理员、目录或者文件的所有者之外的其它人(即使其它用户对该文件夹有rwx权限)*对文件或者目录进行删除。<br>命令如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#即在第一位添加数字1</span></span><br><span class="line">hadoop fs -chmod 1777 /tmp</span><br><span class="line">hadoop fs -chmod 1777 /spark-history</span><br><span class="line">hadoop fs -chmod 1777 /user/hive/warehouse</span><br></pre></td></tr></table></figure>
+
+<h2 id="HDFS-ACL"><a href="#HDFS-ACL" class="headerlink" title="HDFS ACL"></a>HDFS ACL</h2><p>HDFS ACL(Access Control Lists)是对POSIX permissions model的一个补充。传统的权限是针对用户和组的组织架构来设置的，但当你<em>只想给特定的用户或者组</em>(<strong>而不是只针对文件的所有者和所属组</strong>)来开权限时，我们就可以使用ACL来控制。</p>
+<p>默认情况下，HDFS ACL功能是关闭的，因为开启ACL之后，NN中会对开启ACL的inode存储一份额外的数据，会带来额外的内存开销，如果有需要可以在<code>hdfs-site.xml</code>中设置<code>dfs.namenode.acls.enabled</code>为true。</p>
+<blockquote>
+<p>新建一个文件或者目录时，会继承父目录的ACL，但改变父目录的ACL时，在此目录中已经存在的内容不会发生改变。</p>
+</blockquote>
+<p>一个文件或者目录的ACL由一组ACL entry组成。每个Entry标识一个用户或者组的rwx权限，如下一个文件的一个ACL：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">user::rw-</span><br><span class="line">user:bruce:rwx                  <span class="comment">#effective:r--</span></span><br><span class="line">group::r-x                      <span class="comment">#effective:r--</span></span><br><span class="line">group:sales:rwx                 <span class="comment">#effective:r--</span></span><br><span class="line">mask::r--</span><br><span class="line">other::r--</span><br></pre></td></tr></table></figure>
+<p>文件的所有者具有rw权限，所属组具有rx权限，其它用户具有r权限，但是用户bruce具有该文件的rwx权限，sales组也具有该文件的rwx权限。但是bruce和sales就真的具有rwx权限了？这里还有最后一道防线<em>mask</em>，mask决定了一个用户或者组能够得到的最大的权限。上面的例子中，bruce和sales的权限会与mask的权限进行与运算，最终的结果才是bruce和sales的权限，也就是注释中的内容。</p>
+<h3 id="权限检查流程"><a href="#权限检查流程" class="headerlink" title="权限检查流程"></a>权限检查流程</h3><p>当一个文件有ACL时，权限检查的流程为：</p>
+<ul>
+<li>判断该用户是否为owner</li>
+<li>判断该用户是否包含在ACL entry的user中，如果在，则通过mask过滤权限</li>
+<li>判断该用户的所属组是否包含在组中，包含则也要通过mask来过滤权限(因为在使用了ACL的情况下，group的权限显示的就是当前的mask)</li>
+<li>判断该用户的所属组是否包含在ACL entry的group中，如果在，则通过mask来过滤权限</li>
+</ul>
+<h3 id="ACL命令"><a href="#ACL命令" class="headerlink" title="ACL命令"></a>ACL命令</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 添加用户acl</span></span><br><span class="line">hdfs dfs -setfacl -m user:xx:rwx path</span><br><span class="line"><span class="comment"># 删除一个用户的acl</span></span><br><span class="line">hdfs dfs -setfacl -x user:xx path</span><br><span class="line"><span class="comment"># 删除所有的acl</span></span><br><span class="line">hdfs dfs -setfacl -d path</span><br><span class="line"><span class="comment"># 查看acl</span></span><br><span class="line">hdfs dfs -getfacl path</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>目录或者文件添加了ACL之后，ll命令查看，会有一个<code>+</code>标识</p>
+</blockquote>
+<h2 id="umask"><a href="#umask" class="headerlink" title="umask"></a>umask</h2><p>一个文件或者目录新建之后就有一个默认的权限，这个默认的权限是怎么控制的呢？是由<code>umask</code>控制的。</p>
+<p>文件创建之后的默认权限是<code>0666 &amp; ^umask</code>，目录创建之后的默认权限是<code>0777 &amp; ^umask</code>，umask在<code>core-site.xml</code>中由<code>fs.permissions.umask-mode</code>设置，默认是022。</p>
+<h2 id="HDFS-开启权限"><a href="#HDFS-开启权限" class="headerlink" title="HDFS 开启权限"></a>HDFS 开启权限</h2><p>HDFS中与权限相关的配置在<code>core-site.xml</code>和<code>hdfs-site.xml</code>中。</p>
+<h3 id="core-site-xml"><a href="#core-site-xml" class="headerlink" title="core-site.xml"></a>core-site.xml</h3><p>core-site中主要是设置umask，由fs.permissions.umask-mode控制，默认是022</p>
+<h3 id="hdfs-site-xml"><a href="#hdfs-site-xml" class="headerlink" title="hdfs-site.xml"></a>hdfs-site.xml</h3><p>hfds-site中控制着权限的开启，参数如下：</p>
+<ul>
+<li><p>dfs.permissions.enabled = true<br>是否开启权限检查，默认是true</p>
+</li>
+<li><p>dfs.permissions.superusergroup = supergroup<br>设置hdfs管理员的组名称，模式名字是<em>supergroup</em>，一般改为与管理员相同的名字，如管理员是hdfs，则改为hdfs</p>
+</li>
+<li><p>dfs.namenode.acls.enabled = true<br>控制ACL是否开启，默认为false。</p>
+</li>
+</ul>
+<blockquote>
+<p>Tips<br>HDFS权限设置最好是以传统的权限进行控制，只针对个别权限要求高的文件进行ACL控制。</p>
+</blockquote>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">混绅士</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://bigdatadecode.club/HDFS%E6%9D%83%E9%99%90.html">http://bigdatadecode.club/HDFS%E6%9D%83%E9%99%90.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://bigdatadecode.club" target="_blank">big data decode club</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Hadoop/">Hadoop</a><a class="post-meta__tags" href="/tags/BigData/">BigData</a><a class="post-meta__tags" href="/tags/HDFS/">HDFS</a><a class="post-meta__tags" href="/tags/ACL/">ACL</a><a class="post-meta__tags" href="/tags/permission/">permission</a></div><div class="post_share"></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/path/to/wechat-reward-image/wechatpay.png" target="_blank"><img class="post-qr-code-img" src="/path/to/wechat-reward-image/wechatpay.png" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/bitcoin%E6%BA%90%E7%A0%81%E7%8E%AF%E5%A2%83.html"><img class="prev-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">Ubuntu搭建Bitcoin源码阅读环境</div></div></a></div><div class="next-post pull-right"><a href="/Zookeeper%20session%E8%BF%87%E6%9C%9F%E5%92%8Cconnection%E8%B6%85%E6%97%B6.html"><img class="next-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Zookeeper session过期和connection超时</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/HDFS%20HA%E7%9B%B8%E5%85%B3%E7%9A%84%E5%87%A0%E4%B8%AA%E9%97%AE%E9%A2%98%E5%92%8C%E7%A4%BA%E4%BE%8B%E5%9C%BA%E6%99%AF.html" title="HDFS HA相关的几个问题和示例场景"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-11-19</div><div class="title">HDFS HA相关的几个问题和示例场景</div></div></a></div><div><a href="/HDFS%20HA%E6%9C%BA%E5%88%B6%E8%A7%A3%E6%9E%90.html" title="HDFS HA机制解析"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-07-14</div><div class="title">HDFS HA机制解析</div></div></a></div><div><a href="/HDFS%20ReplicationMonitor%E5%89%AF%E6%9C%AC%E7%9B%91%E6%8E%A7%E7%BA%BF%E7%A8%8B%E8%A7%A3%E6%9E%90.html" title="HDFS ReplicationMonitor副本监控线程解析"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-08-01</div><div class="title">HDFS ReplicationMonitor副本监控线程解析</div></div></a></div><div><a href="/HDFS%20read%E8%A7%A3%E6%9E%90.html" title="HDFS read解析(一)之Open文件流"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-11-21</div><div class="title">HDFS read解析(一)之Open文件流</div></div></a></div><div><a href="/HDFS%20read%E8%A7%A3%E6%9E%902%E4%B9%8B%E4%BB%8E%E6%96%87%E4%BB%B6%E6%B5%81%E4%B8%ADread.html" title="HDFS read解析2之从文件流中read"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-11-15</div><div class="title">HDFS read解析2之从文件流中read</div></div></a></div><div><a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2019-01-30</div><div class="title">HDFS小文件合并实战</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/uploads/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">混绅士</div><div class="author-info__description">Any answers you can find in source code.</div></div><div class="card-info-data is-center"><div class="card-info-data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="card-info-data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="card-info-data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#HDFS%E5%9F%BA%E4%BA%8ELinux%E7%9A%84POSIX-model"><span class="toc-number">1.</span> <span class="toc-text">HDFS基于Linux的POSIX model</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#sticky-bit"><span class="toc-number">1.1.</span> <span class="toc-text">sticky bit</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#HDFS-ACL"><span class="toc-number">2.</span> <span class="toc-text">HDFS ACL</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9D%83%E9%99%90%E6%A3%80%E6%9F%A5%E6%B5%81%E7%A8%8B"><span class="toc-number">2.1.</span> <span class="toc-text">权限检查流程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ACL%E5%91%BD%E4%BB%A4"><span class="toc-number">2.2.</span> <span class="toc-text">ACL命令</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#umask"><span class="toc-number">3.</span> <span class="toc-text">umask</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#HDFS-%E5%BC%80%E5%90%AF%E6%9D%83%E9%99%90"><span class="toc-number">4.</span> <span class="toc-text">HDFS 开启权限</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#core-site-xml"><span class="toc-number">4.1.</span> <span class="toc-text">core-site.xml</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#hdfs-site-xml"><span class="toc-number">4.2.</span> <span class="toc-text">hdfs-site.xml</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/scratch-extensions-demo.html" title="scratch自定义扩展"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="scratch自定义扩展"/></a><div class="content"><a class="title" href="/scratch-extensions-demo.html" title="scratch自定义扩展">scratch自定义扩展</a><time datetime="2021-12-14T14:30:20.000Z" title="发表于 2021-12-14 22:30:20">2021-12-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/metabase-import-ide.html" title="metabase导入IDE调试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="metabase导入IDE调试"/></a><div class="content"><a class="title" href="/metabase-import-ide.html" title="metabase导入IDE调试">metabase导入IDE调试</a><time datetime="2021-12-13T15:31:22.000Z" title="发表于 2021-12-13 23:31:22">2021-12-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/flink-connector-example.html" title="Flink Connector调研"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Connector调研"/></a><div class="content"><a class="title" href="/flink-connector-example.html" title="Flink Connector调研">Flink Connector调研</a><time datetime="2021-11-10T14:30:20.000Z" title="发表于 2021-11-10 22:30:20">2021-11-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink standlone模式下Flinkx测试"/></a><div class="content"><a class="title" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试">Flink standlone模式下Flinkx测试</a><time datetime="2021-11-06T15:05:20.000Z" title="发表于 2021-11-06 23:05:20">2021-11-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/openGauss-deploy.html" title="openGauss极简版安装使用"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="openGauss极简版安装使用"/></a><div class="content"><a class="title" href="/openGauss-deploy.html" title="openGauss极简版安装使用">openGauss极简版安装使用</a><time datetime="2021-05-13T14:35:20.000Z" title="发表于 2021-05-13 22:35:20">2021-05-13</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2022 By 混绅士</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">本地搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div></div></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

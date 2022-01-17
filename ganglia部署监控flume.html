@@ -1,0 +1,217 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>ganglia部署监控flume | big data decode club</title><meta name="keywords" content="Flume,ganglia,debian"><meta name="author" content="混绅士"><meta name="copyright" content="混绅士"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="debian环境下编译部署ganglia，用于监控flume。 ganglia编译部署ganglia主要包括gmond和gmeta，  gmond用于收集监测数据，可以发送也可以接收在同一个组播或单播通道上的统计信息。gmond有两个角色，一个是发送者，另一个是接收者。当mute&#x3D;no时，gmond是发送者，会收集本节点上的基本指标，比如系统负载(load_one)、cpu和memory利用率等，">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ganglia部署监控flume">
+<meta property="og:url" content="http://bigdatadecode.club/ganglia%E9%83%A8%E7%BD%B2%E7%9B%91%E6%8E%A7flume.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="debian环境下编译部署ganglia，用于监控flume。 ganglia编译部署ganglia主要包括gmond和gmeta，  gmond用于收集监测数据，可以发送也可以接收在同一个组播或单播通道上的统计信息。gmond有两个角色，一个是发送者，另一个是接收者。当mute&#x3D;no时，gmond是发送者，会收集本节点上的基本指标，比如系统负载(load_one)、cpu和memory利用率等，">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+<meta property="article:published_time" content="2017-03-27T11:30:16.000Z">
+<meta property="article:modified_time" content="2022-01-17T08:58:24.266Z">
+<meta property="article:author" content="混绅士">
+<meta property="article:tag" content="Flume">
+<meta property="article:tag" content="ganglia">
+<meta property="article:tag" content="debian">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><link rel="shortcut icon" href="/favicon.ico"><link rel="canonical" href="http://bigdatadecode.club/ganglia%E9%83%A8%E7%BD%B2%E7%9B%91%E6%8E%A7flume"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="baidu-site-verification" content="27E5EbutCm"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'ganglia部署监控flume',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2022-01-17 16:58:24'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="big data decode club" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/uploads/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><div class="data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">big data decode club</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">ganglia部署监控flume</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2017-03-27T11:30:16.000Z" title="发表于 2017-03-27 19:30:16">2017-03-27</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2022-01-17T08:58:24.266Z" title="更新于 2022-01-17 16:58:24">2022-01-17</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Flume/">Flume</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">1.7k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>6分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="ganglia部署监控flume"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>debian环境下编译部署ganglia，用于监控flume。</p>
+<h2 id="ganglia编译部署"><a href="#ganglia编译部署" class="headerlink" title="ganglia编译部署"></a>ganglia编译部署</h2><p>ganglia主要包括gmond和gmeta，</p>
+<ul>
+<li>gmond用于收集监测数据，可以发送也可以接收在同一个组播或单播通道上的统计信息。gmond有两个角色，一个是发送者，另一个是接收者。当<code>mute=no</code>时，gmond是发送者，会收集本节点上的基本指标，比如系统负载(load_one)、cpu和memory利用率等，也可以发送用户通过添加C/Python模块来自定义的指标。当<code>deaf=no</code>是接收者，主要用来聚合所有从别的节点上发来的指标(如flume agent发来的metrics信息)，并把他们都保存在内存缓冲区中。<em>gmond节点之间通过UDP收集数据，gmetad通过TCP从gmond节点获取数据</em></li>
+<li>gmeta定期检查gmond，拉取gmond上的数据，并将他们的指标存储在RRD存储引擎中。</li>
+</ul>
+<p>除此之外还有个web组件用于显示监控图，ganglia-web(或者ganglia-webfrontend)</p>
+<p>下面开始编译ganglia，官网上gmond、gmeta和ganglia-web是分开的两个安装包。ganglia中只包括gmond和gmeta。</p>
+<span id="more"></span>
+
+<h3 id="编译"><a href="#编译" class="headerlink" title="编译"></a>编译</h3><p><code>apt-get install make gawk gcc g++ pkg-config python-libxml2 libcogl-pango-dev python-dev libxml2-dev libxslt-dev libaprutil1-dev libpcre* libconfuse*</code><br>可能不全，但也差不多。</p>
+<p>上面的依赖包都安装之后还需要<em>confuse</em>和<em>rrdtool</em>，这两个需要编译安装，所以单独说明下。</p>
+<p>安装confuse</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">wget http://download.savannah.gnu.org/releases/confuse/confuse-2.7.tar.gz</span><br><span class="line">tar -zxvf confuse-2.7.tar.gz </span><br><span class="line"><span class="built_in">cd</span> confuse-2.7 </span><br><span class="line">./configure CFLAGS=-fPIC --disable-nls --prefix=/home/hadoop/confuse-2.7</span><br><span class="line">make &amp;&amp; make install     <span class="comment">#root用户执行</span></span><br></pre></td></tr></table></figure>
+
+<p>安装rrdtool</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">wget http://oss.oetiker.ch/rrdtool/pub/rrdtool-1.6.0.tar.gz</span><br><span class="line">./configure --prefix=/usr/<span class="built_in">local</span>   <span class="comment"># 貌似安装到别的目录，需要将bin下的命令加到环境变量中，否则后面编译ganglia会报错</span></span><br><span class="line">make &amp;&amp; make install     <span class="comment">#root用户执行</span></span><br></pre></td></tr></table></figure>
+
+<p>依赖安装完毕，进入<code>ganglia-3.7.2.tar.gz</code>的解压目录中，执行编译命令</p>
+<p><code>./configure --prefix=/usr/local/ganglia --with-gmetad --with-librrd=/usr/local/lib --sysconfdir=/etc/ganglia --enable-gexec --enable-status</code></p>
+<p><code>--prefix</code>用于指定ganglia编译之后的目录，<code>--with-gmetad</code>包含gmeta组件，<code>--with-librrd=/usr/local/lib</code>包含rrd数据库，<code>--sysconfdir=/etc/ganglia</code>将gmeta和gmond的配置文件放在此目录。</p>
+<p>成功之后就可以执行<code>make &amp;&amp; make install</code>安装ganglia了。</p>
+<blockquote>
+<p>还需要安装<code>apt-get install ganglia-modules-linux ganglia-monitor ganglia-monitor-python ganglia-webfrontend libganglia1 libganglia1-dev</code>，要不然无法收集机器的基础属性，也不能正常显示图片(<em>ganglia-webfrontend不安装无法正常显示图片</em>)。</p>
+</blockquote>
+<p>下面来编译ganglia-web，其实下载的<code>ganglia-web-3.7.2.tar.gz</code>已经是编译好的，直接执行安装命令(<em>make &amp;&amp; make install</em>)就行了。但是ganglia-web需要依赖apache作为服务器，则还需要安装依赖<code>apt-get install apache2.2-bin apache2.2-common apache2 libapache2-mod-php5 php5 </code></p>
+<!--mini-httpd-->
+
+<blockquote>
+<p>这里也可以对ganglia-web的安装目录进行稍许的配置，配置在<em>Makefile</em>中</p>
+</blockquote>
+<p>主要改的配置选项如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Location where gweb should be installed to (excluding conf, dwoo dirs).</span></span><br><span class="line"><span class="comment"># web页面文件，需要放在apache web文件夹里</span></span><br><span class="line">GDESTDIR = /usr/share/ganglia-webfrontend</span><br><span class="line"></span><br><span class="line"><span class="comment"># Location where default apache configuration should be installed to.</span></span><br><span class="line">GCONFDIR = /etc/ganglia-web</span><br><span class="line"></span><br><span class="line"><span class="comment"># Gweb statedir (where conf dir and Dwoo templates dir are stored)</span></span><br><span class="line">GWEB_STATEDIR = /var/lib/ganglia-web</span><br><span class="line"></span><br><span class="line"><span class="comment"># Gmetad rootdir (parent location of rrd folder)</span></span><br><span class="line">GMETAD_ROOTDIR = /var/lib/ganglia</span><br></pre></td></tr></table></figure>
+<p>上面的目录配置的有点散，可以对其进行修改，使其便于管理，修改如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">GDESTDIR = /var/lib/ganglia/web</span><br><span class="line"></span><br><span class="line"><span class="comment"># Location where default apache configuration should be installed to.</span></span><br><span class="line">GCONFDIR = /var/lib/ganglia/etc/</span><br><span class="line"><span class="comment">#GCONFDIR = /etc/ganglia-web</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Gweb statedir (where conf dir and Dwoo templates dir are stored)</span></span><br><span class="line">GWEB_STATEDIR = var/lib/ganglia</span><br><span class="line"></span><br><span class="line"><span class="comment"># Gmetad rootdir (parent location of rrd folder)</span></span><br><span class="line">GMETAD_ROOTDIR = /var/lib/ganglia</span><br><span class="line"><span class="comment"># 可改可不改，默认是www-data</span></span><br><span class="line">APACHE_USER = hadoop_portal</span><br></pre></td></tr></table></figure>
+<p>之所以选择<code>/var/lib/ganglia</code>这个目录，是因为<em>rrd</em>在此目录中。<strong>如果你用的版本和我一样，可能会遇到个小bug，将GDESTDIR和GWEB_STATEDIR路径中的第一个/去掉</strong></p>
+<h3 id="部署"><a href="#部署" class="headerlink" title="部署"></a>部署</h3><p>部署比较简单，修改两个配置文件就行，分别是gmond.conf和gmeta.conf，在目录<code>/etc/ganglia</code>(此路径是在编译ganglia时指定的)中。</p>
+<p>gmeta.conf中只需添加数据源和gmod节点就可以了，</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 说明：这里的 &quot;flume&quot; 表示的是集群的名称，与gmod中的cluster名字一样，后面的内容是这个集群中所包含的主机信息，也就是要监控的主机ip</span></span><br><span class="line"><span class="comment"># 这里采用单播方式，则只有一个节点，并配上端口，如果不指定端口，默认是8649</span></span><br><span class="line">data_source <span class="string">&quot;flume&quot;</span> 127.0.0.1:8666</span><br><span class="line"><span class="comment"># 由于setuid默认是开启的，而setuid_username默认是nobody，可能会遇到权限问题，则改为启动用户hadoop</span></span><br><span class="line">setuid_username <span class="string">&quot;hadoop&quot;</span></span><br></pre></td></tr></table></figure>
+<p>启动之前需要改下rrd所在目录的权限，改为启动gmeta的用户，命令<code>chown -R hadoop:hadoop /var/lib/ganglia</code>(如果rrds目录不存在，则新建/var/lib/ganglia/rrds目录)</p>
+<p>现在就可以启动gmeta了，命令<code>/usr/local/ganglia/sbin/gmetad start</code>。(/usr/local/ganglia/是在编译时由–prefix=指定的)</p>
+<p>然后通过<code>ps -ef | grep gm</code>查看是否有gmeta进程，如果没有就代表没有启动成功，可以使用<code>gmetad --debug=4</code>(或者gmeta debug=10 log message)进来debug启动。</p>
+<p>gmond.conf文件修改</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line">globals &#123;</span><br><span class="line">  daemonize = yes</span><br><span class="line">  setuid = yes</span><br><span class="line">  <span class="comment"># 与gmeta中setuid_username相同，启动gmond的用户</span></span><br><span class="line">  user = hadoop</span><br><span class="line">  debug_level = 0</span><br><span class="line">  max_udp_msg_len = 1472</span><br><span class="line">  <span class="comment"># 发送者开关</span></span><br><span class="line">  mute = no</span><br><span class="line">  <span class="comment"># 接收者开关</span></span><br><span class="line">  deaf = no</span><br><span class="line">  host_dmax = 0 /*secs */</span><br><span class="line">  cleanup_threshold = 300 /*secs */</span><br><span class="line">  gexec = no</span><br><span class="line">  send_metadata_interval = 0</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">cluster &#123;</span><br><span class="line">  <span class="comment"># gmeta中data_source中的cluster名字</span></span><br><span class="line">  name = <span class="string">&quot;flume&quot;</span></span><br><span class="line">  owner = <span class="string">&quot;unspecified&quot;</span></span><br><span class="line">  latlong = <span class="string">&quot;unspecified&quot;</span></span><br><span class="line">  url = <span class="string">&quot;unspecified&quot;</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">#发送者channel</span></span><br><span class="line"><span class="comment"># 如果不用监视本节点基础指标则不用配置，并设置mute为yes</span></span><br><span class="line">udp_send_channel &#123;</span><br><span class="line">  <span class="comment"># 多播方式</span></span><br><span class="line">  /*mcast_join = 239.2.11.71 */</span><br><span class="line">  host = 127.0.0.1</span><br><span class="line">  port = 8666</span><br><span class="line">  ttl = 1</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment"># 接收者channel</span></span><br><span class="line">udp_recv_channel &#123;</span><br><span class="line">  /* mcast_join = 239.2.11.71 */</span><br><span class="line">  port = 8666</span><br><span class="line">  <span class="built_in">bind</span> = 127.0.0.1</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">tcp_accept_channel &#123;</span><br><span class="line">  port = 8666</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>启动gmond，命令<code>/usr/local/ganglia/sbin/gmond start</code>，没有启动则用上面介绍的debug模式启动，查找错误原因。</p>
+<p>最后就是启动ganglia-web，这个比较简单，只需要将<em>GDESTDIR</em>所指定的目录放到<code>/var/www</code>目录中就可以了。我在这建了个软连<code>cd /var/www/ &amp;&amp; ln -s /usr/share/ganglia-webfrontend ganglia</code></p>
+<p>启动apache就可以访问了，apache启动命令<code>apache2ctl -k start</code></p>
+<!-- 查看apache监听哪个端口 netstat -lnp |grep apache -->
+
+<p>输入<code>127.0.0.1/ganglia</code>就可以查看监控指标了。</p>
+<p>如果服务器在本地不能访问，可以使用<code>telnet localhost 8651</code>来验证下gmeta是否成功(gmeta默认是8651端口)。</p>
+<blockquote>
+<p>更改Apache的默认端口</p>
+</blockquote>
+<p>在debian系统下apache默认安装目录是<code>/etc/apache2/</code><br>更改默认端口需要修改两个配置文件，分别为<code>/etc/apache2/ports.conf</code>和<code>/etc/apache2/sites-available/default</code></p>
+<p>更改内容如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#ports.conf</span></span><br><span class="line">NameVirtualHost *:8001</span><br><span class="line">Listen 8001</span><br><span class="line"><span class="comment">#default</span></span><br><span class="line">VirtualHost *:8001</span><br></pre></td></tr></table></figure>
+<p>然后重启就ok了。可以使用命令<code>netstat -lnp |grep apache</code>查看配置是否生效。显示内容如下则表示生效<br><code>tcp6       0      0 :::8001                 :::*                    LISTEN      8647/apache2</code></p>
+<!--
+### 防火墙转接口
+要外网可以访问还需要给防火墙开个80端口，
+/sbin/iptables -L --line-number
+iptables -I net2fw 15 -p tcp --dport 80 -j ACCEPT
+iptables-save
+iptables restart
+-->
+
+<h2 id="flume-监控"><a href="#flume-监控" class="headerlink" title="flume 监控"></a>flume 监控</h2><p>使用ganglia监控flume较为简单，只要在启动agent时指定ganglia中gmond的地址和端口就ok了，命令如下：<br><code>/bin/bash $&#123;FLUME_PATH&#125;/bin/flume-ng agent -n a1 -c $&#123;FLUME_PATH&#125;/conf -f $&#123;FLUME_PATH&#125;/conf/flume.conf -Dflume.monitoring.type=ganglia -Dflume.monitoring.hosts=127.0.0.1:8666 &amp;</code></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">混绅士</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://bigdatadecode.club/ganglia%E9%83%A8%E7%BD%B2%E7%9B%91%E6%8E%A7flume.html">http://bigdatadecode.club/ganglia%E9%83%A8%E7%BD%B2%E7%9B%91%E6%8E%A7flume.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://bigdatadecode.club" target="_blank">big data decode club</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Flume/">Flume</a><a class="post-meta__tags" href="/tags/ganglia/">ganglia</a><a class="post-meta__tags" href="/tags/debian/">debian</a></div><div class="post_share"></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/path/to/wechat-reward-image/wechatpay.png" target="_blank"><img class="post-qr-code-img" src="/path/to/wechat-reward-image/wechatpay.png" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/mac%E4%B8%8B%E7%BC%96%E8%AF%91Hadoop.html"><img class="prev-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">mac下编译Hadoop</div></div></a></div><div class="next-post pull-right"><a href="/%E5%8D%95%E4%BE%8B%E6%A8%A1%E5%BC%8F%E5%BC%95%E5%8F%91%E7%9A%84%E6%80%9D%E8%80%83.html"><img class="next-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">单例模式引发的思考</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/Flume%E7%AE%80%E4%BB%8B%E5%8F%8A%E5%88%9D%E6%AC%A1%E4%BD%BF%E7%94%A8.html" title="Flume简介及初次使用"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-12-02</div><div class="title">Flume简介及初次使用</div></div></a></div><div><a href="/flume%E4%BA%8B%E5%8A%A1%E8%A7%A3%E6%9E%90.html" title="flume事务解析"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2017-06-01</div><div class="title">flume事务解析</div></div></a></div><div><a href="/%E5%88%A9%E7%94%A8zookeeper%E7%9B%91%E6%8E%A7flume%E8%BF%9B%E7%A8%8B%E6%8A%A5%E8%AD%A6.html" title="利用zookeeper监控flume进程报警"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2017-05-15</div><div class="title">利用zookeeper监控flume进程报警</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/uploads/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">混绅士</div><div class="author-info__description">Any answers you can find in source code.</div></div><div class="card-info-data is-center"><div class="card-info-data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="card-info-data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="card-info-data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#ganglia%E7%BC%96%E8%AF%91%E9%83%A8%E7%BD%B2"><span class="toc-number">1.</span> <span class="toc-text">ganglia编译部署</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%BC%96%E8%AF%91"><span class="toc-number">1.1.</span> <span class="toc-text">编译</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%83%A8%E7%BD%B2"><span class="toc-number">1.2.</span> <span class="toc-text">部署</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#flume-%E7%9B%91%E6%8E%A7"><span class="toc-number">2.</span> <span class="toc-text">flume 监控</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/scratch-extensions-demo.html" title="scratch自定义扩展"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="scratch自定义扩展"/></a><div class="content"><a class="title" href="/scratch-extensions-demo.html" title="scratch自定义扩展">scratch自定义扩展</a><time datetime="2021-12-14T14:30:20.000Z" title="发表于 2021-12-14 22:30:20">2021-12-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/metabase-import-ide.html" title="metabase导入IDE调试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="metabase导入IDE调试"/></a><div class="content"><a class="title" href="/metabase-import-ide.html" title="metabase导入IDE调试">metabase导入IDE调试</a><time datetime="2021-12-13T15:31:22.000Z" title="发表于 2021-12-13 23:31:22">2021-12-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/flink-connector-example.html" title="Flink Connector调研"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Connector调研"/></a><div class="content"><a class="title" href="/flink-connector-example.html" title="Flink Connector调研">Flink Connector调研</a><time datetime="2021-11-10T14:30:20.000Z" title="发表于 2021-11-10 22:30:20">2021-11-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink standlone模式下Flinkx测试"/></a><div class="content"><a class="title" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试">Flink standlone模式下Flinkx测试</a><time datetime="2021-11-06T15:05:20.000Z" title="发表于 2021-11-06 23:05:20">2021-11-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/openGauss-deploy.html" title="openGauss极简版安装使用"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="openGauss极简版安装使用"/></a><div class="content"><a class="title" href="/openGauss-deploy.html" title="openGauss极简版安装使用">openGauss极简版安装使用</a><time datetime="2021-05-13T14:35:20.000Z" title="发表于 2021-05-13 22:35:20">2021-05-13</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2022 By 混绅士</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">本地搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div></div></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

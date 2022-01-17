@@ -1,0 +1,265 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>分布式一致性协议 | big data decode club</title><meta name="keywords" content="BlockChain,Kafka,Zookeeper,Paxos,Raft,BFT"><meta name="author" content="混绅士"><meta name="copyright" content="混绅士"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="分布式系统中有个著名的原则CAP原则，C为Consistency(一致性)、A为Availability(可用性)、P为Partition tolerance(分区容错性)。这里主要介绍下分布式环境下如果达到一致性。 说到一致性不得不说下经典的拜占庭问题。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="分布式一致性协议">
+<meta property="og:url" content="http://bigdatadecode.club/Consistency-in-Distributed.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="分布式系统中有个著名的原则CAP原则，C为Consistency(一致性)、A为Availability(可用性)、P为Partition tolerance(分区容错性)。这里主要介绍下分布式环境下如果达到一致性。 说到一致性不得不说下经典的拜占庭问题。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+<meta property="article:published_time" content="2019-04-06T16:10:34.000Z">
+<meta property="article:modified_time" content="2022-01-17T08:58:24.245Z">
+<meta property="article:author" content="混绅士">
+<meta property="article:tag" content="BlockChain">
+<meta property="article:tag" content="Kafka">
+<meta property="article:tag" content="Zookeeper">
+<meta property="article:tag" content="Paxos">
+<meta property="article:tag" content="Raft">
+<meta property="article:tag" content="BFT">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><link rel="shortcut icon" href="/favicon.ico"><link rel="canonical" href="http://bigdatadecode.club/Consistency-in-Distributed"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="baidu-site-verification" content="27E5EbutCm"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '分布式一致性协议',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2022-01-17 16:58:24'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="big data decode club" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/uploads/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><div class="data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">big data decode club</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">分布式一致性协议</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2019-04-06T16:10:34.000Z" title="发表于 2019-04-07 00:10:34">2019-04-07</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2022-01-17T08:58:24.245Z" title="更新于 2022-01-17 16:58:24">2022-01-17</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/BlockChain/">BlockChain</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">3.1k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>9分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="分布式一致性协议"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>分布式系统中有个著名的原则CAP原则，C为Consistency(一致性)、A为Availability(可用性)、P为Partition tolerance(分区容错性)。这里主要介绍下分布式环境下如果达到一致性。</p>
+<p>说到一致性不得不说下经典的拜占庭问题。</p>
+<span id="more"></span>
+
+<!--
+分布式共识算法是分布式系统的核心，常见的有Paxos、pbft、bft、raft、pow等。区块链中常见的是POW、POS、DPOS、pbft等。 其中：
+POW、POS、DPOS是开放式的共识协议
+PBFT为半开放式的共识协议
+Paxos、raft等是封闭式共识协议
+区别：
+开放式，无法确切的知道节点的多少及连接状态，每个节点都可能是恶意的，但是大多数是非恶意的
+半开放式，可以确定节点的多少及连接状态，每个节点都可能是恶意的，但是有满足一定条件的非恶意节点
+封闭式，每个节点都是非恶意的，只不过可能断开连接或crash。
+-->
+<h2 id="拜占庭问题"><a href="#拜占庭问题" class="headerlink" title="拜占庭问题"></a>拜占庭问题</h2><p>话说一组拜占庭将军分别各率领一支军队共同围困一座城市。为了简化问题，将各支军队的行动策略限定为进攻或撤离两种。因为部分军队进攻部分军队撤离可能会造成灾难性后果，因此各位<em>将军必须通过投票来达成一致策略，即所有军队一起进攻或所有军队一起撤离</em>。因为各位将军分处城市不同方向，他们<em>只能通过信使互相联系</em>。在投票过程中每位将军都将自己投票给进攻还是撤退的信息通过信使分别通知其他所有将军，这样一来每位将军根据自己的投票和其他所有将军送来的信息就可以知道共同的投票结果而决定行动策略。</p>
+<p>系统的问题在于，<strong>将军中可能出现叛徒，他们不仅可能向较为糟糕的策略投票，还可能选择性地发送投票信息。假设有9位将军投票，其中1名叛徒。8名忠诚的将军中出现了4人投进攻，4人投撤离的情况。这时候叛徒可能故意给4名投进攻的将领送信表示投票进攻，而给4名投撤离的将领送信表示投撤离。这样一来在4名投进攻的将领看来，投票结果是5人投进攻，从而发起进攻；而在4名投撤离的将军看来则是5人投撤离。这样各支军队的一致协同就遭到了破坏</strong>。</p>
+<p>拜占庭问题其实是指在一个可妥协的通信网络中实现分布式协议的问题，也就是<em>在不可靠的环境中建立一个可靠的系统的问题</em>。</p>
+<p>假始那些忠诚（或是没有出错）的将军仍然能通过多数决策来决定他们的战略，便称达到了<strong>拜占庭容错</strong>。</p>
+<!--在点对点式数字货币系统比特币里，比特币网络的运作是平行的（parallel）。各结点与终端都运算著区块链来达成工作量证明（PoW）。工作量证明的链条是解决比特币系统中拜占庭问题的关键，避免有问题的结点（即前文提到的“反叛的将军”）破坏数字货币系统里交易帐的正确性，是对整个系统的运行状态有着重要的意义。
+比特币使用经过工作量证明区块链技术解决了拜占庭容错问题。 POW增加了提出提案的成本，不是任意节点可以随意提出提案，在源头减少了干扰信息
+-->
+<h2 id="PBFT"><a href="#PBFT" class="headerlink" title="PBFT"></a>PBFT</h2><p>PBFT是Practical Byzantine Fault Tolerance的缩写，意为<em>实用拜占庭容错算法</em>，复杂度过高<code>O(N^2)</code>。PBFT是一种<em>状态机副本复制算法</em>，即服务作为状态机进行建模，状态机在分布式系统的不同节点进行副本复制。每个状态机的副本都保存了服务的状态，同时也实现了服务的操作。</p>
+<p>PBFT是一个<strong>三阶段算法</strong>，分为<code>Pre-Prepare</code>、<code>Prepare</code>和<code>Commit</code>。<br>PBFT中有几个概念需要了解下，所有的节点称为<code>副本</code>，这些副本有两个角色，分别为主节点(primary)和备份节点(backups)，所有的副本在一个被称为<code>视图</code>(View)的轮换过程中运作。<em>主节点和备份节点是针对视图而言，视图是连续编号的整数</em>。在某个视图中，从副本中选出一个副本为主节点，选择算法为<code>p = v mod |R|</code>，其中v是视图编号，|R|为副本个数，p为副本编号，除主节点之外所有的节点都为备份节点。当<strong>主节点失效</strong>的时候就需要启动视图更换过程。</p>
+<p>知道上述概念之后，来看下算法的具体流程：<br><img src="/blogimgs/PBFT-Paxos-Raft/pbft.png" alt="PBFT" title="PBFT"><br>其中0为主节点，123为备份节点，3宕机无法响应请求</p>
+<ol>
+<li>主节点0接收到客户端C发来的请求request，给请求分配一个序列号n，然后向所有<strong>备份节点</strong>群发预准备消息，预准备消息的格式为&lt;&lt;PRE-PREPARE,v,n,d&gt;,m&gt;，这里v是视图编号，m是客户端发送的请求消息，d是请求消息m的摘要。</li>
+<li>备份节点收到主节点广播的消息之后，check下自己是否接受，接受之后向<strong>其它副本</strong>进行prepare广播</li>
+<li>某个副本在接收到<code>2f</code>个prepare信息之后，向<strong>其它副本</strong>广播commit<!--(*备份节点的2f中有一个是未广播给自己的prepare信息*)--></li>
+<li>某个副本在接收到<code>2f+1</code>个commit信息之后，向客户端C发送reply<!--之所以这里是2f+1，是因为主节点加入了广播序列--></li>
+<li>客户端C在接收到<code>f+1</code>个相同的reply之后则达成共识<!--需要注意的是主节点没有收到pre-prepare广播，没有自己的prepare信息，但是可以收到备份节点的prepare信息，收到2f个之后就可以进行广播commit信息--></li>
+</ol>
+<!--
+同所有的状态机副本复制技术一样，PBFT对每个副本节点提出了两个限定条件：（1）所有节点必须是确定性的。也就是说，在给定状态和参数相同的情况下，操作执行的结果必须相同；（2）所有节点必须从相同的状态开始执行。在这两个限定条件下，即使失效的副本节点存在，PBFT算法对所有非失效副本节点的请求执行总顺序达成一致，从而保证安全性。
+-->
+
+<p>拜占庭问题是一个理论性的模型，解决起来比较困难，工程实践上可以将其模型的某些条件进行假设，这样可以解决一些特定的问题。<br>将集群中是否存在背叛者作为一个已知条件来将拜占庭问题细分下：</p>
+<ol>
+<li>假如集群中存在背叛者，也就是有一些伪造信息，这种情况称为<em>拜占庭错误</em>，伪造信息的节点称为拜占庭节点。其一致性算法为BFT（Byzantine Fault Tolerance），上文介绍的PBFT就是一个拜占庭容错算法。</li>
+<li>如果集群中不存在背叛者，都是忠诚者，只是这些忠诚者由于某种原因无法正常工作，这种情况称为<em>非拜占庭错误</em>。其一致性算法为CFT（Crash Fault Tolerance）。</li>
+</ol>
+<p>下面我们就介绍两个非拜占庭一致性算法<em>Paxos</em>和<em>Raft</em>。</p>
+<h2 id="Paxos"><a href="#Paxos" class="headerlink" title="Paxos"></a>Paxos</h2><p>Paxos算法为非拜占庭一致性算法，<em>运行在允许宕机故障的异步系统中，不要求可靠的消息传递，可容忍消息丢失、延迟、乱序以及重复</em>。<strong>它利用大多数机制保证了2F+1的容错能力，即2F+1个节点的系统最多允许F个节点同时出现故障</strong>。</p>
+<p>Paxos算法中的角色分为Proposer和Acceptor，Proposer是提案者，用来发起提案（Proposal），Acceptor是决策者，用来接收和响应Proposer提出的提案。这个算法的场景是<strong>一个或多个提议进程（Proposer）可以发起提案（Proposal），需要在所有提案中选取某一个提案，使其在所有进程中达成一致。系统中的多数派同时认可该提案，即达成了一致。最多只针对一个确定的提案达成一致。</strong></p>
+<p>Paxos算法流程分为两阶段，第一阶段为Prepare阶段，第二阶段为Commit阶段。两阶段提交算法的思路大致可以概括为<strong>决策者将提案的结果通知提案者，再由提案者根据所有决策者反馈的结果决定是提交操作还是终止操作</strong>。</p>
+<p>Paxos算法大致流程为Proposer询问Acceptors<strong>是否可以发起提案</strong>，Acceptors将结果返回给Proposer(第一阶段)，再由Proposer根据Acceptors反馈的<em>结果决定提案内容以及提案是提交还是终止</em>(第二阶段)。具体流程如下：<br>第一阶段Prepare阶段：</p>
+<ol>
+<li>Proposer提出一个提案时，每次提案时都生成一个全局唯一且递增的ID，向Acceptors发送<em>PrepareRequest</em>请求，PrepareRequest请求<em>只携带提案ID</em>，而<em>无需携带提案内容</em>。</li>
+<li>Acceptors收到Proposer的请求后，判断<code>PrepareRequest</code>中的<strong>ID是否大于Acceptors记录的值</strong>，如果大于则检查下是否有已经Accept过的提案，<em>有则返回提案中ID最大的那个提案的value和ID，没有则返回空值</em>，如果<strong>小于Acceptors记录的值则不响应</strong>。<br>第一阶段结束，开始第二阶段Commit阶段：</li>
+<li>Proposer接收到多数Acceptors的<code>PrepareResponse</code>应答之后，<strong>从应答中选择提案ID最大对应的value作为本次要发起的提案</strong>。 <em>如果所有应答的提案value均为空值，则可以自己随意决定提案value</em>。然后携带当前ID，向所有Acceptors发送<code>AccpetRequest</code>请求。</li>
+<li>Accpetors收到<code>AccpetRequest</code>后，判断<code>AccpetRequest</code>中的<strong>ID是否大于等于Acceptors记录的值</strong>，是则持久化当前ID和提案内容，然后返回给Proposer响应<code>AcceptResponse</code></li>
+<li>Proposer收到多数Acceptors的<code>AcceptResponse</code>后，决议形成。</li>
+</ol>
+<blockquote>
+<p>整个流程中Acceptors的行为可以概括为<strong>两个承诺，一个应答</strong>。<br>两个承诺：</p>
+</blockquote>
+<ol>
+<li>不再应答PrepareRequest中ID小于等于当前请求PrepareRequest中ID的请求(是因为当前PrepareRequest中ID已经赋值给minProposal)</li>
+<li>不再应答AcceptRequest中ID小于当前请求AcceptRequest中ID的请求(因为当前AcceptRequest中ID是上次PrepareRequest请求中ID，所以不再应答小于的ID)<br>一个应答：<br>不违背之前作出的承诺下，返回自己已经Accept过的提案中ID最大的那个提案的内容，如果没有则返回空值</li>
+</ol>
+<p>结合下面的伪代码能够更加深刻理解这两个承诺一个应答的含义<br><img src="/blogimgs/PBFT-Paxos-Raft/basic-paxos.jpg" alt="basic paxos" title="basic paxos"><br>算法逻辑为：</p>
+<ol>
+<li>获取一个ProposalID n，为了保证ProposalID唯一，可采用时间戳+ServerID生成；</li>
+<li>Proposer向所有Acceptors广播Prepare(n)请求；</li>
+<li>Acceptor比较n和<code>minProposal</code>，如果<code>n&gt;minProposal</code>，则<code>minProposal=n</code>，并且将<code>acceptedProposal</code>和<code>acceptedValue</code>返回；</li>
+<li>Proposer接收到过半数回复后，如果发现有<code>acceptedValue</code>返回，将所有回复中<em>acceptedProposal最大的acceptedValue作为本次提案的value</em>，否则可以任意决定本次提案的value；</li>
+<li>到这里可以进入第二阶段，广播<code>Accept(n,value)</code> 到所有节点；</li>
+<li>Acceptor比较n和minProposal，如果<code>n&gt;=minProposal</code>，则<em>acceptedProposal=minProposal=n，acceptedValue=value，本地持久化后</em>，返回；<em>否则，返回minProposal</em>。</li>
+<li>提议者接收到过半数请求后，<strong>如果发现有返回值result&gt;n</strong>，表示有更新的提议，跳转到1；否则value达成一致。</li>
+</ol>
+<!--
+第一阶段：获取epoch轮次的访问权和当前var的取值，我们可以简单获取当前时间戳为epoch：
+通过Acceptor.prepare(epoch)，获取epoch轮次的访问权和当前var的取值；
+如果不能获取，返回<error>。
+第二阶段：采用“后者认同前者”的原则执行。
+如果var取值为null，则肯定旧epoch无法生成确定性取值，则通过Acceptor.accept(var, prepared_epoch, V)提交数据V。
+成功后返回<ok, V>；
+若accept失败，则说明被更新的epoch抢占或Acceptor故障，返回<error>。
+如果var取值存在，则此取值肯定是确定性取值，此时认同它不再更改，直接返回<ok, accepted_value>。
+-->
+
+<!--
+提案编号怎么取值，防止恶意取值
+
+JN是如何写，如何同步数据的
+
+“活锁”的根本原因在于两个proposer交替提案，避免“活锁”的方式为，如果一个proposer通过accpter返回的消息知道此时有更高编号的提案被提出时，该proposer静默一段时间，而不是马上提出更高的方案，静默期长短为一个提案从提出到被接受的大概时间长度即可，静默期过后，proposer重新提案。系统中之所以要有主proposer的原因在于，如果每次数据更改都用paxos，那实在是太慢了，还是通过主节点下发请求这样来的快，因为省去了不必要的paxos时间。所以选择主proposer用paxos算法，因为选主的频率要比更改数据频率低太多。但是主proposer挂了咋整，整个集群就一直处于不可用状态，所以一般都用租约的方式，如果proposer挂了，则租约会过期，其它proposer就可以再重新选主，如果不挂，则主proposer自己续租。
+-->
+<p>原始的Paxos算法(Basic Paxos)<em>只能对一个值形成决议</em>，决议的形成至少需要两次网络来回，*在高并发情况下可能需要更多的网络来回，极端情况下甚至可能形成活锁(活锁–多个Proposer交替向Acceptors提交PrepareRequest请求，在发送AccpetRequest请求时，都因为ID发生更新，Acceptors无法接受AccpetRequest请求，返回ID，是Proposer再次向Acceptors发送PrepareRequest请求，如此反复，无法形成共识。)*。更重要的是如果想连续确定多个值<!--这里不是太懂，标记下？？？？-->，Basic Paxos无法确定了。因此Basic Paxos几乎只是用来做理论研究，并不直接应用在实际工程中。</p>
+<p>实际应用中几乎都需要连续确定多个值，而且希望能有更高的效率。<code>Multi-Paxos</code>正是为解决此问题而提出。Multi-Paxos基于Basic Paxos做了两点改进：</p>
+<ol>
+<li>针对每一个要确定的值，运行一次Paxos算法实例（Instance），形成决议。每一个Paxos实例使用唯一的Instance ID标识。</li>
+<li>在所有Proposers中选举一个Leader，由Leader唯一的提交提案给Acceptors进行表决。<em>仅有一个Leader进行value提交的情况下，Prepare阶段就可以跳过，从而将两阶段变为一阶段，提高效率。</em>同时这样没有Proposer竞争，<em>也解决了活锁问题</em>。</li>
+</ol>
+<!--
+Multi-Paxos首先需要选举Leader，Leader的确定也是一次决议的形成，所以可执行一次Basic Paxos实例来选举出一个Leader。选出Leader之后只能由Leader提交Proposal，在Leader宕机之后服务临时不可用，需要重新选举Leader继续服务。在系统中仅有一个Leader进行Proposal提交的情况下，Prepare阶段可以跳过。
+
+Multi-Paxos通过改变Prepare阶段的作用范围至后面Leader提交的所有实例，从而使得Leader的连续提交只需要执行一次Prepare阶段，后续只需要执行Accept阶段，将两阶段变为一阶段，提高了效率。为了区分连续提交的多个实例，每个实例使用一个Instance ID标识，Instance ID由Leader本地递增生成即可。
+
+Multi-Paxos允许有多个自认为是Leader的节点并发提交Proposal而不影响其安全性，这样的场景即退化为Basic Paxos。
+-->
+<p>Paxos确实很强大，而且也可以应用于实际工程中，但是其理论真的很难理解，于是<em>Raft算法</em>出现了，以简单著称，并在工业上也得到了广泛的使用。</p>
+<h2 id="Raft"><a href="#Raft" class="headerlink" title="Raft"></a>Raft</h2><p>Raft也是两阶段提交算法，类似于Multi-Paxos。算法中的角色分为Leader、Follower和Candidate，但是<em>这三种角色并不是同时出现的，正常运行时只有Leader和Follower</em>，candidate只作为选举leader时的一个临时角色出现。</p>
+<ul>
+<li>Leader: 接受客户端请求，并向Follower同步请求日志，当日志同步到大多数节点上后告诉Follower提交日志。</li>
+<li>Follower: 接受并持久化Leader同步的日志，在Leader告之日志可以提交之后，提交日志。</li>
+<li>Candidate: Leader选举过程中的临时角色。</li>
+</ul>
+<blockquote>
+<p>系统在初始化时，同为Follower，在election timeout之后(各节点在150-300ms之间随机)，由Follower转化为Candidate进行选举Leader</p>
+</blockquote>
+<!-- heartbeat timeout 之后Follower感知到Leader消失，进行新Leader选举-->
+<p>Raft算法主要用于管理多副本状态机的日志复制，并且其<em>将一致性分解为多个子问题</em>：Leader选举(Leader election)、日志同步(Log replication)、安全性(Safety)、日志压缩(Log compaction)、成员变更(Membership change)等。同时，<em>Raft算法使用了更强的假设来减少了需要考虑的状态，使之变的易于理解和实现</em>。Raft算法支持最大的容错故障节点是F，集群总数为2F+1。</p>
+<p>个人感觉Raft算法学习的最好教程是<a target="_blank" rel="noopener" href="http://thesecretlivesofdata.com/raft/#home">http://thesecretlivesofdata.com/raft/#home</a>，俗话说一图胜千言，更何况是还是个动图，老牛逼了，保管你看一遍就懂了。。。这里就不再进行过多的介绍了。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/31780743">https://zhuanlan.zhihu.com/p/31780743</a><br><a target="_blank" rel="noopener" href="https://my.oschina.net/ittrueman/blog/1612492">https://my.oschina.net/ittrueman/blog/1612492</a><br><a target="_blank" rel="noopener" href="http://thesecretlivesofdata.com/raft/#home">http://thesecretlivesofdata.com/raft/#home</a><br><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/32052223">https://zhuanlan.zhihu.com/p/32052223</a></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">混绅士</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://bigdatadecode.club/Consistency-in-Distributed.html">http://bigdatadecode.club/Consistency-in-Distributed.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://bigdatadecode.club" target="_blank">big data decode club</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/BlockChain/">BlockChain</a><a class="post-meta__tags" href="/tags/Kafka/">Kafka</a><a class="post-meta__tags" href="/tags/Zookeeper/">Zookeeper</a><a class="post-meta__tags" href="/tags/Paxos/">Paxos</a><a class="post-meta__tags" href="/tags/Raft/">Raft</a><a class="post-meta__tags" href="/tags/BFT/">BFT</a></div><div class="post_share"></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/path/to/wechat-reward-image/wechatpay.png" target="_blank"><img class="post-qr-code-img" src="/path/to/wechat-reward-image/wechatpay.png" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/%5B%E8%AF%91%5DFSImage-protocol.html"><img class="prev-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">Use protobuf to FSImage</div></div></a></div><div class="next-post pull-right"><a href="/cryptozombies-src-parse-2.html"><img class="next-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">cryptozombies源码解析二</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/Ethereum-deploy.html" title="以太坊环境部署"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2018-08-08</div><div class="title">以太坊环境部署</div></div></a></div><div><a href="/Ethereum-private-chain.html" title="以太坊测试环境部署"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2018-08-21</div><div class="title">以太坊测试环境部署</div></div></a></div><div><a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2019-01-13</div><div class="title">Merkle Patricia Tree(MPT)</div></div></a></div><div><a href="/Solidity_Voting%E8%A7%A3%E6%9E%90.html" title="Solidity Voting解析"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2018-10-31</div><div class="title">Solidity Voting解析</div></div></a></div><div><a href="/Voting-Dapp-Demo.html" title="全栈Voting Dapp Demo"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2018-11-28</div><div class="title">全栈Voting Dapp Demo</div></div></a></div><div><a href="/bitcoin%E6%BA%90%E7%A0%81%E7%8E%AF%E5%A2%83.html" title="Ubuntu搭建Bitcoin源码阅读环境"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2018-05-31</div><div class="title">Ubuntu搭建Bitcoin源码阅读环境</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/uploads/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">混绅士</div><div class="author-info__description">Any answers you can find in source code.</div></div><div class="card-info-data is-center"><div class="card-info-data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="card-info-data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="card-info-data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%8B%9C%E5%8D%A0%E5%BA%AD%E9%97%AE%E9%A2%98"><span class="toc-number">1.</span> <span class="toc-text">拜占庭问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#PBFT"><span class="toc-number">2.</span> <span class="toc-text">PBFT</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Paxos"><span class="toc-number">3.</span> <span class="toc-text">Paxos</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Raft"><span class="toc-number">4.</span> <span class="toc-text">Raft</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">5.</span> <span class="toc-text">参考</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/scratch-extensions-demo.html" title="scratch自定义扩展"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="scratch自定义扩展"/></a><div class="content"><a class="title" href="/scratch-extensions-demo.html" title="scratch自定义扩展">scratch自定义扩展</a><time datetime="2021-12-14T14:30:20.000Z" title="发表于 2021-12-14 22:30:20">2021-12-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/metabase-import-ide.html" title="metabase导入IDE调试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="metabase导入IDE调试"/></a><div class="content"><a class="title" href="/metabase-import-ide.html" title="metabase导入IDE调试">metabase导入IDE调试</a><time datetime="2021-12-13T15:31:22.000Z" title="发表于 2021-12-13 23:31:22">2021-12-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/flink-connector-example.html" title="Flink Connector调研"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Connector调研"/></a><div class="content"><a class="title" href="/flink-connector-example.html" title="Flink Connector调研">Flink Connector调研</a><time datetime="2021-11-10T14:30:20.000Z" title="发表于 2021-11-10 22:30:20">2021-11-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink standlone模式下Flinkx测试"/></a><div class="content"><a class="title" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试">Flink standlone模式下Flinkx测试</a><time datetime="2021-11-06T15:05:20.000Z" title="发表于 2021-11-06 23:05:20">2021-11-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/openGauss-deploy.html" title="openGauss极简版安装使用"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="openGauss极简版安装使用"/></a><div class="content"><a class="title" href="/openGauss-deploy.html" title="openGauss极简版安装使用">openGauss极简版安装使用</a><time datetime="2021-05-13T14:35:20.000Z" title="发表于 2021-05-13 22:35:20">2021-05-13</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2022 By 混绅士</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">本地搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div></div></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

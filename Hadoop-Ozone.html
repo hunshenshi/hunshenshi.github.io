@@ -1,0 +1,255 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>Hadoop小文件利器Ozone调研 | big data decode club</title><meta name="keywords" content="Hadoop,BigData,HDFS,小文件,Ozone"><meta name="author" content="混绅士"><meta name="copyright" content="混绅士"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="之前一篇文章介绍了在小文件合并方面的一些心得，*本篇介绍下Hadoop解决小文件的最新利器Ozone(本篇基于0.3.0-alpha版本)*。 Ozone诞生的背景众所周知，HDFS是大数据存储系统，并在业界得到了广泛的使用。但是无论大集群还是小集群其扩展性都受NN的限制，虽然HDFS可以通过Federation进行扩展，但是依然深受小文件和4亿个文件的困扰。 于是分布式key-value存储系统">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Hadoop小文件利器Ozone调研">
+<meta property="og:url" content="http://bigdatadecode.club/Hadoop-Ozone.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="之前一篇文章介绍了在小文件合并方面的一些心得，*本篇介绍下Hadoop解决小文件的最新利器Ozone(本篇基于0.3.0-alpha版本)*。 Ozone诞生的背景众所周知，HDFS是大数据存储系统，并在业界得到了广泛的使用。但是无论大集群还是小集群其扩展性都受NN的限制，虽然HDFS可以通过Federation进行扩展，但是依然深受小文件和4亿个文件的困扰。 于是分布式key-value存储系统">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+<meta property="article:published_time" content="2019-02-11T15:02:20.000Z">
+<meta property="article:modified_time" content="2019-02-11T15:55:23.000Z">
+<meta property="article:author" content="混绅士">
+<meta property="article:tag" content="Hadoop">
+<meta property="article:tag" content="BigData">
+<meta property="article:tag" content="HDFS">
+<meta property="article:tag" content="小文件">
+<meta property="article:tag" content="Ozone">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><link rel="shortcut icon" href="/favicon.ico"><link rel="canonical" href="http://bigdatadecode.club/Hadoop-Ozone"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="baidu-site-verification" content="27E5EbutCm"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Hadoop小文件利器Ozone调研',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2019-02-11 23:55:23'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="big data decode club" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/uploads/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><div class="data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">big data decode club</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Hadoop小文件利器Ozone调研</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2019-02-11T15:02:20.000Z" title="发表于 2019-02-11 23:02:20">2019-02-11</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2019-02-11T15:55:23.000Z" title="更新于 2019-02-11 23:55:23">2019-02-11</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Hadoop/">Hadoop</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">3.3k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>13分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="Hadoop小文件利器Ozone调研"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>之前一篇文章介绍了在小文件合并方面的一些心得，*本篇介绍下Hadoop解决小文件的最新利器Ozone(本篇基于0.3.0-alpha版本)*。</p>
+<h2 id="Ozone诞生的背景"><a href="#Ozone诞生的背景" class="headerlink" title="Ozone诞生的背景"></a>Ozone诞生的背景</h2><p>众所周知，HDFS是大数据存储系统，并在业界得到了广泛的使用。但是无论大集群还是小集群其扩展性都受NN的限制，<em>虽然HDFS可以通过Federation进行扩展，但是依然深受小文件和4亿个文件的困扰</em>。</p>
+<p>于是分布式key-value存储系统Ozone诞生了，Ozone能够轻松管理小文件和大文件。(HDFS提供了类似POSIX的语义，Ozone的外观和行为更像一个Object存储系统。)</p>
+<span id="more"></span>
+
+<h2 id="Ozone"><a href="#Ozone" class="headerlink" title="Ozone"></a>Ozone</h2><p>Ozone是专门为Hadoop设计的可扩展的分布式对象存储系统。Hadoop生态中的其它组件如Spark、Hive和Yarn不需要任何修改就可以直接运行在Ozone之上。<em>Ozone的使用方式也较为丰富，可以通过命令行直接使用也有java客户端接口，而且接口支持RPC和REST。</em></p>
+<p>Ozone由<em>volumes、buckets和Keys</em>组成，其中<br>Volumes只有管理员能够创建和删除，类似账号的概念，管理员一般都是给某个团队或者组织创建一个Volume。<br>Buckets有点像目录，<em>不过这个只能有一层，因为Buckets中不能包含其它Buckets</em>。Buckets是在Volume下，一个Volume可以包含n个Buckets，<em>但是Buckets下面只能是Keys</em>。<br>Keys就是具体的对象，在Buckets中是唯一的，其名字可以是任意字符串，其值就是需要存储的数据，也就是具体的文件。目前ozone对key的大小没有限制，bucket可以包含n个keys。</p>
+<blockquote>
+<p>有个小疑问–key就是对象，没有目录的概念，那么原hdfs某个目录下的n个小文件对应n个key？如何一次读取所有相关的key呢？比如hive加载某个分区呢？</p>
+</blockquote>
+<h2 id="设计原则"><a href="#设计原则" class="headerlink" title="设计原则"></a>设计原则</h2><p>Ozone是由一群对大规模Hadoop集群有着丰富运维和管理经验的工程师设计开发的，因此HDFS在实践中的优缺点深刻的影响着Ozone的设计和优化。</p>
+<ol>
+<li>Strongly Consistent</li>
+<li>Architectural Simplicity<br>当系统出现问题时，一个简单的架构更容易定位，也容易调试。Ozone尽可能的将架构进行简单化，即使牺牲掉一些可扩展性，但是在扩展性上Ozone并不逊色。Ozone目前在单个集群上可以存储10亿个对象。</li>
+<li>Layered Architecture<br>为了提高Ozone的扩展性，Ozone采用<em>分层的文件系统</em>。Ozone将<strong>namespace management与块和节点管理层分开</strong>，允许用户分别对其进行扩展。</li>
+<li>Painless Recovery</li>
+<li>Open Source in Apache</li>
+<li>Interoperability with Hadoop Ecosystem<br>Ozone可以被现存的Hadoop生态和相关的应用(如 apache hive、apache spark 和传统的 mapreduce)使用，因此Ozone支持:</li>
+</ol>
+<blockquote>
+<p>Hadoop Compatible FileSystem API(也叫OzoneFS) – hive、spark等可以使用OzoneFS API将Ozone作为存储层，而不需要做任务修改</p>
+</blockquote>
+<blockquote>
+<p>Data Locality – Ozone像HDFS那样对上层应用支持数据本地性。</p>
+</blockquote>
+<blockquote>
+<p>与HDFS并行部署 – Ozone可以部署在现有的Hadoop集群中, 并且可以与HDFS共享存储磁盘。</p>
+</blockquote>
+<h2 id="架构"><a href="#架构" class="headerlink" title="架构"></a>架构</h2><p>在架构上Ozone由三部分组成，分别为<code>Ozone Manager</code>、<code>Storage Container Manager</code>和<code>Datanodes</code><!--，在目前的版本中还有一个组件`Hadoop Distributed Data Store`-->。架构图如下:<br><img src="/blogimgs/ozone%E8%B0%83%E7%A0%94/OzoneOverview.png" alt="OzoneOverview" title="OzoneOverview"></p>
+<blockquote>
+<p>Ozone Manager(OM) </p>
+</blockquote>
+<p>OzoneManager是一个server服务，<em>主要负责Ozone的namespace，记录所有的volume, bucket和key操作</em>。<strong>有点类似HDFS的namenode</strong><br>Ozone由<em>volumes、buckets和Keys</em>组成，其中每个volume是一个namespace的根节点(<em>与HDFS不同，HDFS只提供了一个根节点</em>)，所以<em>整个Ozone的namespace是一个volumes的集合或者是一个由类似HDFS那样的树节点组成的森林</em>。这使得OM可以轻松的扩展为多个OM(此功能正在开发)。<br>OM中也存储了Ozone的一些元数据信息，这些元数据信息包括volumes、buckets和keys，<em>底层通过Ratis扩展元数据的副本数来实现HA</em>。</p>
+<blockquote>
+<p>Storage Container Manager(SCM) </p>
+</blockquote>
+<p>类似HDFS中的block manager，是Ozone中一个非常重要的组件，用来管理container的，<em>为OM提供基于block和container的服务</em>。<br><strong>container是由一些block组成的集合</strong>，这些block相互之间没有关系。<br>SCM和数据节点协同工作以维护群集所需的复制级别</p>
+<p>关于SCM的作用通过一个使用实例来说明下 – 由客户端调用<code>putKey(keyName, data, pipeline type, replication count)</code>发起一个putKey操作</p>
+<p><strong>参数说明</strong><br>keyName是指文件的名字。data是指要写入的数据。pipeline type指block的副本策略，Ozone目前支持Stand Alone和Ratis两种策略。replication count是指block有多少个副本<br>一般情况下pipeline type和replication count不用指定，直接使用模式的就行。</p>
+<p><em>整个流程为OM收到putKey请求，向SCM发送一个请求，请求一个包含特定属性的pipeline实例。例如客户端要求Ratis存储策略并且副本数是3，则OM请求SCM返回一个满足此特性的datanode set。如果SCM能够实例化这样一个pipeline(也就是一个datanode set)，则将这些dn返回给OM。OM则存储这些信息并将此信息包装成一个元组{BlockID, ContainerName, and Pipeline}。</em><strong>这里也有点类似HDFS写流程</strong><br>如果SCM并没有找到一组datanode set来满足clinet的要求，<strong>则SCM创建一个逻辑管道，然后返回它</strong></p>
+<p>从上面的调用过程中可以看出OM与SCM的关系，SCM作为block manager。当client向OM请求datanode set写数据数据时，OM需要向SCM请求block。block从SCM以pipeline的形式返回，此时pipeline是由参与block副本的一组datanode。</p>
+<!-- So OM is dependent on SCM for reading and writing of Keys. However, OM is independent of SCM while doing metadata operations like ozone volume or bucket operations. -->
+<p>SCM主要用来管理blocks、containers和pipelines，为了返回正常可用的pipelines，SCM必须找到node的健康状态，所以SCM也会监听datanode发来的心态，扮演着datanode manager的角色。</p>
+<p>SCM内部结构为:<br><img src="/blogimgs/ozone%E8%B0%83%E7%A0%94/SCMBlockDiagram.png" alt="SCM" title="SCM"></p>
+<p>Block：block数据块对象，真实存储数据的对象，可以拥有多个副本块。<br>Container：在逻辑上存储的是Block块对象集合。<br>Pipeline：SCM允许2种Pipeline方式实现多副本：单副本的Standaline模式和多副本的Ratis方式。<br>Pool：一组特定的数据节点称为一个pool。将节点按pool分组是为了方便日常的维护升级操作，也是为了扩展性的考虑。<br>Node：物理存储数据的地方。</p>
+<blockquote>
+<p>Datanodes</p>
+</blockquote>
+<p>如果是基于HDFS部署的Ozone也就是Ozone数据节点功能以插件的功能运行在HDFS的datanode中，则就指HDFS的datanode。Ozone也可以单独部署，此时指运行Ozone数据节点的守护进程。<strong>DataNode中以Container基本存储单元</strong></p>
+<blockquote>
+<p>Ozone Client</p>
+</blockquote>
+<p>Ozone client在Ozone内部是一个对外开放使用的模块，比如说Ozone相关的shell命令会触发到ozone client，这就是图中显示的Ozone Cli。<br>Rest Handler是一个钩子，能够做到RPC和Restful通信方式的一键切换。<em>Ozone client能够支持2种方式的通信：RPC方式和Restful接口的方式。</em><br>Freon是Ozone内部的性能测试工具。</p>
+<blockquote>
+<p>OzoneFileSysyem</p>
+</blockquote>
+<p>Ozone为了兼容其它框架体系，根据自身独特的数据特点，实现了文件系统接口，称为OzoneFileSystem。这样的话，用户可以以通用的方式来使用Ozone内部的文件对象。在程序上无需做兼容性的改动。</p>
+<blockquote>
+<p>Hadoop Distributed Data Store</p>
+</blockquote>
+<p>上面的架构图中只剩下Hadoop Distributed Data Store没有介绍了，其实<em>Hadoop Distributed Data Store(HDDS)是由Containers、Ratis和SCM组成的，是一个没有全局命名空间的分布式块存储层</em>。</p>
+<p>DataNodes3个组成一组，每组都是一个Ratis副本链，每个链都可以打开多个containers进行操作。</p>
+<p>SCM定期从datanode上接受报告，通知每个节点上打开和关闭的容器副本。基于每次报告的内容制定一些决定，例如如何分配新container、关闭打开的containers和在磁盘/数据丢失时重新复制封闭容器。</p>
+<p>SCM Clients可以向SCM请求新块的分配节点，然后将块数据写入分配的容器中。Clients还可以读取open/closed状态的容器，并且可以删除块。<em>关键的一点是, HDDS 并不关心单个容器的内容。内容完全由SCM管理</em>。</p>
+<p>HDDS细节图如下:<br><img src="/blogimgs/ozone%E8%B0%83%E7%A0%94/HDDS.png" alt="HDDS" title="HDDS"></p>
+<h2 id="部署及测试"><a href="#部署及测试" class="headerlink" title="部署及测试"></a>部署及测试</h2><p>Ozone与HDFS结合的话需要基于Hadoop3.0，所以需要先部署Hadoop3.0，具体部署细节在此略去不表。</p>
+<p>从官方下载Hadoop3.0和Ozone的安装包(由于官方build的Hadoop3.0中并没有Ozone相关的内容，所以需要单独下载Ozone的安装包)，将Ozone的相关内容复制到Hadoop的home目录。命令如下:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 在Ozone的home目录下执行</span></span><br><span class="line">cp libexec/ozone-config.sh /opt/soft/hadoop/libexec</span><br><span class="line">cp -r share/ozone /opt/soft/hadoop/share</span><br><span class="line">cp -r share/hadoop/ozoneplugin /opt/soft/hadoop/share/hadoop/</span><br></pre></td></tr></table></figure>
+
+<p>利用Ozone的命令生成conf文件，<code>ozone genconf etc/hadoop</code>，此命令会生成ozone-site.xml文件，修改配置之后复制到Hadoop3.0的conf目录中。</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;yes&quot;?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">configuration</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">property</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">name</span>&gt;</span>ozone.enabled<span class="tag">&lt;/<span class="name">name</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">value</span>&gt;</span>true<span class="tag">&lt;/<span class="name">value</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">tag</span>&gt;</span>OZONE, REQUIRED<span class="tag">&lt;/<span class="name">tag</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">description</span>&gt;</span></span><br><span class="line">      Status of the Ozone Object Storage service is enabled.</span><br><span class="line">      Set to true to enable Ozone.</span><br><span class="line">      Set to false to disable Ozone.</span><br><span class="line">      Unless this value is set to true, Ozone services will not be started in</span><br><span class="line">      the cluster.</span><br><span class="line"></span><br><span class="line">      Please note: By default ozone is disabled on a hadoop cluster.</span><br><span class="line">    <span class="tag">&lt;/<span class="name">description</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">property</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">property</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">name</span>&gt;</span>ozone.om.address<span class="tag">&lt;/<span class="name">name</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">value</span>&gt;</span>localhost<span class="tag">&lt;/<span class="name">value</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">tag</span>&gt;</span>OM, REQUIRED<span class="tag">&lt;/<span class="name">tag</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">description</span>&gt;</span></span><br><span class="line">      The address of the Ozone OM service. This allows clients to discover</span><br><span class="line">      the address of the OM.</span><br><span class="line">    <span class="tag">&lt;/<span class="name">description</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">property</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">property</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">name</span>&gt;</span>ozone.metadata.dirs<span class="tag">&lt;/<span class="name">name</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">value</span>&gt;</span>/opt/hadoop/ozone<span class="tag">&lt;/<span class="name">value</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">tag</span>&gt;</span>OZONE, OM, SCM, CONTAINER, REQUIRED, STORAGE<span class="tag">&lt;/<span class="name">tag</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">description</span>&gt;</span></span><br><span class="line">      Ozone metadata is shared among OM, which acts as the namespace</span><br><span class="line">      manager for ozone, SCM which acts as the block manager and data nodes</span><br><span class="line">      which maintain the name of the key(Key Name and BlockIDs). This</span><br><span class="line">      replicated and distributed metadata store is maintained under the</span><br><span class="line">      directory pointed by this key. Since metadata can be I/O intensive, at</span><br><span class="line">      least on OM and SCM we recommend having SSDs. If you have the luxury</span><br><span class="line">      of mapping this path to SSDs on all machines in the cluster, that will</span><br><span class="line">      be excellent.</span><br><span class="line"></span><br><span class="line">      If Ratis metadata directories are not specified, Ratis server will emit a</span><br><span class="line">      warning and use this path for storing its metadata too.</span><br><span class="line">    <span class="tag">&lt;/<span class="name">description</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">property</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">property</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">name</span>&gt;</span>ozone.scm.client.address<span class="tag">&lt;/<span class="name">name</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">value</span>&gt;</span>localhost<span class="tag">&lt;/<span class="name">value</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">tag</span>&gt;</span>OZONE, SCM, REQUIRED<span class="tag">&lt;/<span class="name">tag</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">description</span>&gt;</span></span><br><span class="line">      The address of the Ozone SCM client service. This is a required setting.</span><br><span class="line"></span><br><span class="line">      It is a string in the host:port format. The port number is optional</span><br><span class="line">      and defaults to 9860.</span><br><span class="line">    <span class="tag">&lt;/<span class="name">description</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">property</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">property</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">name</span>&gt;</span>ozone.scm.names<span class="tag">&lt;/<span class="name">name</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">value</span>&gt;</span>localhost<span class="tag">&lt;/<span class="name">value</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">tag</span>&gt;</span>OZONE, REQUIRED<span class="tag">&lt;/<span class="name">tag</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">description</span>&gt;</span></span><br><span class="line">      The value of this property is a set of DNS | DNS:PORT | IP</span><br><span class="line">      Address | IP:PORT. Written as a comma separated string. e.g. scm1,</span><br><span class="line">      scm2:8020, 7.7.7.7:7777.</span><br><span class="line">      This property allows datanodes to discover where SCM is, so that</span><br><span class="line">      datanodes can send heartbeat to SCM.</span><br><span class="line">    <span class="tag">&lt;/<span class="name">description</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">property</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">property</span>&gt;</span></span><br><span class="line">         <span class="tag">&lt;<span class="name">name</span>&gt;</span>ozone.replication<span class="tag">&lt;/<span class="name">name</span>&gt;</span></span><br><span class="line">         <span class="tag">&lt;<span class="name">value</span>&gt;</span>1<span class="tag">&lt;/<span class="name">value</span>&gt;</span></span><br><span class="line">     <span class="tag">&lt;/<span class="name">property</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;/<span class="name">configuration</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>需要将ozone相关的jar引入到classpath中，在user home目录下增加.hadooprc文件</p>
+</blockquote>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">vim ~/.hadooprc</span><br><span class="line">HADOOP_CLASSPATH=/opt/soft/hadoop/share/hadoop/yarn/*.jar:/opt/soft/hadoop/share/hadoop/tools/*.jar:/opt/soft/hadoop/share/hadoop/ozoneplugin/*.jar:/opt/soft/hadoop/share/hadoop/ozone/*.jar:/opt/soft/hadoop/share/hadoop/mapreduce/*.jar:/opt/soft/hadoop/share/hadoop/hdfs/*.jar:/opt/soft/hadoop/share/hadoop/common/*.jar:/opt/soft/hadoop/share/hadoop/client/*.jar:/opt/soft/hadoop/share/hadoop/yarn/lib/*.jar:/opt/soft/hadoop/share/hadoop/tools/lib/*.jar:/opt/soft/hadoop/share/hadoop/ozoneplugin/lib/*.jar:/opt/soft/hadoop/share/hadoop/ozone/lib/*.jar:/opt/soft/hadoop/share/hadoop/mapreduce/lib/*.jar:/opt/soft/hadoop/share/hadoop/hdfs/lib/*.jar:/opt/soft/hadoop/share/hadoop/common/lib/*.jar:/opt/soft/hadoop/share/hadoop/client/lib/*.jar</span><br></pre></td></tr></table></figure>
+
+<p>如果将Ozone运行在HDFS之上的话，需要在hdfs-site.xml中添加如下内容:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&lt;property&gt;</span><br><span class="line">   &lt;name&gt;dfs.datanode.plugins&lt;/name&gt;</span><br><span class="line">   &lt;value&gt;org.apache.hadoop.ozone.HddsDatanodeService&lt;/value&gt;</span><br><span class="line">&lt;/property&gt;</span><br></pre></td></tr></table></figure>
+
+<p>此时就可以启动相关的服务了，首先启动namenode和datanode，命令为<code>hdfs --daemon start namenode</code>和<code>hdfs --daemon start datanode</code><br>其次启动scm和om，<em>要先启动scm再启动om，而且在第一次启动的时候要先初始化</em>，命令如下:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">ozone scm --init</span><br><span class="line">ozone --daemon start scm</span><br><span class="line">ozone om --init</span><br><span class="line">ozone --daemon start om</span><br></pre></td></tr></table></figure>
+
+<p><em>一切正常就可以在OM的UI上查看信息，OM默认端口上9874，地址为<a target="_blank" rel="noopener" href="http://omserver:9874/">http://omserver:9874/</a></em></p>
+<p>我们可以运行一些命令来感受下Ozone，<br>创建一个volume并且查看</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">ozone sh volume create --user=work /hive-ozone</span><br><span class="line"></span><br><span class="line">ozone sh volume list --user work</span><br><span class="line"><span class="attr">SLF4J</span>: Class path contains multiple SLF4J bindings.</span><br><span class="line"><span class="attr">SLF4J</span>: Found binding <span class="keyword">in</span> [jar:file:<span class="regexp">/opt/</span>soft/hadoop-<span class="number">3.2</span><span class="number">.0</span>/share/hadoop/common/lib/slf4j-log4j12-<span class="number">1.7</span><span class="number">.25</span>.jar!<span class="regexp">/org/</span>slf4j/impl/StaticLoggerBinder.class]</span><br><span class="line"><span class="attr">SLF4J</span>: Found binding <span class="keyword">in</span> [jar:file:<span class="regexp">/opt/</span>soft/hadoop-<span class="number">3.2</span><span class="number">.0</span>/share/ozone/lib/slf4j-log4j12-<span class="number">1.7</span><span class="number">.25</span>.jar!<span class="regexp">/org/</span>slf4j/impl/StaticLoggerBinder.class]</span><br><span class="line"><span class="attr">SLF4J</span>: Found binding <span class="keyword">in</span> [jar:file:<span class="regexp">/opt/</span>soft/hadoop-<span class="number">3.2</span><span class="number">.0</span>/share/hadoop/ozone/lib/slf4j-log4j12-<span class="number">1.7</span><span class="number">.25</span>.jar!<span class="regexp">/org/</span>slf4j/impl/StaticLoggerBinder.class]</span><br><span class="line"><span class="attr">SLF4J</span>: See http:<span class="comment">//www.slf4j.org/codes.html#multiple_bindings for an explanation.</span></span><br><span class="line">SLF4J: Actual binding is <span class="keyword">of</span> type [org.slf4j.impl.Log4jLoggerFactory]</span><br><span class="line"><span class="number">2019</span>-<span class="number">01</span>-<span class="number">29</span> <span class="number">15</span>:<span class="number">33</span>:<span class="number">52</span>,<span class="number">786</span> WARN util.NativeCodeLoader: Unable to load native-hadoop library <span class="keyword">for</span> your platform... using builtin-java classes where applicable</span><br><span class="line">[ &#123;</span><br><span class="line">  <span class="string">&quot;owner&quot;</span> : &#123;</span><br><span class="line">    <span class="string">&quot;name&quot;</span> : <span class="string">&quot;work&quot;</span></span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="string">&quot;quota&quot;</span> : &#123;</span><br><span class="line">    <span class="string">&quot;unit&quot;</span> : <span class="string">&quot;TB&quot;</span>,</span><br><span class="line">    <span class="string">&quot;size&quot;</span> : <span class="number">1048576</span></span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="string">&quot;volumeName&quot;</span> : <span class="string">&quot;hive-ozone&quot;</span>,</span><br><span class="line">  <span class="string">&quot;createdOn&quot;</span> : <span class="string">&quot;星期二, 29 一月 2019 07:32:27 GMT&quot;</span>,</span><br><span class="line">  <span class="string">&quot;createdBy&quot;</span> : <span class="string">&quot;work&quot;</span></span><br><span class="line">&#125; ]</span><br></pre></td></tr></table></figure>
+
+<p>再来创建一个bucket，<code>ozone sh bucket create /hive-ozone/bucket-test</code></p>
+<p>创建完volume和bucket，就可以上传文件了，也就是创建一个key，Ozone命令为<code>ozone sh key put /hive-ozone/bucket-test/hadoop.log logs/hadoop.log</code>，<br>也可以像hdfs shell那样上传key，命令为<code>ozone fs -put logs/hadoop.log o3fs://bucket-test.hive-ozone/t.log</code></p>
+<!--
+各用户之间如何共享数据
+Ozone如何自动识别小文件？
+-->
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://cwiki.apache.org/confluence/display/HADOOP/Building+Ozone">https://cwiki.apache.org/confluence/display/HADOOP/Building+Ozone</a><br><a target="_blank" rel="noopener" href="https://hortonworks.com/blog/introducing-apache-hadoop-ozone-object-store-apache-hadoop/">https://hortonworks.com/blog/introducing-apache-hadoop-ozone-object-store-apache-hadoop/</a><br><a target="_blank" rel="noopener" href="https://hortonworks.com/blog/apache-hadoop-ozone-object-store-overview/">https://hortonworks.com/blog/apache-hadoop-ozone-object-store-overview/</a><br><a target="_blank" rel="noopener" href="https://hadoop.apache.org/ozone/docs/0.3.0-alpha/index.html">https://hadoop.apache.org/ozone/docs/0.3.0-alpha/index.html</a><br><a target="_blank" rel="noopener" href="https://hortonworks.com/blog/apache-hadoop-ozone-object-store-architecture/">https://hortonworks.com/blog/apache-hadoop-ozone-object-store-architecture/</a><br><a target="_blank" rel="noopener" href="https://blog.csdn.net/Androidlushangderen/article/details/78168479">https://blog.csdn.net/Androidlushangderen/article/details/78168479</a></p>
+<!--
+
+To scale Ozone to billions of files, we needed to solve two bottlenecks that exist in HDFS.
+
+2.1. NAMESPACE SCALABILITY
+We can no longer store the entire namespace in the memory of a single node. The key insight is that the namespace has locality of reference so we can store just the working set in memory. The namespace is managed by a service called the Ozone Manager.
+
+2.2. BLOCK MAP SCALABILITY
+This is a harder problem to solve. Unlike the namespace, the block map does not have locality of reference since storage nodes (DataNodes) periodically send block reports about each block in the system. Ozone delegates this problem to a shared generic storage layer called Hadoop Distributed DataStore (HDDS).
+-->
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">混绅士</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://bigdatadecode.club/Hadoop-Ozone.html">http://bigdatadecode.club/Hadoop-Ozone.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://bigdatadecode.club" target="_blank">big data decode club</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Hadoop/">Hadoop</a><a class="post-meta__tags" href="/tags/BigData/">BigData</a><a class="post-meta__tags" href="/tags/HDFS/">HDFS</a><a class="post-meta__tags" href="/tags/%E5%B0%8F%E6%96%87%E4%BB%B6/">小文件</a><a class="post-meta__tags" href="/tags/Ozone/">Ozone</a></div><div class="post_share"></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/path/to/wechat-reward-image/wechatpay.png" target="_blank"><img class="post-qr-code-img" src="/path/to/wechat-reward-image/wechatpay.png" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/Ozone%E6%84%9F%E6%82%9F.html"><img class="prev-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">Ozone感悟</div></div></a></div><div class="next-post pull-right"><a href="/HDFS-little-file-action.html"><img class="next-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">HDFS小文件合并实战</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/HDFS-little-file-action.html" title="HDFS小文件合并实战"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2019-01-30</div><div class="title">HDFS小文件合并实战</div></div></a></div><div><a href="/Ozone%E6%84%9F%E6%82%9F.html" title="Ozone感悟"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2019-02-15</div><div class="title">Ozone感悟</div></div></a></div><div><a href="/HDFS%20HA%E7%9B%B8%E5%85%B3%E7%9A%84%E5%87%A0%E4%B8%AA%E9%97%AE%E9%A2%98%E5%92%8C%E7%A4%BA%E4%BE%8B%E5%9C%BA%E6%99%AF.html" title="HDFS HA相关的几个问题和示例场景"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-11-19</div><div class="title">HDFS HA相关的几个问题和示例场景</div></div></a></div><div><a href="/HDFS%20HA%E6%9C%BA%E5%88%B6%E8%A7%A3%E6%9E%90.html" title="HDFS HA机制解析"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-07-14</div><div class="title">HDFS HA机制解析</div></div></a></div><div><a href="/HDFS%20ReplicationMonitor%E5%89%AF%E6%9C%AC%E7%9B%91%E6%8E%A7%E7%BA%BF%E7%A8%8B%E8%A7%A3%E6%9E%90.html" title="HDFS ReplicationMonitor副本监控线程解析"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-08-01</div><div class="title">HDFS ReplicationMonitor副本监控线程解析</div></div></a></div><div><a href="/HDFS%20read%E8%A7%A3%E6%9E%90.html" title="HDFS read解析(一)之Open文件流"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-11-21</div><div class="title">HDFS read解析(一)之Open文件流</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/uploads/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">混绅士</div><div class="author-info__description">Any answers you can find in source code.</div></div><div class="card-info-data is-center"><div class="card-info-data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="card-info-data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="card-info-data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Ozone%E8%AF%9E%E7%94%9F%E7%9A%84%E8%83%8C%E6%99%AF"><span class="toc-number">1.</span> <span class="toc-text">Ozone诞生的背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Ozone"><span class="toc-number">2.</span> <span class="toc-text">Ozone</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99"><span class="toc-number">3.</span> <span class="toc-text">设计原则</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9E%B6%E6%9E%84"><span class="toc-number">4.</span> <span class="toc-text">架构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%83%A8%E7%BD%B2%E5%8F%8A%E6%B5%8B%E8%AF%95"><span class="toc-number">5.</span> <span class="toc-text">部署及测试</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">6.</span> <span class="toc-text">参考</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/scratch-extensions-demo.html" title="scratch自定义扩展"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="scratch自定义扩展"/></a><div class="content"><a class="title" href="/scratch-extensions-demo.html" title="scratch自定义扩展">scratch自定义扩展</a><time datetime="2021-12-14T14:30:20.000Z" title="发表于 2021-12-14 22:30:20">2021-12-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/metabase-import-ide.html" title="metabase导入IDE调试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="metabase导入IDE调试"/></a><div class="content"><a class="title" href="/metabase-import-ide.html" title="metabase导入IDE调试">metabase导入IDE调试</a><time datetime="2021-12-13T15:31:22.000Z" title="发表于 2021-12-13 23:31:22">2021-12-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/flink-connector-example.html" title="Flink Connector调研"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Connector调研"/></a><div class="content"><a class="title" href="/flink-connector-example.html" title="Flink Connector调研">Flink Connector调研</a><time datetime="2021-11-10T14:30:20.000Z" title="发表于 2021-11-10 22:30:20">2021-11-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink standlone模式下Flinkx测试"/></a><div class="content"><a class="title" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试">Flink standlone模式下Flinkx测试</a><time datetime="2021-11-06T15:05:20.000Z" title="发表于 2021-11-06 23:05:20">2021-11-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/openGauss-deploy.html" title="openGauss极简版安装使用"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="openGauss极简版安装使用"/></a><div class="content"><a class="title" href="/openGauss-deploy.html" title="openGauss极简版安装使用">openGauss极简版安装使用</a><time datetime="2021-05-13T14:35:20.000Z" title="发表于 2021-05-13 22:35:20">2021-05-13</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2022 By 混绅士</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">本地搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div></div></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

@@ -1,0 +1,264 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>Java虚拟机及GC基础介绍 | big data decode club</title><meta name="keywords" content="java,jvm,gc"><meta name="author" content="混绅士"><meta name="copyright" content="混绅士"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="作为一个hadoop开发，工作中难免会遇到gc的问题，以前总是一头雾水，这次抽时间系统的整理下，只是入门，更加深入的知识在工作中用到了再整理。 要理解gc先要搞清楚JVM，JVM是一个抽象的计算机结构。Java程序根据JVM的特性编写。JVM针对特定于操作系统并且可以将Java指令翻译成底层系统的指令并执行。JVM确保了Java的平台无关性。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Java虚拟机及GC基础介绍">
+<meta property="og:url" content="http://bigdatadecode.club/Java%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%8F%8AGC%E5%9F%BA%E7%A1%80%E4%BB%8B%E7%BB%8D.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="作为一个hadoop开发，工作中难免会遇到gc的问题，以前总是一头雾水，这次抽时间系统的整理下，只是入门，更加深入的知识在工作中用到了再整理。 要理解gc先要搞清楚JVM，JVM是一个抽象的计算机结构。Java程序根据JVM的特性编写。JVM针对特定于操作系统并且可以将Java指令翻译成底层系统的指令并执行。JVM确保了Java的平台无关性。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+<meta property="article:published_time" content="2017-07-07T03:46:23.000Z">
+<meta property="article:modified_time" content="2017-07-07T03:46:23.000Z">
+<meta property="article:author" content="混绅士">
+<meta property="article:tag" content="java">
+<meta property="article:tag" content="jvm">
+<meta property="article:tag" content="gc">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><link rel="shortcut icon" href="/favicon.ico"><link rel="canonical" href="http://bigdatadecode.club/Java%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%8F%8AGC%E5%9F%BA%E7%A1%80%E4%BB%8B%E7%BB%8D"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="baidu-site-verification" content="27E5EbutCm"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Java虚拟机及GC基础介绍',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2017-07-07 11:46:23'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="big data decode club" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/uploads/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><div class="data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">big data decode club</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Java虚拟机及GC基础介绍</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2017-07-07T03:46:23.000Z" title="发表于 2017-07-07 11:46:23">2017-07-07</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2017-07-07T03:46:23.000Z" title="更新于 2017-07-07 11:46:23">2017-07-07</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Java/">Java</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">5.1k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>16分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="Java虚拟机及GC基础介绍"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>作为一个hadoop开发，工作中难免会遇到gc的问题，以前总是一头雾水，这次抽时间系统的整理下，只是入门，更加深入的知识在工作中用到了再整理。</p>
+<p>要理解gc先要搞清楚JVM，JVM是一个抽象的计算机结构。Java程序根据JVM的特性编写。JVM针对特定于操作系统并且可以将Java指令翻译成底层系统的指令并执行。JVM确保了Java的平台无关性。</p>
+<span id="more"></span>
+
+<h2 id="JVM架构"><a href="#JVM架构" class="headerlink" title="JVM架构"></a>JVM架构</h2><p>下图是JVM的架构(此架构图是HotSpot JVM)<br><img src="/blogimgs/Java%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%9F%BA%E7%A1%80%E4%BB%8B%E7%BB%8D/JVM%E6%9E%B6%E6%9E%84.jpg" alt="JVM架构图" title="JVM架构图"><br>下面简单介绍下各个组件：</p>
+<blockquote>
+<p>class files文件是通过.java文件编译而来的。</p>
+</blockquote>
+<blockquote>
+<p><em>ClassLoader的作用是装载能被JVM识别的指令，也就是加载.class文件到堆中，形成一个该类的对象(也就是说ClassLoader将class文件翻译为对象存放在堆内存中。)<em>。其加载流程为</em>加载 –&gt; 验证 –&gt; 准备 –&gt; 解析 –&gt; 初始化</em>。<br>ClassLoader，这个东西还是非常重要的，<em>在JVM中是通过ClassLoader和类本身共同去判断两个Class是否相同</em>。换句话说就是：不同的ClassLoader加载同一个Class文件，那么JVM认为他们生成的类是不同的。有些时候不会从Class文件中加载流（比如Java Applet是从网络中加载），那么这个ClassLoader和普通的实现逻辑当然是不一样的，通过不同的ClassLoader就可以解决这个问题。</p>
+</blockquote>
+<blockquote>
+<p>Runtime Data Area(运行数据区域)也是Java内存区域，在此区域内又分为5部分，GC就是对这些区域内存的操作。其中这5部分根据是否被线程共享可以分为两大类，<em>PC Register、Java Stacks 和 Native Method Statck为线程私有的，Heap Memory 和 Method Area是线程共享的</em>。</p>
+</blockquote>
+<p>1、PC Register(程序计数器)</p>
+<p>PC Register是一个比较小的内存区域，用于指示当前线程所执行的字节码执行到了第几行，可以理解为是当前线程的行号指示器。字节码解释器在工作时，会通过改变这个计数器的值来取下一条语句指令。<br>每个程序计数器只用来记录一个线程的行号，所以它是<strong>线程私有</strong>（一个线程就有一个程序计数器）的。<br>如果程序执行的是一个Java方法，则计数器记录的是正在执行的虚拟机字节码指令地址；如果正在执行的是一个本地（native，由C语言编写完成）方法，则计数器的值为Undefined，由于程序计数器只是记录当前指令地址，所以不存在内存溢出的情况，因此，<strong>程序计数器是JVM内存区域中唯一一个不会发生OutOfMemoryError的区域</strong>。</p>
+<p>2、Java Stacks(Java 栈)</p>
+<p>Java栈也称为方法栈，存放这与方法相关的信息，如<em>方法中的局部变量、方法入口、方法出口</em>等。<br>一个线程的每个方法在执行的同时，都会创建一个<em>栈帧</em>(Statck Frame)，栈帧中存储的有局部变量表、操作站、动态链接、方法出口等，<em>当方法被调用时，栈帧在Java栈中入栈，当方法执行完成时，栈帧出栈</em>。</p>
+<p>局部变量表中存储着方法的相关<em>局部变量</em>，包括各种基本数据类型，对象的引用，返回地址等。在局部变量表中，只有long和double类型会占用2个局部变量空间(Slot，对于32位机器，一个Slot就是32个bit)，其它都是1个Slot。需要注意的是，<em>局部变量表是在__编译__时就已经确定好的，方法运行所需要分配的空间在栈帧中是完全确定的</em>，在方法的生命周期内都不会改变。</p>
+<p>Java栈中定义了两种异常，如果线程调用的栈深度大于虚拟机允许的最大深度(例如递归的深度较大)，则抛出<em>StatckOverFlowError</em>(栈溢出)；不过多数Java虚拟机都允许动态扩展虚拟机栈的大小(有少部分是固定长度的)，所以线程可以一直申请栈，直到内存不足，此时，会抛出<em>OutOfMemoryError</em>(内存溢出)。</p>
+<p>Java栈也是一个线程对应着一个Java栈，因此Java栈也是<strong>线程私有</strong>的。</p>
+<p>3、Native Method Statck(本地方法栈)</p>
+<p><em>本地方法栈在作用，运行机制，异常类型等方面都与Java栈相同</em>，唯一的区别是：Java栈是执行Java方法的，而<em>本地方法栈是用来执行native方法</em>(也就是由c语言编写的方法)的，在很多虚拟机中（如Sun的JDK默认的HotSpot虚拟机），会将本地方法栈与虚拟机栈放在一起使用。<br>本地方法栈也是<em>线程私有</em>的。</p>
+<p>4、Heap Memory(堆内存)</p>
+<p>堆内存主要是用来<em>动态的存储对象实例</em>，原则上讲，所有的对象都在堆区上分配内存(不过现代技术里，也不是这么绝对的，也有栈上直接分配的)。也是<em>Java GC机制所管理的主要内存区域</em>，堆区由所有<em>线程共享</em>，在虚拟机启动时创建。堆区的存在是为了存储对象实例，</p>
+<p>一般的，根据Java虚拟机规范规定，堆内存需要在逻辑上是连续的（在物理上不需要），在实现时，可以是固定大小的，也可以是可扩展的，目前主流的虚拟机都是可扩展的。<em>如果在执行垃圾回收之后，仍没有足够的内存分配，也不能再扩展，将会抛出OutOfMemoryError:__Java heap space__异常</em>。</p>
+<p>堆内存的详细内存在下面的章节进行扩展。</p>
+<p>5、Method Area(方法区)</p>
+<p>方法区也就是平时所说的<em>非堆内存</em>(Non-heap)，但按照Java GC的分代收集机制来说，方法区也叫永久代(Permanent Generation)。</p>
+<p>方法区是各个<em>线程共享</em>的区域，用于存储已经被虚拟机加载的<em>类信息</em>(即加载类时需要加载的信息，包括版本、field、方法、接口等信息)、<em>final常量</em>、<em>静态变量</em>、编译器即时编译的代码等。</p>
+<p>方法区在物理上也不需要是连续的，可以选择固定大小或可扩展大小，并且方法区比堆还多了一个限制：可以选择是否执行垃圾收集。一般的，方法区上执行的垃圾收集是很少的，这也是方法区被称为永久代的原因之一（HotSpot），但这也不代表着在方法区上完全没有垃圾收集，其上的垃圾收集主要是针对<em>常量池的内存回收和对已加载类的卸载</em>。</p>
+<p>在方法区上进行垃圾收集，条件苛刻而且相当困难，效果也不令人满意，所以一般不做太多考虑，可以留作以后进一步深入研究时使用。</p>
+<p>方法区在内存不足时抛出OutOfMemoryError:<strong>PermGen space</strong>异常，。</p>
+<blockquote>
+<p>Execution Engine(执行引擎)的功能是执行classes中的指令。任何JVM specification实现(JDK)的核心都是Execution engine，而Execution engine最核心的两块是JIT(just in time)即时编译器和GC(Garbage Collection)垃圾回收器。Execution Engine包含Interpreter(解释器)、JIT、Hotspot profiler和GC。</p>
+</blockquote>
+<p>Interpreter：主要功能是读bytecode，然后执行相对应的指令。<br>JIT(Just-in-time) Compiler：这个部分主要是用以优化execution engine的性能，一般execution engine会先用interpreter去解释bytecode, 然后执行对应的命令。在很多时候，JIT compliler可以将相类似的bytecode都翻译成native code，然后直接运行。直接执行native code会比bytecode快。<br>Hotspot profiler: 这个部分也是用来优化性能的，当某些method被多次使用时，Hotspot这个部分就会用profiler去记录那些method所对应的native code， 这样就可以直接用native code而不是byte code了。<br>Garbage collector: 这个部分主要负责内存的管理，当程序中的object不再被用的时候，garbage collector会将其删除。</p>
+<p>通过类装载器装载的，被分配到JVM的运行时数据区的字节码会被<em>执行引擎</em>执行。执行引擎以指令为单位读取Java字节码。它就像一个CPU一样，一条一条地执行机器指令。每个字节码指令都由一个1字节的操作码和附加的操作数组成。执行引擎取得一个操作码，然后根据操作数来执行任务，完成后就继 续执行下一条操作码。<br>不过Java字节码是用一种人类可以读懂的语言编写的，而不是用机器可以直接执行的语言。因此，执行引擎必须把字节码转换成可以直接被JVM执行的语言。字节码可以通过以下两种方式转换成合适的语言。</p>
+<ul>
+<li><p>解释器(解释执行)：一条一条地读取，解释并且执行字节码指令。因为它一条一条地解释和执行指令，所以它可以很快地解释字节码，但是执行起来会比较慢。这是解释执行的语言的一个缺点。字节码这种“语言”基本来说是解释执行的。</p>
+</li>
+<li><p>即时(Just-In-Time)编译器(编译执行)： 即时编译器被引入用来弥补解释器的缺点。执行引擎首先按照解释执行的方式来执行，然后在合适的时候，即时编译器把整段字节码编译成本地代码。然后，执行引 擎就没有必要再去解释执行方法了，它可以直接通过本地代码去执行它。执行本地代码比一条一条进行解释执行的速度快很多。编译后的代码可以执行的很快，因为 本地代码是保存在缓存里的。</p>
+</li>
+</ul>
+<p>不过，用JIT编译器来编译代码所花的时间要比用解释器去一条条解释执行花的时间要多。因此，如果代码只被执行一次的话，那么最好还是解释执行而不是编译后再执行。因此，内置了JIT编译器的JVM都会检查方法的执行频率，<em>如果一个方法的执行频率超过一个特定的值的话，那么这个方法就会被编译成本地代码</em>。</p>
+<h2 id="垃圾回收-GC"><a href="#垃圾回收-GC" class="headerlink" title="垃圾回收(GC)"></a>垃圾回收(GC)</h2><p><em>垃圾回收主要组件是堆内存和垃圾回收器</em>。堆内存是内存数据区，用来保存运行时的对象实例。垃圾回收器也会在这里操作。垃圾回收器是个守护进程。</p>
+<p>GC主要是对堆内存的回收，堆内存按照隔代划分将堆内存划分为新生代(Young Generation)、老年代(Old Generation)，方法区(non-heap)划分为永久代(Permanent Generation)。java的内存分配如下图：<br><img src="/blogimgs/Java%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%9F%BA%E7%A1%80%E4%BB%8B%E7%BB%8D/java%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D.png" alt="java内存分配" title="java内存分配"></p>
+<ul>
+<li>新生代</li>
+</ul>
+<p>新生代分为3个区域：Eden、Survivor0和Survivor1。</p>
+<p>新创建的对象被分配在Eden区(大对象可以直接被创建在年老代)，由于大部分对象在创建后会很快不再使用，所以很多对象被创建在新生代，然后消失。对象从这个区域消失的过程我们称之为*minor GC(or young gc)*。</p>
+<p>新生代minor gc的流程为：<br>1、新生成的对象放入Eden区，等Eden区满之后，执行一次minor gc，将Eden中存活下来的对象放入S0(Survivor0)中<br>2、此时Eden区为空，新生的对象再次放入Eden区，Eden区再次被放满，执行一次minor gc，此时将Eden中存活的对象再次放入S0中，<em>循环几次待S0也满之后</em>，将Eden和S0中存活的对象放入S1中，此时Eden和S0为空<br>3、反复上述流程15次(默认15次，由-XX:MaxTenuringThreshold控制，大于该值进入老年代，<em>但这只是个最大值，并不代表一定是这个值</em>)之后，将S0或者S1中依然存活的对象放入老年代中，将Eden中存活的对象放入S0或者S1中。</p>
+<blockquote>
+<p>S0和S1两个幸存区同时只有一个区域里有数据</p>
+</blockquote>
+<blockquote>
+<p>Eden、S0和S1所占的比例由参数-XX:SurvivorRatio控制，默认SurvivorRatio=8，即Eden:S0:S1=8:1:1。如果SurvivorRatio=10，Eden:S0:S1=10:1:1，Eden占新生代的10/12，S0和S1各占1/12。</p>
+</blockquote>
+<p>在执行minor gc时可能<em>需要查询整个老年代以确定新生代中的对象是否可以清理回收</em>，这显然是低效的。解决的方法是，老年代中维护一个<em>card table</em>，他是一个512 byte大小的块。所有老年代对象引用新生代对象的记录都记录在这里。当针对新生代执行GC的时候，只需要查询card table来决定是否可以被回收，而不用查询整个老年代。这个card table由一个write barrier来管理。write barrier给GC带来了很大的性能提升，虽然由此可能带来一些开销，但GC的整体时间被显著的减少。</p>
+<ul>
+<li>老年代</li>
+</ul>
+<p>对象如果在年轻代存活了足够长的时间而没有被清理掉(即在几次Young GC后存活了下来)，则会被复制到老年代，老年代的空间一般比新生代大，能存放更多的对象，在老年代上发生的GC次数也比新生代少。当老年代内存不足时，将执行<em>Major GC，也叫Full GC</em>。</p>
+<p>他们是一个概念，就是针对老年代/永久代进行GC。因为取名叫Full就会让人疑惑，到底会不会先Minor GC。<em>事实上Full GC本身不会先进行Minor GC</em>，<strong>我们可以配置</strong>，让Full GC之前先进行一次Minor GC，因为老年代很多对象都会引用到新生代的对象，先进行一次Minor GC可以提高老年代GC的速度。<em>比如老年代使用CMS时，设置CMSScavengeBeforeRemark优化，让CMS remark之前先进行一次Minor GC</em>。</p>
+<blockquote>
+<p>个人理解Major GC针对Old区，此区域的gc算法包括CMS、G1等。而Full GC的次数是由STW(stop the world)决定的，则当使用CMS(initial mark、concurrent mark、remark和concurrent sweep)时，对Old区进行gc时，full gc的个数会加2，因为CMS中STW的次数是2(分别为initial mark和remark阶段)</p>
+</blockquote>
+<blockquote>
+<p><strong>CMS 不等于Full GC，我们可以看到CMS分为多个阶段，只有stop the world的阶段被计算到了Full GC的次数和时间，而和业务线程并发的GC的次数和时间则不被认为是Full GC</strong></p>
+</blockquote>
+<blockquote>
+<p>新生代和老年代所占内存的比例参数由-XX:NewRatio控制，默认NewRatio=3，即Old:Young=3:1，则Old占内存的3/4，Young占内存的1/4。</p>
+</blockquote>
+<ul>
+<li>永久代</li>
+</ul>
+<p>永久代用来保存<em>类常量以及字符串常量</em>。因此，<em>这个区域不是用来永久的存储那些从老年代存活下来的对象</em>。这个区域也可能发生GC。并且发生在这个区域上的GC事件也会被算为<em>major GC</em>。</p>
+<p><em>运行时常量池</em>(Runtime Constant Pool)是存在该区域，用于存储编译期就生成的字面常量、符号引用、翻译出来的直接引用(符号引用就是编码是用字符串表示某个变量、接口的位置，直接引用就是根据符号引用翻译出来的地址，将在类链接阶段完成翻译)；运行时常量池除了存储编译期常量外，也可以存储在运行时间产生的常量(比如String类的intern()方法，作用是String维护了一个常量池，如果调用的字符“abc”已经在常量池中，则返回池中的字符串地址，否则，新建一个常量加入池中，并返回地址)。</p>
+<h2 id="GC监控"><a href="#GC监控" class="headerlink" title="GC监控"></a>GC监控</h2><p>GC监控主要是为了搞清楚JVM是如何执行GC的，鉴别JVM是否在高效地执行GC，以及是否有必要进行额外的性能调优。</p>
+<p>监控GC有很多种方法，这里主要介绍两种，一种是图形化的GC监控，一种是命令行式的监控命令。</p>
+<h3 id="图形化GC监控"><a href="#图形化GC监控" class="headerlink" title="图形化GC监控"></a>图形化GC监控</h3><p>图形化GC监控主要介绍下JDK自带的Java VisualVM。</p>
+<p>Java VisualVM存在JDK的安装目录下的bin文件夹中。主要用于：</p>
+<ul>
+<li>生成并分析堆的内存转储；</li>
+<li>在MBeans上观察并操作；</li>
+<li>监视垃圾回收；</li>
+<li>内存和CPU性能分析；</li>
+</ul>
+<p>更多详细内容请看<a target="_blank" rel="noopener" href="http://www.importnew.com/13838.html">这里</a></p>
+<h3 id="GC监控命令"><a href="#GC监控命令" class="headerlink" title="GC监控命令"></a>GC监控命令</h3><p>GC监控命令常用的有<em>jstat和jmap</em>。</p>
+<ul>
+<li>jstat</li>
+</ul>
+<p>jstat用于监视虚拟机各种运行状态信息的命令行工具。可以显示本地或者远程虚拟机进程中的<em>类装载、内存、垃圾收集、JIT编译</em>等运行数据。<br>其命令格式为<code>jstat [ option vmid|lvmid [interval[s|ms] [count]]]</code>，其中vmid是连接本地虚拟机用的，lvmid是连接远程虚拟机用的，参数interval和count代表查询间隔和次数，省略说明查询1次。假设需要每250毫秒查询一次进程1234垃圾收集的状态，一共查询3次，则命令为<code>jstat -gc 1234 250 3</code>，输出如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">S0C       S1C       S0U    S1U      EC         EU          OC         OU         PC         PU         YGC     YGCT    FGC      FGCT     GCT</span><br><span class="line">3008.0   3072.0    0.0     1511.1   343360.0   46383.0     699072.0   283690.2   75392.0    41064.3    2540    18.454    4      1.133    19.588</span><br><span class="line">3008.0   3072.0    0.0     1511.1   343360.0   47530.9     699072.0   283690.2   75392.0    41064.3    2540    18.454    4      1.133    19.588</span><br><span class="line">3008.0   3072.0    0.0     1511.1   343360.0   47793.0     699072.0   283690.2   75392.0    41064.3    2540    18.454    4      1.133    19.588</span><br></pre></td></tr></table></figure>
+<p>其中各列代表的意思如下：<br>S0C  输出Survivor0空间的大小。单位KB。<br>S1C     输出Survivor1空间的大小。单位KB。<br>S0U     输出Survivor0已用空间的大小。单位KB。<br>S1U     输出Survivor1已用空间的大小。单位KB。<br>EC  输出Eden空间的大小。单位KB。<br>EU  输出Eden已用空间的大小。单位KB。<br>OC  输出老年代空间的大小。单位KB。<br>OU  输出老年代已用空间的大小。单位KB。<br>PC  输出持久代空间的大小。单位KB。<br>PU  输出持久代已用空间的大小。单位KB。<br>YGC     新生代空间GC时间发生的次数。<br>YGCT  新生代GC处理花费的时间。<br>FGC     full GC发生的次数。<br>FGCT  full GC操作花费的时间<br>GCT     GC操作花费的总时间。</p>
+<ul>
+<li>jmap</li>
+</ul>
+<p>jamp是内存映射工具，用于生成堆转储快照(一般称为heapdump或者dump文件)。<em>jmap的作用不仅仅是为了生成dump文件，还可以查询finalize执行队列、java堆和永久代的详细信息</em>，如空间使用率、当前用的是哪种垃圾收集器等。<br>其命令格式为<code>jmap [ option ] vmid</code>，常用option有-dump和-heap，-dump用于生成java堆转储快照。-heap用于显示java堆的详细信息，如使用哪种回收器、参数配置、分代情况等。</p>
+<p>查看进程pid的内存使用情况<br>命令<code>jmap -histo:live pid &gt; mem</code><br>或者<br>命令<code>jmap -histo pid &gt; mem</code></p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>本篇主要科普了下JVM的架构和Java的内存分配。在JVM架构中主要关注运行时数据区域，这里分为两大类，线程共享的方法区和Java堆，线程私有的程序计数器、Java栈和本地方法栈，线程私有是指每个线程都会有这3个模块。在整个运行时数据区域只有程序计数器不会发生OOM，其它部分都会发生OOM，OOM的主要类型有<em>Java heap space、PermGen space、OutOfMemoryError和StatckOverFlowError</em>。</p>
+<!-- 
+// JVM sizing options
+-server -Xms40g -Xmx40g -XX:MaxDirectMemorySize=4096m -XX:PermSize=256m -XX:MaxPermSize=256m   
+// Young generation options
+-XX:NewSize=6g -XX:MaxNewSize=6g -XX:+UseParNewGC -XX:MaxTenuringThreshold=2 -XX:SurvivorRatio=8 -XX:+UnlockDiagnosticVMOptions -XX:ParGCCardsPerStrideChunk=32768
+// Old generation  options
+-XX:+UseConcMarkSweepGC -XX:CMSParallelRemarkEnabled -XX:+ParallelRefProcEnabled -XX:+CMSClassUnloadingEnabled  -XX:CMSInitiatingOccupancyFraction=80 -XX:+UseCMSInitiatingOccupancyOnly   
+// Other options
+-XX:+AlwaysPreTouch -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -XX:+PrintTenuringDistribution -XX:+PrintGCApplicationStoppedTime -XX:-OmitStackTraceInFastThrow
+-->
+
+<h2 id="附加：直接内存"><a href="#附加：直接内存" class="headerlink" title="附加：直接内存"></a>附加：直接内存</h2><p>直接内存并不是JVM管理的内存，则直接内存在分配时不会受到Java堆大小的限制，但是会受到本机内存大小的限制，所有也可能会抛<em>OutOfMemoryError异常</em>。可以这样理解，直接内存，就是JVM以外的机器内存，比如，你有4G的内存，JVM占用了1G，则其余的3G就是直接内存。</p>
+<p>JDK中有一种基于通道(Channel)和缓冲区(Buffer)的内存分配方式，将由C语言实现的native函数库分配在直接内存中，用存储在JVM堆中的DirectByteBuffer来引用。<br>在NIO类中引入一种基于通道与缓冲区的IO方式，它可以使用Native函数库直接分配堆外内存，然后通过一个存储在Java堆中的DirectByteBuffer对象作为这块内存的引用进行操作。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">混绅士</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://bigdatadecode.club/Java%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%8F%8AGC%E5%9F%BA%E7%A1%80%E4%BB%8B%E7%BB%8D.html">http://bigdatadecode.club/Java%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%8F%8AGC%E5%9F%BA%E7%A1%80%E4%BB%8B%E7%BB%8D.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://bigdatadecode.club" target="_blank">big data decode club</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/java/">java</a><a class="post-meta__tags" href="/tags/jvm/">jvm</a><a class="post-meta__tags" href="/tags/gc/">gc</a></div><div class="post_share"></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/path/to/wechat-reward-image/wechatpay.png" target="_blank"><img class="post-qr-code-img" src="/path/to/wechat-reward-image/wechatpay.png" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/MysqlToHDFSWithCanal.html"><img class="prev-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">利用canal同步mysql到HDFS</div></div></a></div><div class="next-post pull-right"><a href="/unclean.leader.election.enable%E5%BC%95%E8%B5%B7%E7%9A%84outOfRanger.html"><img class="next-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">unclean.leader.election.enable引起的outOfRanger</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/Builder%20%E6%A8%A1%E5%BC%8F.html" title="Java设计模式之Builder模式"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2015-12-02</div><div class="title">Java设计模式之Builder模式</div></div></a></div><div><a href="/Intellij%20idea%E4%B8%AD%E4%BE%9D%E8%B5%96%E6%A8%A1%E5%9D%97%E9%97%B4%E7%9A%84test%E4%BB%A3%E7%A0%81.html" title="Intellij idea中依赖模块间的test代码"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2017-06-02</div><div class="title">Intellij idea中依赖模块间的test代码</div></div></a></div><div><a href="/Java%20NIO.html" title="Java NIO"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-11-23</div><div class="title">Java NIO</div></div></a></div><div><a href="/JavaSynchronizedTheory.html" title="Java Synchronized实现原理"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2017-10-20</div><div class="title">Java Synchronized实现原理</div></div></a></div><div><a href="/Java%E4%BC%98%E5%85%88%E7%BA%A7%E9%98%9F%E5%88%97%E8%A7%A3%E6%9E%90.html" title="Java优先级队列解析"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-12-04</div><div class="title">Java优先级队列解析</div></div></a></div><div><a href="/Java%E5%90%8C%E6%AD%A5%E9%94%81%E8%A7%A3%E6%9E%90.html" title="Java同步锁解析"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-12-04</div><div class="title">Java同步锁解析</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/uploads/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">混绅士</div><div class="author-info__description">Any answers you can find in source code.</div></div><div class="card-info-data is-center"><div class="card-info-data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="card-info-data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="card-info-data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#JVM%E6%9E%B6%E6%9E%84"><span class="toc-number">1.</span> <span class="toc-text">JVM架构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6-GC"><span class="toc-number">2.</span> <span class="toc-text">垃圾回收(GC)</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GC%E7%9B%91%E6%8E%A7"><span class="toc-number">3.</span> <span class="toc-text">GC监控</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9B%BE%E5%BD%A2%E5%8C%96GC%E7%9B%91%E6%8E%A7"><span class="toc-number">3.1.</span> <span class="toc-text">图形化GC监控</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#GC%E7%9B%91%E6%8E%A7%E5%91%BD%E4%BB%A4"><span class="toc-number">3.2.</span> <span class="toc-text">GC监控命令</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">4.</span> <span class="toc-text">总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%99%84%E5%8A%A0%EF%BC%9A%E7%9B%B4%E6%8E%A5%E5%86%85%E5%AD%98"><span class="toc-number">5.</span> <span class="toc-text">附加：直接内存</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/scratch-extensions-demo.html" title="scratch自定义扩展"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="scratch自定义扩展"/></a><div class="content"><a class="title" href="/scratch-extensions-demo.html" title="scratch自定义扩展">scratch自定义扩展</a><time datetime="2021-12-14T14:30:20.000Z" title="发表于 2021-12-14 22:30:20">2021-12-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/metabase-import-ide.html" title="metabase导入IDE调试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="metabase导入IDE调试"/></a><div class="content"><a class="title" href="/metabase-import-ide.html" title="metabase导入IDE调试">metabase导入IDE调试</a><time datetime="2021-12-13T15:31:22.000Z" title="发表于 2021-12-13 23:31:22">2021-12-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/flink-connector-example.html" title="Flink Connector调研"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Connector调研"/></a><div class="content"><a class="title" href="/flink-connector-example.html" title="Flink Connector调研">Flink Connector调研</a><time datetime="2021-11-10T14:30:20.000Z" title="发表于 2021-11-10 22:30:20">2021-11-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink standlone模式下Flinkx测试"/></a><div class="content"><a class="title" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试">Flink standlone模式下Flinkx测试</a><time datetime="2021-11-06T15:05:20.000Z" title="发表于 2021-11-06 23:05:20">2021-11-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/openGauss-deploy.html" title="openGauss极简版安装使用"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="openGauss极简版安装使用"/></a><div class="content"><a class="title" href="/openGauss-deploy.html" title="openGauss极简版安装使用">openGauss极简版安装使用</a><time datetime="2021-05-13T14:35:20.000Z" title="发表于 2021-05-13 22:35:20">2021-05-13</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2022 By 混绅士</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">本地搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div></div></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

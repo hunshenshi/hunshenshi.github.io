@@ -1,0 +1,227 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>Resource Localization in YARN | big data decode club</title><meta name="keywords" content="Hadoop,BigData,YARN,Localization"><meta name="author" content="混绅士"><meta name="copyright" content="混绅士"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="一个Applciation运行在YARN上的流程为，从YARN Client向ResourceManager提交任务，将Applciation所需资源提交到HDFS中，然后ResourceManager启动APPMaster，APPMaster通知各个NodeManager启动container执行具体到计算任务。在启动container之前需要从HDFS上下载该container执行所依赖的资源">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Resource Localization in YARN">
+<meta property="og:url" content="http://bigdatadecode.club/YARN-Resource-Localization.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="一个Applciation运行在YARN上的流程为，从YARN Client向ResourceManager提交任务，将Applciation所需资源提交到HDFS中，然后ResourceManager启动APPMaster，APPMaster通知各个NodeManager启动container执行具体到计算任务。在启动container之前需要从HDFS上下载该container执行所依赖的资源">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+<meta property="article:published_time" content="2019-05-20T14:10:01.000Z">
+<meta property="article:modified_time" content="2019-05-20T17:10:16.000Z">
+<meta property="article:author" content="混绅士">
+<meta property="article:tag" content="Hadoop">
+<meta property="article:tag" content="BigData">
+<meta property="article:tag" content="YARN">
+<meta property="article:tag" content="Localization">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><link rel="shortcut icon" href="/favicon.ico"><link rel="canonical" href="http://bigdatadecode.club/YARN-Resource-Localization"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="baidu-site-verification" content="27E5EbutCm"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Resource Localization in YARN',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2019-05-21 01:10:16'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="big data decode club" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/uploads/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><div class="data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">big data decode club</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Resource Localization in YARN</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2019-05-20T14:10:01.000Z" title="发表于 2019-05-20 22:10:01">2019-05-20</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2019-05-20T17:10:16.000Z" title="更新于 2019-05-21 01:10:16">2019-05-21</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Hadoop/">Hadoop</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">2.7k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>8分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="Resource Localization in YARN"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>一个Applciation运行在YARN上的流程为，从YARN Client向ResourceManager提交任务，将Applciation所需资源提交到HDFS中，然后ResourceManager启动APPMaster，APPMaster通知各个NodeManager启动container执行具体到计算任务。在启动container之前需要从HDFS上下载该container执行所依赖的资源，这些资源包括jar、依赖的jar或者其它文件，这个过程就称为<strong>资源本地化</strong>(Resource Localization)。</p>
+<p>本篇主要介绍下资源本地化相关的内容。</p>
+<span id="more"></span>
+
+<h2 id="相关概念"><a href="#相关概念" class="headerlink" title="相关概念"></a>相关概念</h2><p><strong>本地化(Localization)</strong><br>本地化是指将HDFS上的资源下载到本地的<strong>过程</strong>。将资源本地化，使container不用总是访问HDFS上的数据，而是直接访问本地数据，提高效率。</p>
+<p><strong>本地资源(LocalResource)</strong><br>本地资源是指container运行时所需要的资源，可以是某个文件或者依赖的library，这些资源存在HDFS中。NodeManager在container启动之前负责将这些资源进行本地化。对于Application来说，本地资源指：</p>
+<ul>
+<li>URL: 需要从HDFS上下载的本地资源地址</li>
+<li>Size: 本地资源的大小</li>
+<li>timestamp: 本地资源在HDFS上创建时的时间戳</li>
+<li>LocalResourceType: NodeManager本地化资源时指定的资源类型，有FILE、ARCHIVE和PATTERN</li>
+<li>Pattern: 从archive中解压具体内容时使用的规则匹配方式(只有LocalResourceType是PATTERN时才生效)。</li>
+<li>LocalResourceVisibility: NodeManager将资源本地化之后针对该Nodemanager上其它用户和Application的可见性。可见范围为PUBLIC、PRIVATE和APPLICATION。</li>
+</ul>
+<blockquote>
+<p>NOTE: 本地资源并不是指在本地磁盘的资源，而是需要从HDFS下载到本地的资源。</p>
+</blockquote>
+<p>那么container会请求什么样的资源进行本地化呢？可以是任意的文件，但是这些文件对contianer必须是只读的。<br>下面举几个比较适合做本地资源的典型例子：</p>
+<ol>
+<li>container启动的时候需要的代码库，如jar文件</li>
+<li>container启动时所需要的configure文件</li>
+<li>静态的文件目录</li>
+</ol>
+<p>一些动态资源不适合作为本地资源，例如：container需要的资源有可能被其它组件进行更新，application自己会直接更新的文件或者application想跟其它服务共享文件的变化情况的。</p>
+<p><strong>ResourceLocalizationService</strong><br>ResourceLocalizationService是NodeManager内部的一个服务，主要负责下载和管理container所需的各种资源。下载时会对所有可用的磁盘进行负载均衡，对下载的资源会严格控制他们的访问权限。</p>
+<p><strong>DeletionService</strong><br>DeletionService也是NodeManager内部的一个服务，主要负责在收到指令之后删除本地目录</p>
+<p><strong>Localizer</strong><br>Localizer实际上是一个线程，用于资源本地化。Localizer有两种类型，一种是指用与下载PUBLIC访问类型资源的<em>PublicLocalizer</em>，另一种是下载PRIVATE和APPLICATION访问类型的<em>ContainerLocalizers</em>。</p>
+<p><strong>LocalCache</strong><br>LocalCache是NodeManager维护所有下载到本地的文件的local-cache。这些资源通过下载时指定的HDFS地址来唯一标识。</p>
+<h2 id="概念补充"><a href="#概念补充" class="headerlink" title="概念补充"></a>概念补充</h2><h3 id="LOCALRESOURCE-TIMESTAMPS"><a href="#LOCALRESOURCE-TIMESTAMPS" class="headerlink" title="LOCALRESOURCE TIMESTAMPS"></a>LOCALRESOURCE TIMESTAMPS</h3><p>timestamp反应了本地资源的一个版本，NodeManager在下载本地资源时会检查timestamp，这样Application在运行时看到的文件内容都一样。<br>利用timestamp，YARN能发现资源是否发生过变化，如果发生变化将使container失败避免不一致发生。因为在HDFS上的资源一旦被NodeManager本地化到本地磁盘，这个文件就不再与源文件有任何联系，只会记录下原来的URL用来在本地进行唯一标识。此时即使源文件发生变化，NodeManager也不会跟踪此变化再次下载文件。</p>
+<blockquote>
+<p>这里需要注意的是<em>当container启动时，ApplicationMaster会向运行container的NodeManager指定资源的timestamp，同样当运行ApplicationMaster的container启动时，也需要资源的timestamp，此时这个timestamp就需要由client指定</em>。以MapReduce on YARN为例，MapReduce的JobClient决定ApplicationMaster需要的资源的timestamp，然后由ApplicationMaster自己决定map和reduce所需资源的timestamp。</p>
+</blockquote>
+<h3 id="LOCALRESOURCE-TYPES"><a href="#LOCALRESOURCE-TYPES" class="headerlink" title="LOCALRESOURCE TYPES"></a>LOCALRESOURCE TYPES</h3><p>上一节中提到LocalResourceType为FILE、ARCHIVE和PATTERN，下面介绍下三种type的具体含义。<br>FILE类型是指普通的文件，文本类型或者二进制文件<br>ARCHIVE类型是指一些可以被NodeManager自动识别解压的归档文件，比如jars、tars、tar.gz和zip<br>PATTERN是ARCHIVE和FILE的一种混合体。这种类型下载到本地的源文件会保留，并且在本地化时只有解压的文件会留存在本地文件系统中。源文件和解压的文件在同一个目录中。哪些文件需要从ARCHIVE中抽取出来，哪些不需要这些都是由pattern决定的。目前只有jar支持PATTERN，其它都被认为正常的ARCHIVE。</p>
+<h3 id="LOCALRESOURCE-VISIBILITES"><a href="#LOCALRESOURCE-VISIBILITES" class="headerlink" title="LOCALRESOURCE VISIBILITES"></a>LOCALRESOURCE VISIBILITES</h3><p>上一节LocalResourceVisibility中提到本地资源有三种可见性，分别为PUBLIC、PRIVATE和APPLICATION。其中</p>
+<p>PUBLIC的访问权限是指<strong>任何用户的任意Application的container都可以访问</strong>。典型的PUBLIC资源是那些在HDFS上可以被任何人访问的文件，当这些资源被本地化之后会保留相同的访问权限。<em>如果一个资源是PUBLIC，当有container(container可以是当前Attempt，也可以是其它用户的任意Application中的container)请求相同的本地资源时，只要此资源没有被LocalCache删除，都可以直接从LocalCache里直接使用，而不需要再次下载</em>。</p>
+<p>PUBLIC资源存储在NodeManager本地磁盘的<code>&lt;local-dir&gt;/filecache</code>目录下，此目录中的所有文件的owner是NodeManager进程启动时的用户，并且所有用户都有读权限，因此这些资源可以在此NodeManager上运行的所有用户的container共享。</p>
+<p>PRIVATE权限本地资源只能在<strong>当前节点上相同用户的application之间共享</strong>，这些资源存储在NodeManager本地磁盘的<code>&lt;local-dir&gt;/usercache/$username/filecache</code>目录下，这些文件的owner是启动Application的user，并且其它用户没有访问权限。类似PUBLIC，一旦资源本地化，所有的用户都没有写权限，即使是提交任务的user。这样是为了避免恶意的container去修改文件。</p>
+<p>APPLICATION只在<strong>当前节点上同一个application的container之间共享</strong>。这些资源存储在NodeManager本地磁盘的<code>&lt;local-dir&gt;/usercache/$username/appcache/&lt;app-id&gt;/</code>目录下，文件的owner是Application的提交者，并且只有读权限。</p>
+<blockquote>
+<p>这里需要注意的是LOCALRESOURCE VISIBILITIES与LOCALRESOURCE TIMESTAMPS类似，都是由ApplicationMaster指定本地资源的可见性，NodeManager并不会对资源的可见性做任何决定。同样当运行ApplicationMaster的container启动时，也需要资源的可见性，此时这个可见性就需要由client指定。以MapReduce on YARN为例，MapReduce的JobClient决定ApplicationMaster需要的资源的可见性，然后由ApplicationMaster自己决定map和reduce所需资源的可见性。</p>
+</blockquote>
+<h4 id="本地化流程"><a href="#本地化流程" class="headerlink" title="本地化流程"></a>本地化流程</h4><p>PUBLIC资源本地化是由<code>PublicLocalizer</code>实现的，在NodeManager进程中会有一个线程池PublicLocalizers，其个数是由<code>yarn.nodemanager.localizer.fetch.thread-count</code>决定，线程池的大小决定并行下载PUBLIC资源的线程最大个数。当PublicLocalizer本地化PUBLIC资源时，会通过检查这些资源在HDFS上的权限来确定所申请的资源确实为PUBLIC。只要有资源不符合就拒绝本地化。PublicLocalizer能安全的从HDFS上下载资源是向ContainerLaunchContext传递了证书。 </p>
+<p>PRIVATE/APPLICATON资源的本地化是由<code>ContainerLocalizer</code>实现的，不同与PUBLIC的<code>PublicLocalizer</code>实现。<em>PublicLocalizer是直接在NodeManager中启动一个线程池进行本地化，而ContainerLocalizer出于安全问题，并没有在NodeManager进程中直接实现，而是在continer中实现的</em>。</p>
+<p>PRIVATE/APPLICATON资源的本地化是由<code>ContainerLocalizer</code>实现，这是一个单独的进程，这个进程由<code>LocalizerRunner</code>线程管理，<em>LocalizerRunner是NodeManager中的一个线程</em>，只要某个container有资源还没有下载，<em>那么此container就会触发一个LocalizerRunner</em>。下面看下具体的细节：</p>
+<!--
+LocalResourcesTracker is a per-user or per-application object that tracks all the LocalResources for a given user or an application.
+-->
+<p>当某个container第一次请求PRIVATE/APPLICATION类型的本地资源时，如果没有在LocalResourcesTracker中找到，则加入pending-resources列表。随后是否需要创建LocalizerRunner线程取决于是否有必要下载资源，如果需要就将本地资源加入<strong>LocalizerRunner</strong>维护的pending-resources列表。</p>
+<p>NodeManager在安全模式时，本地资源本地化时需要所用的user是application的提交用户而不是NodeManager的启动用户。因此<strong>LocalizerRunner会以application提交者的身份启动LinuxContainerExecutor(LCE)进程，然后LCE会执行ContainerLocalizer下载资源</strong>。<em>ContainerLocalizer启动之后会与NodeManager维持一个心跳</em>，通过心跳，LocalizerRunner给ContainerLocalizer分配需要下载的资源或者停止ContainerLocalizer进程，而ContainerLocalizer会通知LocalizerRunner自己的下载进度。如果资源下载失败，这个资源将会从LocalResourcesTracker中移除，并且container最终也会失败。如果下载成功，LocalizerRunner会通过心跳给ContainerLocalizer另一个资源进行下载，直到所有的资源都下载完。</p>
+<!--
+At present, each ContainerLocalizer doesn’t support parallel download of mutliple PRIVATE/APPLICATION resources which we are trying to fix via YARN-574.
+
+Note that because of the above, the maximum parallelism that we can get at present is the number of containers requested for same user on same node manager at THAT point of time. This in the worst case is one when an ApplicationMaster itself is starting. So if AM needs any resources to be localized then today they will be downloaded serially before its container starts.
+-->
+<h4 id="本地资源的生命周期"><a href="#本地资源的生命周期" class="headerlink" title="本地资源的生命周期"></a>本地资源的生命周期</h4><p>由于本地资源的访问权限不一样，则不同的LocalResourceType在本地保留的时间也会不一样。</p>
+<ul>
+<li>PUBLIC由于是在任何用户的任意Application之间共享，所以并不会在某个container或者application结束之后被删除，只有在本地目录<local-dir>达到存储阈值时才会被删除，这个阈值由<code>yarn.nodemanager.localizer.cache.target-size-mb</code>控制。</li>
+<li>PRIVATE和PUBLIC的生命周期一样。</li>
+<li>APPLICATION会在application结束之后立即删除。</li>
+</ul>
+<!--
+One thing of note is that for any given application, we may have multiple ApplicationAttempts and each attempt may start zero or more containers on a given node manager. When the first container belonging to an ApplicationAttempt starts, ResourceLocalizationService localizes files for that application as requested in the container’s launch context. If future containers request more such resources then they all will be localized. If one ApplicationAttempt finishes/fails and another is started, ResourceLocalizationService doesn’t do anything w.r.t the previously localized resources. However when eventually the application finishes, ResourceManager communicates that information to NodeManagers which in turn clear the application LocalCache. In summary, APPLICATION LocalResources are truly application scoped and not ApplicationAttempt scoped.
+-->
+<h4 id="本地化相关的配置"><a href="#本地化相关的配置" class="headerlink" title="本地化相关的配置"></a>本地化相关的配置</h4><p>在<code>yarn-site.xml</code>中有一些资源本地化相关的配置。</p>
+<ul>
+<li><code>yarn.nodemanager.local-dirs</code>: 资源本地化时所在的本地目录，可以是以逗号分隔的多个磁盘目录。</li>
+<li><code>yarn.nodemanager.local-cache.max-files-per-directory</code>: 每个目录中最多本地化文件的个数，PUBLIC / PRIVATE / APPLICATION分别统计。</li>
+<li><code>yarn.nodemanager.localizer.address</code>: ResourceLocalizationService服务监听的RPC地址，用来接收不同localizers</li>
+<li><code>yarn.nodemanager.localizer.client.thread-count</code>: ResourceLocalizationService中用来处理来自localizers请求的线程数。默认是5</li>
+<li><code>yarn.nodemanager.localizer.fetch.thread-count</code>: 本地化PUBLIC资源时PublicLocalizer的线程数。默认是4</li>
+<li><code>yarn.nodemanager.delete.thread-count</code>: DeletionService中删除文件的线程数，默认是4。</li>
+<li><code>yarn.nodemanager.localizer.cache.target-size-mb</code>: 本地化资源所占的最大磁盘空间，单位是MB，比包括APPLICATION资源。</li>
+<li><code>yarn.nodemanager.localizer.cache.cleanup.interval-ms</code>: 每隔固定时间，去检查下磁盘的使用量。在此间隔之后，如果存储的磁盘空间超过了配置的阈值，会删除未用的资源。</li>
+</ul>
+<blockquote>
+<p>未使用的资源是指没有被正在运行的container引用的资源。每次container请求资源时，container会被加入到一个资源引用列表中，直到container结束之后才会被移除。所以当引用数为0时，可以被删除。</p>
+</blockquote>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a target="_blank" rel="noopener" href="https://zh.hortonworks.com/blog/management-of-application-dependencies-in-yarn/">Management of Application Dependencies in YARN</a><br><a target="_blank" rel="noopener" href="https://zh.hortonworks.com/blog/resource-localization-in-yarn-deep-dive/">Resource Localization in YARN: Deep Dive</a></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">混绅士</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://bigdatadecode.club/YARN-Resource-Localization.html">http://bigdatadecode.club/YARN-Resource-Localization.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://bigdatadecode.club" target="_blank">big data decode club</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Hadoop/">Hadoop</a><a class="post-meta__tags" href="/tags/BigData/">BigData</a><a class="post-meta__tags" href="/tags/YARN/">YARN</a><a class="post-meta__tags" href="/tags/Localization/">Localization</a></div><div class="post_share"></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/path/to/wechat-reward-image/wechatpay.png" target="_blank"><img class="post-qr-code-img" src="/path/to/wechat-reward-image/wechatpay.png" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/%5B%E8%AF%91%5DYarn-capacity.html"><img class="prev-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">YARN Capacity Scheduler</div></div></a></div><div class="next-post pull-right"><a href="/%5B%E8%AF%91%5DFSImage-protocol.html"><img class="next-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Use protobuf to FSImage</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/Application-fail-RM-change.html" title="Application运行失败导致RM主备切换"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2018-11-27</div><div class="title">Application运行失败导致RM主备切换</div></div></a></div><div><a href="/YARN-Lost-Node%E6%98%BE%E7%A4%BA%E5%BC%82%E5%B8%B8.html" title="YARN Lost Node显示异常"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2018-09-15</div><div class="title">YARN Lost Node显示异常</div></div></a></div><div><a href="/YARNSrcAMAssignPolicy.html" title="YARN源码分析之ApplicationMaster分配策略"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2017-06-08</div><div class="title">YARN源码分析之ApplicationMaster分配策略</div></div></a></div><div><a href="/YARNSrcApplicationMasterArch.html" title="YARN源码分析之ApplicationMaster架构"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2017-09-13</div><div class="title">YARN源码分析之ApplicationMaster架构</div></div></a></div><div><a href="/YARNSrcApplicationMasterStart.html" title="YARN源码分析之ApplicationMaster启动流程"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2017-06-19</div><div class="title">YARN源码分析之ApplicationMaster启动流程</div></div></a></div><div><a href="/YARNSrcMRAppMasterStart.html" title="YARN源码分析之MRAppMaster启动"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2017-08-09</div><div class="title">YARN源码分析之MRAppMaster启动</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/uploads/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">混绅士</div><div class="author-info__description">Any answers you can find in source code.</div></div><div class="card-info-data is-center"><div class="card-info-data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="card-info-data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="card-info-data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%9B%B8%E5%85%B3%E6%A6%82%E5%BF%B5"><span class="toc-number">1.</span> <span class="toc-text">相关概念</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%A6%82%E5%BF%B5%E8%A1%A5%E5%85%85"><span class="toc-number">2.</span> <span class="toc-text">概念补充</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#LOCALRESOURCE-TIMESTAMPS"><span class="toc-number">2.1.</span> <span class="toc-text">LOCALRESOURCE TIMESTAMPS</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#LOCALRESOURCE-TYPES"><span class="toc-number">2.2.</span> <span class="toc-text">LOCALRESOURCE TYPES</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#LOCALRESOURCE-VISIBILITES"><span class="toc-number">2.3.</span> <span class="toc-text">LOCALRESOURCE VISIBILITES</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%9C%AC%E5%9C%B0%E5%8C%96%E6%B5%81%E7%A8%8B"><span class="toc-number">2.3.1.</span> <span class="toc-text">本地化流程</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%9C%AC%E5%9C%B0%E8%B5%84%E6%BA%90%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F"><span class="toc-number">2.3.2.</span> <span class="toc-text">本地资源的生命周期</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%9C%AC%E5%9C%B0%E5%8C%96%E7%9B%B8%E5%85%B3%E7%9A%84%E9%85%8D%E7%BD%AE"><span class="toc-number">2.3.3.</span> <span class="toc-text">本地化相关的配置</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">3.</span> <span class="toc-text">参考</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/scratch-extensions-demo.html" title="scratch自定义扩展"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="scratch自定义扩展"/></a><div class="content"><a class="title" href="/scratch-extensions-demo.html" title="scratch自定义扩展">scratch自定义扩展</a><time datetime="2021-12-14T14:30:20.000Z" title="发表于 2021-12-14 22:30:20">2021-12-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/metabase-import-ide.html" title="metabase导入IDE调试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="metabase导入IDE调试"/></a><div class="content"><a class="title" href="/metabase-import-ide.html" title="metabase导入IDE调试">metabase导入IDE调试</a><time datetime="2021-12-13T15:31:22.000Z" title="发表于 2021-12-13 23:31:22">2021-12-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/flink-connector-example.html" title="Flink Connector调研"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Connector调研"/></a><div class="content"><a class="title" href="/flink-connector-example.html" title="Flink Connector调研">Flink Connector调研</a><time datetime="2021-11-10T14:30:20.000Z" title="发表于 2021-11-10 22:30:20">2021-11-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink standlone模式下Flinkx测试"/></a><div class="content"><a class="title" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试">Flink standlone模式下Flinkx测试</a><time datetime="2021-11-06T15:05:20.000Z" title="发表于 2021-11-06 23:05:20">2021-11-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/openGauss-deploy.html" title="openGauss极简版安装使用"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="openGauss极简版安装使用"/></a><div class="content"><a class="title" href="/openGauss-deploy.html" title="openGauss极简版安装使用">openGauss极简版安装使用</a><time datetime="2021-05-13T14:35:20.000Z" title="发表于 2021-05-13 22:35:20">2021-05-13</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2022 By 混绅士</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">本地搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div></div></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

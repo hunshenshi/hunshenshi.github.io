@@ -1,0 +1,194 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>利用canal同步mysql到HDFS | big data decode club</title><meta name="keywords" content="BigData,HDFS,MySQL,canal,同步"><meta name="author" content="混绅士"><meta name="copyright" content="混绅士"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="之前有一篇介绍性的文章简单介绍了实时同步mysql到hdfs的几种方案，本篇主要记录下利用canal同步mysql到hdfs的具体方案。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="利用canal同步mysql到HDFS">
+<meta property="og:url" content="http://bigdatadecode.club/MysqlToHDFSWithCanal.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="之前有一篇介绍性的文章简单介绍了实时同步mysql到hdfs的几种方案，本篇主要记录下利用canal同步mysql到hdfs的具体方案。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+<meta property="article:published_time" content="2017-08-02T11:02:31.000Z">
+<meta property="article:modified_time" content="2022-01-17T08:58:24.284Z">
+<meta property="article:author" content="混绅士">
+<meta property="article:tag" content="BigData">
+<meta property="article:tag" content="HDFS">
+<meta property="article:tag" content="MySQL">
+<meta property="article:tag" content="canal">
+<meta property="article:tag" content="同步">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><link rel="shortcut icon" href="/favicon.ico"><link rel="canonical" href="http://bigdatadecode.club/MysqlToHDFSWithCanal"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="baidu-site-verification" content="27E5EbutCm"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '利用canal同步mysql到HDFS',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2022-01-17 16:58:24'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="big data decode club" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/uploads/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><div class="data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">big data decode club</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">利用canal同步mysql到HDFS</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2017-08-02T11:02:31.000Z" title="发表于 2017-08-02 19:02:31">2017-08-02</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2022-01-17T08:58:24.284Z" title="更新于 2022-01-17 16:58:24">2022-01-17</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/BigData/">BigData</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">1.7k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>6分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="利用canal同步mysql到HDFS"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p><a target="_blank" rel="noopener" href="http://bigdatadecode.top/%E5%AE%9E%E6%97%B6%E6%8A%93%E5%8F%96MySQL%E7%9A%84%E6%9B%B4%E6%96%B0%E6%95%B0%E6%8D%AE%E5%88%B0Hadoop.html">之前有一篇</a>介绍性的文章简单介绍了实时同步mysql到hdfs的几种方案，本篇主要记录下利用canal同步mysql到hdfs的具体方案。</p>
+<span id="more"></span>
+
+<h2 id="canal-server-部署"><a href="#canal-server-部署" class="headerlink" title="canal server 部署"></a>canal server 部署</h2><p>在canal中一个mysql实例对应一个配置文件，配置文件放在conf目录下的一个文件夹中，该文件夹的名字就代表了mysql实例。结构如下</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">-rwxr-xr-x 1 dc user 2645 Jul 18 14:25 canal.properties</span><br><span class="line">-rwxr-xr-x 1 dc user 2521 Jul 17 18:31 canal.properties.bak</span><br><span class="line">-rwxr-xr-x 1 dc user 3045 Jul 17 18:31 logback.xml</span><br><span class="line">drwxr-xr-x 2 dc user 4096 Jul 17 18:38 spring</span><br><span class="line">drwxr-xr-x 2 dc user 4096 Jul 19 11:55 trans1</span><br></pre></td></tr></table></figure>
+<p>trans1代表一个mysql实例，该文件夹中有个instance.properties文件，在里面配置mysql数据库的信息</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">## mysql serverId 部署ha的话，slaveId不能重复</span></span><br><span class="line">canal.instance.mysql.slaveId = 1235</span><br><span class="line">canal.instance.master.address = 10.172.152.66:3306</span><br><span class="line"><span class="comment"># username/password</span></span><br><span class="line">canal.instance.dbUsername = root</span><br><span class="line">canal.instance.dbPassword = root</span><br><span class="line"><span class="comment"># 采集表的正则</span></span><br><span class="line">canal.instance.filter.regex = .*\\..*</span><br></pre></td></tr></table></figure>
+<h3 id="canal-server-HA部署"><a href="#canal-server-HA部署" class="headerlink" title="canal server HA部署"></a>canal server HA部署</h3><p>采用canal的HA模式，canal的HA是依赖zk来实现的。<br>修改配置文件，配置文件是conf目录下大canal.properties</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># common argument</span></span><br><span class="line">canal.id= 1             <span class="comment"># 另一台 canal.id= 2</span></span><br><span class="line">canal.ip= 10.172.152.66 <span class="comment"># 另一台 canal.ip= 10.172.152.124</span></span><br><span class="line">canal.port= 11111</span><br><span class="line">canal.zkServers= 10.172.152.66:2181,10.172.152.124:2181,10.172.152.125:2181</span><br><span class="line"><span class="comment"># conf目录下mysql实例的文件名</span></span><br><span class="line">canal.destinations= trans1</span><br><span class="line"><span class="comment"># 使用ha必须使用default-instance.xml</span></span><br><span class="line">canal.instance.global.spring.xml = classpath:spring/default-instance.xml</span><br></pre></td></tr></table></figure>
+
+<p>canal的部署比较简单，在instance.properties也设置从哪个binlog某个位置处开始读(未测)。<br>下面看下client的设计，由于canal并没有继承client只是提供了一套client的api由用户自己去实现，则这里重点记录下client的设计。</p>
+<h2 id="canal-client-功能设计"><a href="#canal-client-功能设计" class="headerlink" title="canal client 功能设计"></a>canal client 功能设计</h2><p>client的主要功能是与canal server的某个destinations建立连接消费订阅的binlog信息，并将binlog进行解析落地到存储系统中。</p>
+<h3 id="client消费原理"><a href="#client消费原理" class="headerlink" title="client消费原理"></a>client消费原理</h3><p>client api中有ack和rollback机制，保证了数据不丢失。<br>ack机制采用异步确认，也就是可以连续调用get多次，后续异步按顺序提交ack/rollback，这种机制在canal中称为<em>流失api</em>设计。</p>
+<p>流式api设计的好处：</p>
+<ul>
+<li>get/ack异步化，减少因ack带来的网络延迟和操作成本 (99%的状态都是处于正常状态，异常的rollback属于个别情况，没必要为个别的case牺牲整个性能)</li>
+<li>get获取数据后，业务消费存在瓶颈或者需要多进程/多线程消费时，可以不停的轮询get数据，不停的往后发送任务，提高并行化。</li>
+</ul>
+<h3 id="数据格式及使用"><a href="#数据格式及使用" class="headerlink" title="数据格式及使用"></a>数据格式及使用</h3><p>client将binlog中的信息解析成json，json格式分为两种，一种是DML，主要包括insert、update和delete，另一种是DDL，主要包括create、alter和drop。<br>json格式如下：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// DML-json</span></span><br><span class="line">&#123;</span><br><span class="line">   <span class="attr">&quot;database&quot;</span>:<span class="string">&quot;test&quot;</span>,</span><br><span class="line">   <span class="attr">&quot;table&quot;</span>:<span class="string">&quot;e&quot;</span>,</span><br><span class="line">   <span class="attr">&quot;type&quot;</span>:<span class="string">&quot;delete/insert/update&quot;</span>,</span><br><span class="line">   <span class="attr">&quot;executeTime&quot;</span>:<span class="string">&quot;1501645930000&quot;</span>,</span><br><span class="line">   <span class="attr">&quot;consumerTime&quot;</span>:<span class="string">&quot;1501645930000&quot;</span>,</span><br><span class="line">   <span class="attr">&quot;data&quot;</span>:[</span><br><span class="line">   		&#123;<span class="attr">&quot;id&quot;</span>:<span class="string">&quot;1&quot;</span>,<span class="attr">&quot;num&quot;</span>:<span class="string">&quot;1&quot;</span>&#125;,</span><br><span class="line">   		&#123;<span class="attr">&quot;id&quot;</span>:<span class="string">&quot;2&quot;</span>,<span class="attr">&quot;num&quot;</span>:<span class="string">&quot;2&quot;</span>&#125;</span><br><span class="line">   ]</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// DDL-json</span></span><br><span class="line">&#123;</span><br><span class="line">   <span class="attr">&quot;database&quot;</span>:<span class="string">&quot;test&quot;</span>,</span><br><span class="line">   <span class="attr">&quot;table&quot;</span>:<span class="string">&quot;e&quot;</span>,</span><br><span class="line">   <span class="attr">&quot;type&quot;</span>:<span class="string">&quot;create/alter/drop&quot;</span>,</span><br><span class="line">   <span class="attr">&quot;executeTime&quot;</span>:<span class="string">&quot;1501645930000&quot;</span>,</span><br><span class="line">   <span class="attr">&quot;consumerTime&quot;</span>:<span class="string">&quot;1501645930000&quot;</span>,</span><br><span class="line">   <span class="attr">&quot;isDDL&quot;</span>:<span class="string">&quot;true/false&quot;</span>,</span><br><span class="line">   <span class="attr">&quot;sql&quot;</span>:<span class="string">&quot;create table e(id int)&quot;</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>之所以分为两个json格式，是因为想把<em>DML-json里的数据直接格式化作为当天的增量使用</em>，而DDL-json则需要解析成hql，个人建议在执行时需要人工check，DDL-json每天应该不会太多，初期人工check的压力不大，等程序成熟之后可以不用人工check。</p>
+<blockquote>
+<p>解析DML-json的时候需要给数据新增一列来标识数据的状态，数据的状态是指数据是否被删除。</p>
+</blockquote>
+<h3 id="配置"><a href="#配置" class="headerlink" title="配置"></a>配置</h3><p>方便程序的移植性将一些参数提出，作为配置文件，由程序动态周期性的加载。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">ZK_HOSTS = <span class="comment"># canal server ha的zk地址</span></span><br><span class="line">DESTINATION =  <span class="comment"># 要消费的mysql实例</span></span><br><span class="line">FILTER_REGEX =  <span class="comment"># 订阅的表信息的正则</span></span><br><span class="line">BATCH_SIZE =  <span class="comment"># 批量获取的条数</span></span><br><span class="line">DML_PATH = </span><br><span class="line">DDL_PATH = </span><br><span class="line">DELAY_TIME =  <span class="comment"># 延迟报警的阈值，单位ms</span></span><br></pre></td></tr></table></figure>
+<h3 id="多线程异步处理数据"><a href="#多线程异步处理数据" class="headerlink" title="多线程异步处理数据"></a>多线程异步处理数据</h3><p>client api提供get／ack／rollback接口，为了提高消费效率，采用异步ack的机制。</p>
+<p>设计一个一定大小的<code>ackQueue</code>，get不断的获取数据，将message交给新线程处理并将<code>batchId</code>放入ackQueue中，待新线程处理完message之后进行ack确认，从ackQueue中取出batchId按顺序确认，如遇到异常进行回滚。</p>
+<p>伪代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">try</span>&#123;</span><br><span class="line">	<span class="keyword">while</span>(<span class="keyword">true</span>)&#123;</span><br><span class="line">		Message message = connector.getWithoutAck(BATCH_SIZE); <span class="comment">// 获取指定数量的数据</span></span><br><span class="line">        batchId = message.getId();</span><br><span class="line">        ackQueue.put(batchId);</span><br><span class="line">        executorService.submit(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            	<span class="comment">// 需要一个线程和文件的映射，防止多个线程写同一个文件</span></span><br><span class="line">                parseMessage(message);</span><br><span class="line">                <span class="comment">// 判断batchId是否和ackQueue中取得的batchId一致，大于则等待小于报异常</span></span><br><span class="line">                ackMessage(batchId);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;<span class="keyword">catch</span> (Exception e)&#123;</span><br><span class="line">	connector.rollback(batchId);</span><br><span class="line">&#125;<span class="keyword">finally</span> &#123;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="数据归档"><a href="#数据归档" class="headerlink" title="数据归档"></a>数据归档</h3><p>由于目前的使用场景对实时要求不高，而是离线使用，则建议将数据直接写入本地文件系统，然后批量上传至HDFS。<br>这样既可以提高写的效率又可以减少对hdfs的操作，并且在上传hdfs时可以对数据进行合并，从源头上减少小文件的生成。</p>
+<p>数据归档方案：</p>
+<ol>
+<li>数据文件切分可以按照持有一个文件句柄的时间来进行切分并且到零点统一关闭所有句柄。</li>
+<li>使用binlog中的executeTime进行文件切分，保证数据归档的时间准备性。<h3 id="跨网络传输"><a href="#跨网络传输" class="headerlink" title="跨网络传输"></a>跨网络传输</h3>北京的数据向杭州传输采用两种方案：</li>
+<li>client将数据写入本地，然后通过rsync传输到杭州服务器</li>
+<li>client调用Avro rpc将数据写入杭州的flume agent的Avro source中，通过fileChannel将数据写入杭州服务器。</li>
+</ol>
+<p>对比：<br>方案1使用rsync进行数据传输，简单方便只开一次接口权限。而且client和杭州的client一致，不需要额外的开发。</p>
+<p>方案2由于使用rpc传输则每个client对应一个port，需要多次申请port权限，同样在杭州的机器上也需要开通port权限，这样暴露的port较多，而且需要运维开通权限。<br>由于一个mysql实例对应一个client，则会需要多个port进行数据传输。</p>
+<blockquote>
+<p>建议rsync同步 </p>
+</blockquote>
+<h3 id="监控报警"><a href="#监控报警" class="headerlink" title="监控报警"></a>监控报警</h3><p>监控主要是监控消费延迟，判断消费延迟的依据是处理当前message的时间和该message在binlog中的executeTime的差值，大于设置的阈值则认为消费滞后，进行报警。<br>也可以判断一个时间窗口中两个时间点差值进行是否消费滞后的判断。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">混绅士</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://bigdatadecode.club/MysqlToHDFSWithCanal.html">http://bigdatadecode.club/MysqlToHDFSWithCanal.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://bigdatadecode.club" target="_blank">big data decode club</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/BigData/">BigData</a><a class="post-meta__tags" href="/tags/HDFS/">HDFS</a><a class="post-meta__tags" href="/tags/MySQL/">MySQL</a><a class="post-meta__tags" href="/tags/canal/">canal</a><a class="post-meta__tags" href="/tags/%E5%90%8C%E6%AD%A5/">同步</a></div><div class="post_share"></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/path/to/wechat-reward-image/wechatpay.png" target="_blank"><img class="post-qr-code-img" src="/path/to/wechat-reward-image/wechatpay.png" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/HDFSCannotObtainBlockLengthForLocatedBlock.html"><img class="prev-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">HDFS之Cannot obtain block length for LocatedBlock异常</div></div></a></div><div class="next-post pull-right"><a href="/Java%E8%99%9A%E6%8B%9F%E6%9C%BA%E5%8F%8AGC%E5%9F%BA%E7%A1%80%E4%BB%8B%E7%BB%8D.html"><img class="next-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Java虚拟机及GC基础介绍</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/%E5%AE%9E%E6%97%B6%E6%8A%93%E5%8F%96MySQL%E7%9A%84%E6%9B%B4%E6%96%B0%E6%95%B0%E6%8D%AE%E5%88%B0Hadoop.html" title="实时抓取MySQL的更新数据到Hadoop"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2017-02-28</div><div class="title">实时抓取MySQL的更新数据到Hadoop</div></div></a></div><div><a href="/HDFS%20HA%E7%9B%B8%E5%85%B3%E7%9A%84%E5%87%A0%E4%B8%AA%E9%97%AE%E9%A2%98%E5%92%8C%E7%A4%BA%E4%BE%8B%E5%9C%BA%E6%99%AF.html" title="HDFS HA相关的几个问题和示例场景"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-11-19</div><div class="title">HDFS HA相关的几个问题和示例场景</div></div></a></div><div><a href="/HDFS%20HA%E6%9C%BA%E5%88%B6%E8%A7%A3%E6%9E%90.html" title="HDFS HA机制解析"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-07-14</div><div class="title">HDFS HA机制解析</div></div></a></div><div><a href="/HDFS%20ReplicationMonitor%E5%89%AF%E6%9C%AC%E7%9B%91%E6%8E%A7%E7%BA%BF%E7%A8%8B%E8%A7%A3%E6%9E%90.html" title="HDFS ReplicationMonitor副本监控线程解析"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-08-01</div><div class="title">HDFS ReplicationMonitor副本监控线程解析</div></div></a></div><div><a href="/HDFS%20read%E8%A7%A3%E6%9E%90.html" title="HDFS read解析(一)之Open文件流"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-11-21</div><div class="title">HDFS read解析(一)之Open文件流</div></div></a></div><div><a href="/HDFS%20read%E8%A7%A3%E6%9E%902%E4%B9%8B%E4%BB%8E%E6%96%87%E4%BB%B6%E6%B5%81%E4%B8%ADread.html" title="HDFS read解析2之从文件流中read"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2016-11-15</div><div class="title">HDFS read解析2之从文件流中read</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/uploads/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">混绅士</div><div class="author-info__description">Any answers you can find in source code.</div></div><div class="card-info-data is-center"><div class="card-info-data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">117</div></a></div><div class="card-info-data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">191</div></a></div><div class="card-info-data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">20</div></a></div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#canal-server-%E9%83%A8%E7%BD%B2"><span class="toc-number">1.</span> <span class="toc-text">canal server 部署</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#canal-server-HA%E9%83%A8%E7%BD%B2"><span class="toc-number">1.1.</span> <span class="toc-text">canal server HA部署</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#canal-client-%E5%8A%9F%E8%83%BD%E8%AE%BE%E8%AE%A1"><span class="toc-number">2.</span> <span class="toc-text">canal client 功能设计</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#client%E6%B6%88%E8%B4%B9%E5%8E%9F%E7%90%86"><span class="toc-number">2.1.</span> <span class="toc-text">client消费原理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E6%A0%BC%E5%BC%8F%E5%8F%8A%E4%BD%BF%E7%94%A8"><span class="toc-number">2.2.</span> <span class="toc-text">数据格式及使用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%85%8D%E7%BD%AE"><span class="toc-number">2.3.</span> <span class="toc-text">配置</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%BC%82%E6%AD%A5%E5%A4%84%E7%90%86%E6%95%B0%E6%8D%AE"><span class="toc-number">2.4.</span> <span class="toc-text">多线程异步处理数据</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E5%BD%92%E6%A1%A3"><span class="toc-number">2.5.</span> <span class="toc-text">数据归档</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%B7%A8%E7%BD%91%E7%BB%9C%E4%BC%A0%E8%BE%93"><span class="toc-number">2.6.</span> <span class="toc-text">跨网络传输</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%9B%91%E6%8E%A7%E6%8A%A5%E8%AD%A6"><span class="toc-number">2.7.</span> <span class="toc-text">监控报警</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/scratch-extensions-demo.html" title="scratch自定义扩展"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="scratch自定义扩展"/></a><div class="content"><a class="title" href="/scratch-extensions-demo.html" title="scratch自定义扩展">scratch自定义扩展</a><time datetime="2021-12-14T14:30:20.000Z" title="发表于 2021-12-14 22:30:20">2021-12-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/metabase-import-ide.html" title="metabase导入IDE调试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="metabase导入IDE调试"/></a><div class="content"><a class="title" href="/metabase-import-ide.html" title="metabase导入IDE调试">metabase导入IDE调试</a><time datetime="2021-12-13T15:31:22.000Z" title="发表于 2021-12-13 23:31:22">2021-12-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/flink-connector-example.html" title="Flink Connector调研"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Connector调研"/></a><div class="content"><a class="title" href="/flink-connector-example.html" title="Flink Connector调研">Flink Connector调研</a><time datetime="2021-11-10T14:30:20.000Z" title="发表于 2021-11-10 22:30:20">2021-11-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink standlone模式下Flinkx测试"/></a><div class="content"><a class="title" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试">Flink standlone模式下Flinkx测试</a><time datetime="2021-11-06T15:05:20.000Z" title="发表于 2021-11-06 23:05:20">2021-11-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/openGauss-deploy.html" title="openGauss极简版安装使用"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="openGauss极简版安装使用"/></a><div class="content"><a class="title" href="/openGauss-deploy.html" title="openGauss极简版安装使用">openGauss极简版安装使用</a><time datetime="2021-05-13T14:35:20.000Z" title="发表于 2021-05-13 22:35:20">2021-05-13</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2022 By 混绅士</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">本地搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div></div></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
