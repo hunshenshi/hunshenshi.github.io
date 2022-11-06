@@ -1,0 +1,225 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>基于Wasm的轻量实时计算 | big data decode club</title><meta name="keywords" content="Wasm,Redpanda,InfinyOn,Pulsar,Realtime"><meta name="author" content="混绅士"><meta name="copyright" content="混绅士"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="随着各行各业对实时计算的需求越来越强烈，实时计算领域的竞争也越来越激烈，呈现百花齐放的状态。 虽说Flink在实时计算领域已坐稳老大哥，但是却也阻挡不了其它实时计算框架在某些细分领域发光。 本篇主要介绍几款基于wasm的轻量实时计算框架，比如Redpanda、InfinyOn。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="基于Wasm的轻量实时计算">
+<meta property="og:url" content="http://bigdatadecode.top/wasm-realtime.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="随着各行各业对实时计算的需求越来越强烈，实时计算领域的竞争也越来越激烈，呈现百花齐放的状态。 虽说Flink在实时计算领域已坐稳老大哥，但是却也阻挡不了其它实时计算框架在某些细分领域发光。 本篇主要介绍几款基于wasm的轻量实时计算框架，比如Redpanda、InfinyOn。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+<meta property="article:published_time" content="2022-11-05T05:35:12.000Z">
+<meta property="article:modified_time" content="2022-11-05T05:35:12.000Z">
+<meta property="article:author" content="混绅士">
+<meta property="article:tag" content="Wasm">
+<meta property="article:tag" content="Redpanda">
+<meta property="article:tag" content="InfinyOn">
+<meta property="article:tag" content="Pulsar">
+<meta property="article:tag" content="Realtime">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><link rel="shortcut icon" href="/favicon.ico"><link rel="canonical" href="http://bigdatadecode.top/wasm-realtime"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="baidu-site-verification" content="27E5EbutCm"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '基于Wasm的轻量实时计算',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2022-11-05 13:35:12'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="big data decode club" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/uploads/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><div class="data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">118</div></a></div><div class="data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">196</div></a></div><div class="data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">21</div></a></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">big data decode club</a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">基于Wasm的轻量实时计算</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2022-11-05T05:35:12.000Z" title="发表于 2022-11-05 13:35:12">2022-11-05</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2022-11-05T05:35:12.000Z" title="更新于 2022-11-05 13:35:12">2022-11-05</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Realtime-BigData/">Realtime, BigData</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">1.6k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>5分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="基于Wasm的轻量实时计算"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>随着各行各业对实时计算的需求越来越强烈，实时计算领域的竞争也越来越激烈，呈现百花齐放的状态。</p>
+<p>虽说Flink在实时计算领域已坐稳老大哥，但是却也阻挡不了其它实时计算框架在某些细分领域发光。</p>
+<p>本篇主要介绍几款基于wasm的轻量实时计算框架，比如Redpanda、InfinyOn。</p>
+<span id="more"></span>
+<h2 id="wasm是什么"><a href="#wasm是什么" class="headerlink" title="wasm是什么"></a>wasm是什么</h2><p>wasm是WebAssembly的简称，就是一个可移植、体积小、加载快并且兼容Web的全新格式。网上也有很多相关的介绍，可以参考下。</p>
+<h2 id="Redpanda"><a href="#Redpanda" class="headerlink" title="Redpanda"></a>Redpanda</h2><p>来自官方的描述：<em>Redpanda is a Kafka®-compatible streaming data platform that is up to 10x faster and 6x more hardware-efficient. It is also JVM-free, ZooKeeper®-free, Jepsen-tested and source available.</em><br>Redpanda是一个实时数据平台，完全兼容kafka，并且没有外部依赖，比如zookeeper。它是用<code>C++</code>编写，所以也没有<code>JVM</code>。</p>
+<p>由官方的描述可知它主要是对标kafka，其核心功能也就是消息队列。不过它还可以对数据进行实时处理，个人感觉其整体功能有点类似Plusar。</p>
+<p>由于它完全兼容kafka，所以它也有topic、partition、replication这些概念，而且使用方式也与kafka一样，就不再赘述了。这里主要介绍下实时处理也就是<code>Data Transforms</code>功能</p>
+<h3 id="Data-Transforms"><a href="#Data-Transforms" class="headerlink" title="Data Transforms"></a>Data Transforms</h3><p><code>Data Transforms</code>是Redpanda用于实时数据处理的模块，其基于<code>wasm</code>实现。基于<code>wasm</code>实现的好处是用户可以使用自己熟悉的语言(可编译为wasm)开发数据处理逻辑，然后将其编译为<code>wasm</code>文件并注册部署到Redpanda中，就可以对数据进行实时处理，对用户及其友好。</p>
+<p>上面是我个人的理解，下面是官方给出的亮点：</p>
+<ol>
+<li>易用: 用户只需使用wasm支持的语言编写TransForm逻辑，然后将其注册到Redpand中就可以了，无需关kafka的依赖库。</li>
+<li>高效: Transform代码会推送到集群中的所有节点中，Redpanda节点会像调用RPC那样调用这些本地代码。</li>
+<li>简单: Transform管理较简单，只需将其注册到Redpanda即可，其会存储在一个单独的topic中，由Redpanda自己管理。</li>
+</ol>
+<h3 id="Data-Transforms架构"><a href="#Data-Transforms架构" class="headerlink" title="Data Transforms架构"></a>Data Transforms架构</h3><p>Data Transforms由4部分组成，分别是<code>客户端工具</code>、<code>存储和Transform code</code>、<code>Routing streams</code>和<code>执行引擎</code>。</p>
+<p><img src="/blogimgs/wasm-realtime/arch.png" title="架构图"></p>
+<blockquote>
+<p>客户端工具(Client-side tooling)</p>
+</blockquote>
+<p>客户端工具<code>rpk</code>可以生成一个标准工程模版，开发者只需填充数据转换逻辑即可。还可通过<code>rpk</code>进行部署、更新<code>wasm</code>文件。</p>
+<blockquote>
+<p>存储和Transform code(Storage and distribution of scripts)</p>
+</blockquote>
+<p>Redpanda核心是一个可线性扩展、支持事务的存储引擎，底层使用raft协议保证数据副本之间的一致性。Redpanda完全支持kafka协议，所以也是按照topic、partition和replication进行存储的，同样也支持压缩存储。</p>
+<p>开发者注册的<code>.wasm</code>文件存在一个单独的内置topic中，其topic也是支持压缩的。<code>wasm</code>文件通过名字来区分，相同名字的wasm根据时间顺序进行更新，压缩时会将历史版本移除。</p>
+<blockquote>
+<p>Routing streams(pacemaker)</p>
+</blockquote>
+<p>Routing streams主要用来将数据根据规则路由给不同的transform进行处理，这个组件被称为<code>pacemaker</code>。它是整个系统的核心，它需要在保证高效的前提下还需要保证数据的顺序性。其整个工作流包含3步：</p>
+<ol>
+<li>并行从<code>input</code>中读取数据</li>
+<li>每个协处理器通过RPC调用<code>wasm</code>执行引擎执行传过来的数据和相关的元数据</li>
+<li>将执行结果和offset写入结果topic中</li>
+</ol>
+<p><img src="/blogimgs/wasm-realtime/pacemaker.png" title="pacemaker工作流"><br>需要注意的是在单个协处理器中只有在第3步执行结束之后，第1步才能再次被执行，否则结果中的数据就会乱序。</p>
+<p>peacemaker中还会记录每个transform处理的offset状态，以便当处理失败时已记录的offset处进行重放，以保证幂等性。</p>
+<blockquote>
+<p>执行引擎(execution engine)</p>
+</blockquote>
+<p>执行引擎有两种，一种是同步函数调用，另一种是基于异步的状态转换。</p>
+<ul>
+<li>同步执行引擎<br>同步执行引擎主要应用在一些简单的数据过滤、数据加密等较为纯粹的数据处理场景下，<code>wasm</code>文件就像调用同步函数那样被执行。其架构如图：</li>
+</ul>
+<p><img src="/blogimgs/wasm-realtime/sync.png" title="同步执行引擎"></p>
+<ul>
+<li>异步执行引擎<br>异步执行引擎主要用于在transform时需要外部依赖或者一些状态的场景中。因为在这些情况下<code>wasm</code>的执行时长是不受控制的，容易造成阻塞，所以在异步执行引擎中会新建一个与原topic分区一摸一样的子分区，这样将producer、transform和consumer解偶，提升数据处理能力。其架构如图：</li>
+</ul>
+<p><img src="/blogimgs/wasm-realtime/async.png" title="异步执行引擎"></p>
+<h3 id="Demo"><a href="#Demo" class="headerlink" title="Demo"></a>Demo</h3><p><a target="_blank" rel="noopener" href="https://redpanda.com/blog/change-data-capture-postgres-debezium-kafka-connect">这里</a>是官方的一个demo，从pg中通过cdc将数据传入Redpanda中，流程较为简单，而且都是基于docker环境的，就不再重复了。</p>
+<!--
+https://www.youtube.com/watch?v=skzWrp8eU-Y
+https://redpanda.com/blog/data-transformation-engine-with-wasm-runtime
+https://redpanda.com/blog/wasm-architecture
+-->
+
+<h2 id="fluvio"><a href="#fluvio" class="headerlink" title="fluvio"></a>fluvio</h2><p>fluvio出自InfinyOn，它也是开源的，可对数据进行实时聚合、关联和可编程。</p>
+<p><img src="/blogimgs/wasm-realtime/fluvio.png" title="fluvio"></p>
+<p>分为4部分，分别为<code>SmartModules</code>、<code>Data Streams</code>、<code>Immutable Store</code>和<code>Clients &amp; Connectors</code>。</p>
+<ul>
+<li><code>SmartModules</code>是可编程模块，可以实时对数据进行清洗、过滤和计算，是用<code>Rust</code>编写然后编译为<code>wasm</code>进行执行。</li>
+<li><code>Data Streams</code>是分布式模块，支持冗余和自动恢复。</li>
+<li><code>Immutable Store</code>是一个持久不变的存储层，用于持久化数据</li>
+<li><code>Clients &amp; Connectors</code>包含一些封装好的API，可以进行生产数据和消费数据，还包括一些已封装好的connector用于连接一些常见数据源，比如pgsql</li>
+</ul>
+<h3 id="fluvio架构"><a href="#fluvio架构" class="headerlink" title="fluvio架构"></a>fluvio架构</h3><p>fluvio由2个组件组成，分别为<code>Streaming Controller(SC)</code>和<code>Streaming Processing Units(SPU)</code>，采用master/worker形式，其架构如图：</p>
+<p><img src="/blogimgs/wasm-realtime/fluvio-arch.png" title="fluvio架构图"></p>
+<p>SC负责SPU的生命周期，包括整个集群各个节点的拓扑图和分布式数据流相关的优化。SPU负责实时数据。SC和SPU是相互独立的，每个服务都可单独重启、升级。</p>
+<h3 id="SmartModules"><a href="#SmartModules" class="headerlink" title="SmartModules"></a>SmartModules</h3><p>SmartModules是开发者可编程的模块，开发者使用Rust语言进行开发，然后将其编译为wasm提交给fluvio，就允许开发者直接控制数据流。<br>目前官方提供的类型有<code>Filter</code>、<code>Map</code>，<code>FilterMap</code>，<code>ArrayMap</code>和<code>Aggregate</code>，不过官方还提供了一个Hub，方便开发者贡献自己的SmartModules和下载所需的非官方SmartModules</p>
+<p>官方也提供了一些Demo，都比较简单，感兴趣的可以自行查看。</p>
+<!-- 
+https://www.infinyon.com/blog/2021/08/smartmodule-aggregates/
+https://www.infinyon.com/blog/2021/08/smartmodule-map-use-cases/
+https://www.infinyon.com/blog/2021/06/smartmodule-filters/
+-->
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">混绅士</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://bigdatadecode.top/wasm-realtime.html">http://bigdatadecode.top/wasm-realtime.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://bigdatadecode.top" target="_blank">big data decode club</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Wasm/">Wasm</a><a class="post-meta__tags" href="/tags/Redpanda/">Redpanda</a><a class="post-meta__tags" href="/tags/InfinyOn/">InfinyOn</a><a class="post-meta__tags" href="/tags/Pulsar/">Pulsar</a><a class="post-meta__tags" href="/tags/Realtime/">Realtime</a></div><div class="post_share"></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/path/to/wechat-reward-image/wechatpay.png" target="_blank"><img class="post-qr-code-img" src="/path/to/wechat-reward-image/wechatpay.png" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/scratch-extensions-demo.html"><img class="next-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">scratch自定义扩展</div></div></a></div></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/uploads/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">混绅士</div><div class="author-info__description">Any answers you can find in source code.</div></div><div class="card-info-data is-center"><div class="card-info-data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">118</div></a></div><div class="card-info-data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">196</div></a></div><div class="card-info-data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">21</div></a></div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#wasm%E6%98%AF%E4%BB%80%E4%B9%88"><span class="toc-number">1.</span> <span class="toc-text">wasm是什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Redpanda"><span class="toc-number">2.</span> <span class="toc-text">Redpanda</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Data-Transforms"><span class="toc-number">2.1.</span> <span class="toc-text">Data Transforms</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Data-Transforms%E6%9E%B6%E6%9E%84"><span class="toc-number">2.2.</span> <span class="toc-text">Data Transforms架构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Demo"><span class="toc-number">2.3.</span> <span class="toc-text">Demo</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#fluvio"><span class="toc-number">3.</span> <span class="toc-text">fluvio</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#fluvio%E6%9E%B6%E6%9E%84"><span class="toc-number">3.1.</span> <span class="toc-text">fluvio架构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SmartModules"><span class="toc-number">3.2.</span> <span class="toc-text">SmartModules</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/wasm-realtime.html" title="基于Wasm的轻量实时计算"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="基于Wasm的轻量实时计算"/></a><div class="content"><a class="title" href="/wasm-realtime.html" title="基于Wasm的轻量实时计算">基于Wasm的轻量实时计算</a><time datetime="2022-11-05T05:35:12.000Z" title="发表于 2022-11-05 13:35:12">2022-11-05</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/scratch-extensions-demo.html" title="scratch自定义扩展"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="scratch自定义扩展"/></a><div class="content"><a class="title" href="/scratch-extensions-demo.html" title="scratch自定义扩展">scratch自定义扩展</a><time datetime="2021-12-14T14:30:20.000Z" title="发表于 2021-12-14 22:30:20">2021-12-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/metabase-import-ide.html" title="metabase导入IDE调试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="metabase导入IDE调试"/></a><div class="content"><a class="title" href="/metabase-import-ide.html" title="metabase导入IDE调试">metabase导入IDE调试</a><time datetime="2021-12-13T15:31:22.000Z" title="发表于 2021-12-13 23:31:22">2021-12-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/flink-connector-example.html" title="Flink Connector调研"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Connector调研"/></a><div class="content"><a class="title" href="/flink-connector-example.html" title="Flink Connector调研">Flink Connector调研</a><time datetime="2021-11-10T14:30:20.000Z" title="发表于 2021-11-10 22:30:20">2021-11-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink standlone模式下Flinkx测试"/></a><div class="content"><a class="title" href="/Flink-standlone-Flinkx.html" title="Flink standlone模式下Flinkx测试">Flink standlone模式下Flinkx测试</a><time datetime="2021-11-06T15:05:20.000Z" title="发表于 2021-11-06 23:05:20">2021-11-06</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2022 By 混绅士</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

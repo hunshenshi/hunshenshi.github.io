@@ -11,5 +11,5 @@ Disallow: /fonts/
 Disallow: /vendors/
 Disallow: /fancybox/
 
-Sitemap: http://bigdatadecode.club/sitemap.xml
-Sitemap: http://bigdatadecode.club/baidusitemap.xml
+Sitemap: http://bigdatadecode.top/sitemap.xml
+Sitemap: http://bigdatadecode.top/baidusitemap.xml
