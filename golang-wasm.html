@@ -1,0 +1,223 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>Golang开发wasm程序 | big data decode club</title><meta name="keywords" content="Wasm,Golang,Tinygo"><meta name="author" content="混绅士"><meta name="copyright" content="混绅士"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="wasm以小巧安全的特性受到广泛的关注，但是他也有很多的局限性。这些局限性可以通过Host Function进行扩展，使得wasm与host能够进行交互，完成更多的功能。 Host Function需要import到wasm中，同样wasm中的function需要export到host中才能调用。 本篇主要记录下在Golang下，wasm function如何与host function进行交互。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Golang开发wasm程序">
+<meta property="og:url" content="http://bigdatadecode.top/golang-wasm.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="wasm以小巧安全的特性受到广泛的关注，但是他也有很多的局限性。这些局限性可以通过Host Function进行扩展，使得wasm与host能够进行交互，完成更多的功能。 Host Function需要import到wasm中，同样wasm中的function需要export到host中才能调用。 本篇主要记录下在Golang下，wasm function如何与host function进行交互。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+<meta property="article:published_time" content="2022-11-25T13:32:12.000Z">
+<meta property="article:modified_time" content="2022-11-25T15:12:10.000Z">
+<meta property="article:author" content="混绅士">
+<meta property="article:tag" content="Wasm">
+<meta property="article:tag" content="Golang">
+<meta property="article:tag" content="Tinygo">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><link rel="shortcut icon" href="/favicon.ico"><link rel="canonical" href="http://bigdatadecode.top/golang-wasm"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="baidu-site-verification" content="27E5EbutCm"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Golang开发wasm程序',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2022-11-25 23:12:10'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="big data decode club" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/uploads/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><div class="data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">119</div></a></div><div class="data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">198</div></a></div><div class="data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">22</div></a></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">big data decode club</a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Golang开发wasm程序</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2022-11-25T13:32:12.000Z" title="发表于 2022-11-25 21:32:12">2022-11-25</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2022-11-25T15:12:10.000Z" title="更新于 2022-11-25 23:12:10">2022-11-25</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Golang/">Golang</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">1.4k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>5分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="Golang开发wasm程序"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>wasm以小巧安全的特性受到广泛的关注，但是他也有很多的局限性。<br>这些局限性可以通过<code>Host Function</code>进行扩展，使得<em>wasm</em>与<em>host</em>能够进行交互，完成更多的功能。</p>
+<p><code>Host Function</code>需要<code>import</code>到wasm中，同样wasm中的function需要<code>export</code>到host中才能调用。</p>
+<p>本篇主要记录下在Golang下，<code>wasm function</code>如何与<code>host function</code>进行交互。</p>
+<span id="more"></span>
+
+<h2 id="环境依赖"><a href="#环境依赖" class="headerlink" title="环境依赖"></a>环境依赖</h2><ol>
+<li>使用wazero或者wasmtime-go作为wasm的runtime</li>
+<li>Tinygo编译Golang为wasm文件</li>
+</ol>
+<h2 id="为什么需要Host-Function"><a href="#为什么需要Host-Function" class="headerlink" title="为什么需要Host Function"></a>为什么需要<code>Host Function</code></h2><p><code>Host Function</code>指在<code>Host</code>程序里定义的方法。某些方面wasm还不太完善，比如默认情况下不能在终端上打印信息，比如<code>fmt.Println(&quot;Hello&quot;)</code>，此时就可以在<code>host</code>程序中创建一个<code>Print(string)</code>方法，让wasm调用这个<code>Print(string)</code>方法。</p>
+<p>在Golang中需要wasm runtime将<code>Host Function</code>(比如<code>Print(string)</code>)加载到wasm中即可运行，这个操作从wasm角度看，为<code>import</code>。</p>
+<p><img src="/blogimgs/golang-wasm/print-import.png"></p>
+<h2 id="show-me-code"><a href="#show-me-code" class="headerlink" title="show me code"></a>show me code</h2><p><em>wasm</em>与<em>host</em>进行交互涉及到<code>import</code>和<code>export</code>操作，通过代码具体展示何时使用<code>import</code>和<code>export</code>，以及在tinygo中又该如何使用。</p>
+<h3 id="1-Golang创建wasm模块"><a href="#1-Golang创建wasm模块" class="headerlink" title="1. Golang创建wasm模块"></a>1. Golang创建wasm模块</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="comment">// 1</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 2</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//export add </span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">add</span><span class="params">(x <span class="keyword">uint32</span>, y <span class="keyword">uint32</span>)</span> <span class="title">uint32</span></span> &#123;</span><br><span class="line">    <span class="keyword">return</span> x + y</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>1标记的空<code>main</code>函数是tinygo编译wasm时需要的</li>
+<li>2标记的是将<code>add</code>方法导出到<code>host</code>，这样就可以在host程序中调用wasm模块</li>
+</ul>
+<p>使用tinygo将golang编译为wasm模块<br><code>tinygo build -o hello.wasm -scheduler=none --no-debug -target wasi ./hello.go</code></p>
+<h3 id="2-编写host程序调用wasm模块"><a href="#2-编写host程序调用wasm模块" class="headerlink" title="2. 编写host程序调用wasm模块"></a>2. 编写<code>host</code>程序调用wasm模块</h3><p><code>host</code>模块是用<code>Wazero</code>runtime编写，首先创建一个WebAssembly Runtime，然后实例化一个WebAssembly module，这样<code>host</code>程序就能调用<code>wasm function</code>了。代码如下：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">  <span class="string">&quot;context&quot;</span></span><br><span class="line">  <span class="string">&quot;fmt&quot;</span></span><br><span class="line">  <span class="string">&quot;log&quot;</span></span><br><span class="line">  <span class="string">&quot;os&quot;</span></span><br><span class="line"></span><br><span class="line">  <span class="string">&quot;github.com/tetratelabs/wazero&quot;</span></span><br><span class="line">  <span class="string">&quot;github.com/tetratelabs/wazero/wasi_snapshot_preview1&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">  ctx := context.Background()</span><br><span class="line"></span><br><span class="line"><span class="comment">// 1</span></span><br><span class="line">  r := wazero.NewRuntimeWithConfig(</span><br><span class="line">    ctx, wazero.NewRuntimeConfig().</span><br><span class="line">    WithWasmCore2())</span><br><span class="line"></span><br><span class="line">  <span class="keyword">defer</span> r.Close(ctx) </span><br><span class="line"></span><br><span class="line">  _, err := wasi_snapshot_preview1.Instantiate(ctx, r)</span><br><span class="line">  <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">    log.Panicln(err)</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 2</span></span><br><span class="line">  helloWasm, err := os.ReadFile(<span class="string">&quot;./hello.wasm&quot;</span>)</span><br><span class="line">  <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">    log.Panicln(err)</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 3</span></span><br><span class="line">  mod, err := r.InstantiateModuleFromBinary(ctx, helloWasm)</span><br><span class="line">  <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">    log.Panicln(err)</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 4</span></span><br><span class="line">  addWasmModuleFunction := mod.ExportedFunction(<span class="string">&quot;add&quot;</span>) </span><br><span class="line"></span><br><span class="line"><span class="comment">// 5</span></span><br><span class="line">  result, err := addWasmModuleFunction.Call(ctx, <span class="number">20</span>, <span class="number">22</span>)</span><br><span class="line">  <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">    log.Panicln(err)</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  fmt.Println(<span class="string">&quot;result:&quot;</span>, result[<span class="number">0</span>])</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>1标记的是创建一个WebAssembly Runtime</li>
+<li>2标记的是加载一个wasm模块</li>
+<li>3标记的是实例化一个WebAssembly module</li>
+<li>4标记的是获取一个<code>wasm function</code> <strong>add</strong>的引用</li>
+<li>5标记的是在host程序中调用wasm</li>
+</ul>
+<p>然后可以像运行正常Go程序那样执行<code>go run main.go</code>，输出是<code>result: 42</code></p>
+<p>这个基础例子展示了wasm模块的常规用法，主要展示了host程序如何调用wasm模块。</p>
+<ol>
+<li>但是wasm模块如何调用<code>host function</code>呢？</li>
+<li>在Go编写的wasm模块中，使用<code>export</code>关键字标记host程序可调用的<code>wasm function</code>，那<code>host function</code>又是如何标记被wasm模块调用的呢？</li>
+</ol>
+<p>带着这两个疑问看下面这一节内容。</p>
+<h2 id="export-import-傻傻分不清楚"><a href="#export-import-傻傻分不清楚" class="headerlink" title="export import 傻傻分不清楚"></a>export import 傻傻分不清楚</h2><p>上面说wasm局限性时提到无法在终端打印信息，需要在<code>host function</code>中定义一个<code>Print(string)</code>方法，然后在wasm模块中调用，现在就在<code>host</code>程序中定义一个在终端打印数字的方法<code>hostLogUint32</code>。</p>
+<blockquote>
+<p>hostLogUint32</p>
+</blockquote>
+<p>wasm模块调用<code>host function</code>需要在host程序中和wasm中都进行改动</p>
+<ul>
+<li>host程序中的改动</li>
+</ul>
+<ol>
+<li>定义一个<code>logUint32</code>方法</li>
+<li>export <code>logUint32</code>方法到Wasm runtime种，为了方便标记<code>logUint32</code> export的名字为<code>hostLogUint32</code></li>
+</ol>
+<ul>
+<li>wasm程序中的改动</li>
+</ul>
+<ol>
+<li>import <code>hostLogUint32</code>方法</li>
+<li>在wasm模块中调用<code>hostLogUint32</code>方法在终端打印一个数字</li>
+</ol>
+<p><img src="/blogimgs/golang-wasm/hostLogUint32.png"></p>
+<p>看下具体的代码改动，在<code>main.go</code>中添加<code>logUint32</code>方法</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">logUint32</span><span class="params">(value <span class="keyword">uint32</span>)</span></span> &#123;</span><br><span class="line">  fmt.Println(<span class="string">&quot;🤖:&quot;</span>, value)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>然后在runtime中export <code>logUint32</code>方法为<code>hostLogUint32</code>，代码如下：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">_, errEnv := wasmRuntime.NewModuleBuilder(<span class="string">&quot;env&quot;</span>).</span><br><span class="line">  ExportFunction(<span class="string">&quot;hostLogUint32&quot;</span>, logUint32).</span><br><span class="line">  Instantiate(ctx, wasmRuntime)</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> errEnv != <span class="literal">nil</span> &#123;</span><br><span class="line">  log.Panicln(<span class="string">&quot;env/host function(s) error:&quot;</span>, errEnv)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>接下来在wasm模块中import <code>hostLogUint32</code>，代码如下：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//export hostLogUint32</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">hostLogUint32</span><span class="params">(value <span class="keyword">uint32</span>)</span></span></span><br></pre></td></tr></table></figure>
+
+<p><strong>这里是不是有人开始疑惑了，不是说好import嘛，怎么还是export呀？？？我当时可是困扰了好久好久。。。</strong><br><strong>这里<code>//export hostLogUint32</code>其实是wasm模块import <code>host function</code>，可以注意到这里的<code>hostLogUint32</code>并没有方法体，这个可以用来区分是export还是import</strong></p>
+<p>最后就是在wasm模块中调用<code>host function</code>了，代码如下：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//export hostLogUint32</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">hostLogUint32</span><span class="params">(value <span class="keyword">uint32</span>)</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">//export add</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">add</span><span class="params">(x <span class="keyword">uint32</span>, y <span class="keyword">uint32</span>)</span> <span class="title">uint32</span></span> &#123;</span><br><span class="line">  res := x + y</span><br><span class="line">  hostLogUint32(res)</span><br><span class="line">  <span class="keyword">return</span> res</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+<p>程序准备好之后就可以运行，由于wasm模块也发生了变化，所以需要重新编译wasm文件，执行如下命令：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">tinygo build -o hello.wasm -scheduler=none --no-debug -target wasi ./hello.go</span><br><span class="line"></span><br><span class="line">go run main.go</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 输出如下</span></span><br><span class="line">🤖: 42         # from the Wasm module</span><br><span class="line">result: 42     # from the host program</span><br></pre></td></tr></table></figure>
+
+<h2 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h2><p>写这篇文章的主要目的其实想理解tinygo中export的用法，因为在参考wasm相关教程中<code>host function</code>需要import到wasm中才能使用，但是tinygo中并没有提供<code>import</code>关键字，这使我一度怀疑代码有问题，为了消除疑虑所以才查找了很多资料。</p>
+<p>我的理解是tinygo中的<code>export</code>关键字有时间充当将wasm模块中的方法export到host的功能，有时也充当将<code>host function</code>中的方法import到wasm模块的功能，那这两种场景如何区分呢？是看带有<code>export</code>关键字的方法是否有<code>方法体</code>，如何有就是<code>export</code>，没有则是<code>import</code>。这个结果从<code>hostLogUint32</code>的解析图中可以猜想到，我们还可以将编译之后的wasm文件进行反编译进行验证。</p>
+<p>wasm文件反编译使用的是<code>wasm-decompile</code>命令，具体命令为<code>wasm-decompile log.wasm -o log.dcmp</code>，查看<code>log.dcmp</code>文件可看到import和export标注的方法。</p>
+<p><a target="_blank" rel="noopener" href="https://www.wasm.builders/k33g_org/extend-wasm-with-host-functions-thanks-to-wazero-3n0n">参考</a></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">混绅士</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://bigdatadecode.top/golang-wasm.html">http://bigdatadecode.top/golang-wasm.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://bigdatadecode.top" target="_blank">big data decode club</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Wasm/">Wasm</a><a class="post-meta__tags" href="/tags/Golang/">Golang</a><a class="post-meta__tags" href="/tags/Tinygo/">Tinygo</a></div><div class="post_share"></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/path/to/wechat-reward-image/wechatpay.png" target="_blank"><img class="post-qr-code-img" src="/path/to/wechat-reward-image/wechatpay.png" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/wasm-realtime.html"><img class="next-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">基于Wasm的轻量实时计算</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/wasm-realtime.html" title="基于Wasm的轻量实时计算"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-11-05</div><div class="title">基于Wasm的轻量实时计算</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/uploads/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">混绅士</div><div class="author-info__description">Any answers you can find in source code.</div></div><div class="card-info-data is-center"><div class="card-info-data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">119</div></a></div><div class="card-info-data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">198</div></a></div><div class="card-info-data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">22</div></a></div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%8E%AF%E5%A2%83%E4%BE%9D%E8%B5%96"><span class="toc-number">1.</span> <span class="toc-text">环境依赖</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81Host-Function"><span class="toc-number">2.</span> <span class="toc-text">为什么需要Host Function</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#show-me-code"><span class="toc-number">3.</span> <span class="toc-text">show me code</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-Golang%E5%88%9B%E5%BB%BAwasm%E6%A8%A1%E5%9D%97"><span class="toc-number">3.1.</span> <span class="toc-text">1. Golang创建wasm模块</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-%E7%BC%96%E5%86%99host%E7%A8%8B%E5%BA%8F%E8%B0%83%E7%94%A8wasm%E6%A8%A1%E5%9D%97"><span class="toc-number">3.2.</span> <span class="toc-text">2. 编写host程序调用wasm模块</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#export-import-%E5%82%BB%E5%82%BB%E5%88%86%E4%B8%8D%E6%B8%85%E6%A5%9A"><span class="toc-number">4.</span> <span class="toc-text">export import 傻傻分不清楚</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BB%93%E8%AE%BA"><span class="toc-number">5.</span> <span class="toc-text">结论</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/golang-wasm.html" title="Golang开发wasm程序"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Golang开发wasm程序"/></a><div class="content"><a class="title" href="/golang-wasm.html" title="Golang开发wasm程序">Golang开发wasm程序</a><time datetime="2022-11-25T13:32:12.000Z" title="发表于 2022-11-25 21:32:12">2022-11-25</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/wasm-realtime.html" title="基于Wasm的轻量实时计算"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="基于Wasm的轻量实时计算"/></a><div class="content"><a class="title" href="/wasm-realtime.html" title="基于Wasm的轻量实时计算">基于Wasm的轻量实时计算</a><time datetime="2022-11-05T05:35:12.000Z" title="发表于 2022-11-05 13:35:12">2022-11-05</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/scratch-extensions-demo.html" title="scratch自定义扩展"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="scratch自定义扩展"/></a><div class="content"><a class="title" href="/scratch-extensions-demo.html" title="scratch自定义扩展">scratch自定义扩展</a><time datetime="2021-12-14T14:30:20.000Z" title="发表于 2021-12-14 22:30:20">2021-12-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/metabase-import-ide.html" title="metabase导入IDE调试"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="metabase导入IDE调试"/></a><div class="content"><a class="title" href="/metabase-import-ide.html" title="metabase导入IDE调试">metabase导入IDE调试</a><time datetime="2021-12-13T15:31:22.000Z" title="发表于 2021-12-13 23:31:22">2021-12-13</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/flink-connector-example.html" title="Flink Connector调研"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Connector调研"/></a><div class="content"><a class="title" href="/flink-connector-example.html" title="Flink Connector调研">Flink Connector调研</a><time datetime="2021-11-10T14:30:20.000Z" title="发表于 2021-11-10 22:30:20">2021-11-10</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2022 By 混绅士</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
