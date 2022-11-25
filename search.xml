@@ -4,19 +4,6 @@
   
     
     <entry>
-      <title></title>
-      <link href="/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E7%AE%97%E6%B3%95%E4%B9%8B%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92.html"/>
-      <url>/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E7%AE%97%E6%B3%95%E4%B9%8B%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92.html</url>
-      
-        <content type="html"><![CDATA[<h2 id="lt-lt-lt-lt-lt-lt-lt-HEAD"><a href="#lt-lt-lt-lt-lt-lt-lt-HEAD" class="headerlink" title="&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD"></a>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</h2><p>title: 数据结构算法之动态规划<br>date: 2016-12-04 11:38:53<br>update: 2016-12-04 11:38:53<br>categories: algorithm<br>tags: [数据结构, 算法, 动态规划]</p><hr><p>动态规划的基本思想与分治法类似，也是将<em>待求解的问题分解为若干个子问题(阶段)<em>。按顺序求解子阶段，</em>前一子问题的解，为后一子问题的求解提供了有用的信息</em>。在<strong>求解任一子问题时，列出各种可能的局部解，通过决策保留那些有可能达到最优的局部解，丢弃其他局部最优解</strong>。依次解决各子问题，最后一个子问题就是初始问题的解。</p><p>动态规划是通过<em>拆分问题</em>，定义<em>问题状态和状态之间的关系</em>，使得问题能够以<em>递推</em>的方式去解决。则<em>动态规划的本质</em>是<strong>状态的定义</strong>和<strong>状态转移方程</strong></p><p>动态规划通过拆分问题，将原始问题拆分为子问题，而各子问题之间的关系是<em>后一子问题的解往往由前一子问题的解求出</em>，则**子问题之间是重叠的(则不是相互独立的)**，为减少重复计算，对每一个子问题只解一次，将其不同阶段的不同状态保存在一个二维数组中。</p><blockquote><p>动态规划与分治法<em>最大的差别</em>是:适合于用动态规划法求解的问题，经分解后得到的子问题往往<em>不是互相独立</em>的（即下一个子阶段的求解是建立在上一个子阶段的解的基础上，进行进一步的求解）。</p></blockquote><blockquote><p>动态规划与贪心法的区别</p></blockquote><p>动态规划其实是贪心法的一般情况，而<em>贪心法是动态规划的特殊情况</em>，为什么这么说呢，下面就来解释下，</p><span id="more"></span><p>用动态规划来求解时总是将问题拆分，找到递推公式，则将各个状态定义为dp[i],结果为result，动态规划求解的流程图如下：</p><p><img src="/blogimgs/dp/greedy.png"></p><p>但是在大多数动态规划求解的过程中后一子问题一般是从前面多个子问题中得出的(也可能是前面所有的子问题)，则流程图如下：</p><p><img src="/blogimgs/dp/dp.png"></p><p>而贪心算法往往只是有前一子问题而得出后一子问题的，则从上面的两个图中可以得出动态规划与贪心算法的关系，<strong>如果后一子问题只是由前一子问题推出，则为贪心，如果后一子问题由前面多个子问题推出，则为动态规划，所以说贪心是动态规划的特殊情况</strong>。</p><h2 id="动态规划常见问题"><a href="#动态规划常见问题" class="headerlink" title="动态规划常见问题"></a>动态规划常见问题</h2><h3 id="最长子串"><a href="#最长子串" class="headerlink" title="最长子串"></a>最长子串</h3><p>给定一个字符串，找到没有重复字符的最长子串的长度。</p><p>例如:<br>字符串”abcabcbb”, 最长非重复子串长度是3(“abc”).<br>字符串”pwwkew”, 最长非重复子串长度是3(“wke”).</p><p>具体解法移步[数据结构算法之leetcode Longest Substring](<a href="http://bigdatadecode.top/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E7%AE%97%E6%B3%95%E4%B9%8Bleetcode">http://bigdatadecode.top/数据结构算法之leetcode</a> Longest Substring.html)</p><h3 id="最长回文"><a href="#最长回文" class="headerlink" title="最长回文"></a>最长回文</h3><p>给定一个字符串，求最长回文子串(假设字符串中只有唯一的一个最长回文子串)。</p><p>例如：<br>字符串”bananas”, 最长回文为”anana”<br>字符串”aaa”, 最长回文为”aaa”</p><p>具体解法移步[数据结构算法之leetcode Longest Palindromic](<a href="http://bigdatadecode.top/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E7%AE%97%E6%B3%95%E4%B9%8Bleetcode">http://bigdatadecode.top/数据结构算法之leetcode</a> Longest Palindromic.html)</p>]]></content>
-      
-      
-      
-    </entry>
-    
-    
-    
-    <entry>
       <title>Golang开发wasm程序</title>
       <link href="/golang-wasm.html"/>
       <url>/golang-wasm.html</url>
@@ -2455,6 +2442,35 @@
             <tag> PriorityQueue </tag>
             
             <tag> topN </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>数据结构算法之动态规划</title>
+      <link href="/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E7%AE%97%E6%B3%95%E4%B9%8B%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92.html"/>
+      <url>/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E7%AE%97%E6%B3%95%E4%B9%8B%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92.html</url>
+      
+        <content type="html"><![CDATA[<p>动态规划的基本思想与分治法类似，也是将<em>待求解的问题分解为若干个子问题(阶段)<em>。按顺序求解子阶段，</em>前一子问题的解，为后一子问题的求解提供了有用的信息</em>。在<strong>求解任一子问题时，列出各种可能的局部解，通过决策保留那些有可能达到最优的局部解，丢弃其他局部最优解</strong>。依次解决各子问题，最后一个子问题就是初始问题的解。</p><p>动态规划是通过<em>拆分问题</em>，定义<em>问题状态和状态之间的关系</em>，使得问题能够以<em>递推</em>的方式去解决。则<em>动态规划的本质</em>是<strong>状态的定义</strong>和<strong>状态转移方程</strong></p><p>动态规划通过拆分问题，将原始问题拆分为子问题，而各子问题之间的关系是<em>后一子问题的解往往由前一子问题的解求出</em>，则**子问题之间是重叠的(则不是相互独立的)**，为减少重复计算，对每一个子问题只解一次，将其不同阶段的不同状态保存在一个二维数组中。</p><blockquote><p>动态规划与分治法<em>最大的差别</em>是:适合于用动态规划法求解的问题，经分解后得到的子问题往往<em>不是互相独立</em>的（即下一个子阶段的求解是建立在上一个子阶段的解的基础上，进行进一步的求解）。</p></blockquote><blockquote><p>动态规划与贪心法的区别</p></blockquote><p>动态规划其实是贪心法的一般情况，而<em>贪心法是动态规划的特殊情况</em>，为什么这么说呢，下面就来解释下，</p><span id="more"></span><p>用动态规划来求解时总是将问题拆分，找到递推公式，则将各个状态定义为dp[i],结果为result，动态规划求解的流程图如下：</p><p><img src="/blogimgs/dp/greedy.png"></p><p>但是在大多数动态规划求解的过程中后一子问题一般是从前面多个子问题中得出的(也可能是前面所有的子问题)，则流程图如下：</p><p><img src="/blogimgs/dp/dp.png"></p><p>而贪心算法往往只是有前一子问题而得出后一子问题的，则从上面的两个图中可以得出动态规划与贪心算法的关系，<strong>如果后一子问题只是由前一子问题推出，则为贪心，如果后一子问题由前面多个子问题推出，则为动态规划，所以说贪心是动态规划的特殊情况</strong>。</p><h2 id="动态规划常见问题"><a href="#动态规划常见问题" class="headerlink" title="动态规划常见问题"></a>动态规划常见问题</h2><h3 id="最长子串"><a href="#最长子串" class="headerlink" title="最长子串"></a>最长子串</h3><p>给定一个字符串，找到没有重复字符的最长子串的长度。</p><p>例如:<br>字符串”abcabcbb”, 最长非重复子串长度是3(“abc”).<br>字符串”pwwkew”, 最长非重复子串长度是3(“wke”).</p><p>具体解法移步[数据结构算法之leetcode Longest Substring](<a href="http://bigdatadecode.top/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E7%AE%97%E6%B3%95%E4%B9%8Bleetcode">http://bigdatadecode.top/数据结构算法之leetcode</a> Longest Substring.html)</p><h3 id="最长回文"><a href="#最长回文" class="headerlink" title="最长回文"></a>最长回文</h3><p>给定一个字符串，求最长回文子串(假设字符串中只有唯一的一个最长回文子串)。</p><p>例如：<br>字符串”bananas”, 最长回文为”anana”<br>字符串”aaa”, 最长回文为”aaa”</p><p>具体解法移步[数据结构算法之leetcode Longest Palindromic](<a href="http://bigdatadecode.top/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E7%AE%97%E6%B3%95%E4%B9%8Bleetcode">http://bigdatadecode.top/数据结构算法之leetcode</a> Longest Palindromic.html)</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> algorithm </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> 数据结构 </tag>
+            
+            <tag> 算法 </tag>
+            
+            <tag> 动态规划 </tag>
             
         </tags>
       
