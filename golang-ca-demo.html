@@ -1,0 +1,236 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>说浅不浅的谈下CA认证 | big data decode club</title><meta name="keywords" content="Golang,CA,Https"><meta name="author" content="混绅士"><meta name="copyright" content="混绅士"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="当Http协议变成Https协议时需要CA证书，简单场景下只需在Nginx上配置CA证书即可，后端服务无需更改。但是当不存在类似Nginx的服务时，就需要后端服务进行调整，加载CA证书，使其支持Https协议。 本篇文章主要介绍下Golang如何进行CA认证。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="说浅不浅的谈下CA认证">
+<meta property="og:url" content="http://yuanba.tech/golang-ca-demo.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="当Http协议变成Https协议时需要CA证书，简单场景下只需在Nginx上配置CA证书即可，后端服务无需更改。但是当不存在类似Nginx的服务时，就需要后端服务进行调整，加载CA证书，使其支持Https协议。 本篇文章主要介绍下Golang如何进行CA认证。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+<meta property="article:published_time" content="2023-01-04T14:53:12.000Z">
+<meta property="article:modified_time" content="2023-01-09T14:26:33.000Z">
+<meta property="article:author" content="混绅士">
+<meta property="article:tag" content="Golang">
+<meta property="article:tag" content="CA">
+<meta property="article:tag" content="Https">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><link rel="shortcut icon" href="/favicon.ico"><link rel="canonical" href="http://yuanba.tech/golang-ca-demo"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="baidu-site-verification" content="27E5EbutCm"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '说浅不浅的谈下CA认证',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2023-01-09 22:26:33'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="big data decode club" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/uploads/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><div class="data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">121</div></a></div><div class="data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">202</div></a></div><div class="data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">22</div></a></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">big data decode club</a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">说浅不浅的谈下CA认证</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2023-01-04T14:53:12.000Z" title="发表于 2023-01-04 22:53:12">2023-01-04</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2023-01-09T14:26:33.000Z" title="更新于 2023-01-09 22:26:33">2023-01-09</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Golang/">Golang</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">1.9k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>7分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="说浅不浅的谈下CA认证"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>当Http协议变成Https协议时需要CA证书，简单场景下只需在Nginx上配置CA证书即可，后端服务无需更改。<br>但是当不存在类似Nginx的服务时，就需要后端服务进行调整，加载CA证书，使其支持Https协议。</p>
+<p>本篇文章主要介绍下Golang如何进行CA认证。</p>
+<span id="more"></span>
+
+<h2 id="CA证书生成"><a href="#CA证书生成" class="headerlink" title="CA证书生成"></a>CA证书生成</h2><p>因为<code>go 1.15</code>之后废弃了<code>CommonName</code>，所以在生成证书时有所区别，为了方便证书的生成，针对不同的证书制定不同的配置文件。</p>
+<h3 id="生成CA根证书"><a href="#生成CA根证书" class="headerlink" title="生成CA根证书"></a>生成CA根证书</h3><p>进入ca根证书所在目录，这里是<code>./ca/</code></p>
+<ol>
+<li>新建ca.conf文件</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">[ req ]</span><br><span class="line">default_bits       = 4096</span><br><span class="line">distinguished_name = req_distinguished_name</span><br><span class="line"></span><br><span class="line">[ req_distinguished_name ]</span><br><span class="line">countryName                 = GB</span><br><span class="line">countryName_default         = BeiJing</span><br><span class="line">stateOrProvinceName         = State or Province Name (full name)</span><br><span class="line">stateOrProvinceName_default = BeiJing</span><br><span class="line">localityName                = Locality Name (eg, city)</span><br><span class="line">localityName_default        = BeiJing</span><br><span class="line">organizationName            = Organization Name (eg, company)</span><br><span class="line">organizationName_default    = Step</span><br><span class="line">commonName                  = localhost</span><br><span class="line">commonName_max              = 64</span><br><span class="line">commonName_default          = localhost</span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>生成CA密钥</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openssl genrsa -out ca.key 4096</span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>生成CA证书</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openssl req -new -x509 -days 365 -subj &quot;/C=GB/L=Beijing/O=github/CN=localhost&quot; -key ca.key -out ca.crt -config ca.conf</span><br></pre></td></tr></table></figure>
+
+<h3 id="生成服务端证书"><a href="#生成服务端证书" class="headerlink" title="生成服务端证书"></a>生成服务端证书</h3><p>进入server证书存放目录，这里是<code>./server/</code></p>
+<ol>
+<li>新建server.conf文件</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">[ req ]</span><br><span class="line">default_bits       = 2048</span><br><span class="line">distinguished_name = req_distinguished_name</span><br><span class="line"></span><br><span class="line">[ req_distinguished_name ]</span><br><span class="line">countryName                 = Country Name (2 letter code)</span><br><span class="line">countryName_default         = CN</span><br><span class="line">stateOrProvinceName         = State or Province Name (full name)</span><br><span class="line">stateOrProvinceName_default = BeiJing</span><br><span class="line">localityName                = Locality Name (eg, city)</span><br><span class="line">localityName_default        = BeiJing</span><br><span class="line">organizationName            = Organization Name (eg, company)</span><br><span class="line">organizationName_default    = Step</span><br><span class="line">commonName                  = CommonName (e.g. server FQDN or YOUR name)</span><br><span class="line">commonName_max              = 64</span><br><span class="line">commonName_default          = XXX(自定义,客户端需要此字段做匹配)</span><br><span class="line">[ req_ext ]</span><br><span class="line">subjectAltName = @alt_names</span><br><span class="line">[alt_names]</span><br><span class="line">DNS.1   = localhost</span><br><span class="line">IP      = 127.0.0.1</span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>生成server端密钥</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openssl genrsa -out server.key 2048</span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>生成CSR</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openssl req -new  -subj &quot;/C=GB/L=Beijing/O=github/CN=localhost&quot; -key server.key -out server.csr -config server.conf</span><br></pre></td></tr></table></figure>
+
+<ol start="4">
+<li>根据根证书生成服务端证书</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openssl x509 -req -sha256 -CA ca.crt -CAkey ../ca/ca.key -CAcreateserial -days 365 -in server.csr -out server.crt -extensions req_ext -extfile server.conf</span><br></pre></td></tr></table></figure>
+
+<h3 id="生成客户端证书"><a href="#生成客户端证书" class="headerlink" title="生成客户端证书"></a>生成客户端证书</h3><p>进入client证书存放目录，这里是<code>./client/</code></p>
+<ol>
+<li>生成client端密钥</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openssl genrsa -out client.key 2048</span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>生成CSR</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openssl req -new -subj &quot;/C=GB/L=Beijing/O=github/CN=localhost&quot;  -key client.key -out client.csr </span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>根据根证书生成客户端证书</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openssl x509 -req -sha256 -CA ca.crt -CAkey ../ca/ca.key -CAcreateserial -days 365 -in client.csr -out client.crt</span><br></pre></td></tr></table></figure>
+
+<p>根证书、服务器端证书和客户端证书生成之后就可以配置CA认证了，客户端证书只有在双向认证时才需要，服务器端证书和根证书是开启CA认证必须的文件。</p>
+<h2 id="CA认证Demo"><a href="#CA认证Demo" class="headerlink" title="CA认证Demo"></a>CA认证Demo</h2><p>Golang在代码层次开启CA认证功能，需要加载相应证书，根据加载的证书分为单向认证和双向认证。</p>
+<h3 id="单向认证"><a href="#单向认证" class="headerlink" title="单向认证"></a>单向认证</h3><p>单向认证是在server端加载server证书和CA认证中心的根证书，开启CA认证，核心代码如下：</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 加载CA, 添加进 caCertPool</span></span><br><span class="line">caCert, err := ioutil.ReadFile(dir + <span class="string">&quot;/ca/ca.crt&quot;</span>)</span><br><span class="line"><span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">	log.Println(<span class="string">&quot;try to load ca err&quot;</span>, err)</span><br><span class="line">	<span class="keyword">return</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">caCertPool := x509.NewCertPool()</span><br><span class="line">caCertPool.AppendCertsFromPEM(caCert)</span><br><span class="line"></span><br><span class="line"><span class="comment">// 加载服务端证书(生产环境当中, 证书是第三方进行签名的, 而非自定义CA)</span></span><br><span class="line">srvCert, err := tls.LoadX509KeyPair(dir+<span class="string">&quot;/server/server.crt&quot;</span>, dir+<span class="string">&quot;/server/server.key&quot;</span>)</span><br><span class="line"><span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">	log.Println(<span class="string">&quot;try to load key &amp; crt err&quot;</span>, err)</span><br><span class="line">	<span class="keyword">return</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">   <span class="comment">// 配置tls加载证书</span></span><br><span class="line">config := &amp;tls.Config&#123;</span><br><span class="line">	Certificates: []tls.Certificate&#123;srvCert&#125;, </span><br><span class="line">	CipherSuites: []<span class="keyword">uint16</span>&#123;</span><br><span class="line">		tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,</span><br><span class="line">		tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,</span><br><span class="line">	&#125;,</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 启动https server</span></span><br><span class="line">server := &amp;http.Server&#123;</span><br><span class="line">	Addr:      <span class="string">&quot;:1443&quot;</span>,</span><br><span class="line">	Handler:   mux,</span><br><span class="line">	TLSConfig: config,</span><br><span class="line">	ErrorLog:  log.New(os.Stdout, <span class="string">&quot;&quot;</span>, log.Lshortfile|log.Ldate|log.Ltime),</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">http2.ConfigureServer(server, &amp;http2.Server&#123;&#125;)</span><br><span class="line"></span><br><span class="line">err = server.ListenAndServeTLS(<span class="string">&quot;&quot;</span>, <span class="string">&quot;&quot;</span>)</span><br><span class="line"><span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">	log.Println(<span class="string">&quot;ListenAndServeTLS err&quot;</span>, err)</span><br><span class="line">	<span class="keyword">return</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在浏览器中输入<code>https://localhost:1443/</code>，由于服务端证书是自有认证中心生成的，浏览器中并没有该服务端证书的根证书，所以浏览器会报错，报错内容如下：</p>
+<p><img src="/blogimgs/golang-ca/dan.png"><br>然后点击最下方的<code>继续浏览localhost</code>即可访问。</p>
+<h3 id="双向认证"><a href="#双向认证" class="headerlink" title="双向认证"></a>双向认证</h3><p>双向认证开启后，客户端在请求时需携带客户端证书和根证书，服务端还需开启验证客户端证书配置，相关代码如下：</p>
+<p>服务端只需修改tls.config，增加客户端证书验证配置，然后重启服务即可。</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">   <span class="comment">// 配置tls加载证书</span></span><br><span class="line">config := &amp;tls.Config&#123;</span><br><span class="line">	Certificates: []tls.Certificate&#123;srvCert&#125;, </span><br><span class="line">	ClientCAs:          caCertPool,                </span><br><span class="line">	InsecureSkipVerify: <span class="literal">true</span>,                       </span><br><span class="line">	ClientAuth: tls.RequireAndVerifyClientCert,     </span><br><span class="line">	CipherSuites: []<span class="keyword">uint16</span>&#123;</span><br><span class="line">		tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,</span><br><span class="line">		tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,</span><br><span class="line">	&#125;,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>客户端加载客户端证书，这里直接使用golang写了个客户端，也可以使用<code>curl</code>访问。核心代码如下：</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 加载CA证书(生产环境不需要这一步)</span></span><br><span class="line">caCrt, err := ioutil.ReadFile(dir + <span class="string">&quot;/ca/ca.crt&quot;</span>)</span><br><span class="line"><span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">	<span class="built_in">panic</span>(<span class="string">&quot;try to load ca err, &quot;</span> + err.Error())</span><br><span class="line">&#125;</span><br><span class="line">caCertPool := x509.NewCertPool()</span><br><span class="line">caCertPool.AppendCertsFromPEM(caCrt)</span><br><span class="line"></span><br><span class="line"><span class="comment">// 加载客户端证书</span></span><br><span class="line">cliCert, err := tls.LoadX509KeyPair(dir+<span class="string">&quot;/client/client.crt&quot;</span>, dir+<span class="string">&quot;/client/client.key&quot;</span>)</span><br><span class="line"><span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">	<span class="built_in">panic</span>(<span class="string">&quot;try to load key &amp; key err, &quot;</span> + err.Error())</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">config := &amp;tls.Config&#123;</span><br><span class="line">	Certificates: []tls.Certificate&#123;cliCert&#125;, </span><br><span class="line">	RootCAs:            caCertPool,  </span><br><span class="line">	InsecureSkipVerify: <span class="literal">false</span>,       </span><br><span class="line">	ServerName:         <span class="string">&quot;localhost&quot;</span>, </span><br><span class="line">&#125;</span><br><span class="line">config.BuildNameToCertificate()</span><br><span class="line"></span><br><span class="line">client = &amp;http.Client&#123;</span><br><span class="line">	Transport: &amp;http.Transport&#123;</span><br><span class="line">		TLSClientConfig: config,</span><br><span class="line">	&#125;,</span><br><span class="line">	Timeout: <span class="number">10</span> * time.Second,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>此时如果在浏览器中访问<code>https://localhost:1443/</code>，会无法访问，而且也不能忽略证书，因为服务端要求认证客户端证书，而浏览器中又没有客户端证书，所以无法访问，页面显示如下：</p>
+<p><img src="/blogimgs/golang-ca/error.png"></p>
+<p>到此，关于CA认证的简单使用就结束了，熟悉了单向认证和双向认证的使用效果。<br>但是我调研CA认证需要解决的场景是多个客户端向服务端发送数据，服务端验证客户端证书是否合法，<strong>比较不同的是多个客户端的证书并不是由同一个认证中心颁发的</strong>，这就需要服务端在接收到客户端请求时，根据客户端的证书去动态的加载对应认证中心生成的服务端证书。</p>
+<h2 id="动态加载证书"><a href="#动态加载证书" class="headerlink" title="动态加载证书"></a>动态加载证书</h2><p>这个场景的需求有两个：</p>
+<ol>
+<li>验证客户端的证书</li>
+<li>验证客户端证书时需加载对应的服务端证书<br>要想满足<strong>需求1则必须开启双向认证</strong>，其次要想加载对应的服务端证书就得根据客户端的证书动态加载服务端证书，动态加载的功能通过<code>GetConfigForClient</code>和<code>ServerName</code>来实现。其核心代码如下：</li>
+</ol>
+<p>服务端也是只需修改tls.config即可，如下：</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line">config := &amp;tls.Config&#123;</span><br><span class="line">	<span class="comment">// 加载server自己的证书</span></span><br><span class="line">	Certificates: []tls.Certificate&#123;srvCert&#125;, <span class="comment">// 服务器证书</span></span><br><span class="line"></span><br><span class="line">	CipherSuites: []<span class="keyword">uint16</span>&#123;</span><br><span class="line">		tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,</span><br><span class="line">		tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,</span><br><span class="line">	&#125;,</span><br><span class="line"></span><br><span class="line">	GetConfigForClient: <span class="function"><span class="keyword">func</span><span class="params">(info *tls.ClientHelloInfo)</span> <span class="params">(*tls.Config, error)</span></span> &#123;</span><br><span class="line">		<span class="keyword">if</span> info.ServerName == <span class="string">&quot;localhost&quot;</span> &#123;</span><br><span class="line">			srvCert, _ = tls.LoadX509KeyPair(dir+<span class="string">&quot;/server/server.crt&quot;</span>, dir+<span class="string">&quot;/server/server.key&quot;</span>)</span><br><span class="line"></span><br><span class="line">			caCert, err := ioutil.ReadFile(dir + <span class="string">&quot;/ca/ca.crt&quot;</span>)</span><br><span class="line">			<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">				log.Println(<span class="string">&quot;try to load ca err&quot;</span>, err)</span><br><span class="line">			&#125;</span><br><span class="line">			caCertPool.AppendCertsFromPEM(caCert)</span><br><span class="line">		&#125; <span class="keyword">else</span> <span class="keyword">if</span> info.ServerName == <span class="string">&quot;localhost1&quot;</span> &#123;</span><br><span class="line">			srvCert, _ = tls.LoadX509KeyPair(dir+<span class="string">&quot;/server1/server.crt&quot;</span>, dir+<span class="string">&quot;/server1/server.key&quot;</span>)</span><br><span class="line"></span><br><span class="line">			caCert, err := ioutil.ReadFile(dir + <span class="string">&quot;/ca1/ca.crt&quot;</span>)</span><br><span class="line">			<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">				log.Println(<span class="string">&quot;try to load ca err&quot;</span>, err)</span><br><span class="line">			&#125;</span><br><span class="line">			caCertPool.AppendCertsFromPEM(caCert)</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		serverConf := &amp;tls.Config&#123;</span><br><span class="line">			GetCertificate: <span class="function"><span class="keyword">func</span><span class="params">(hi *tls.ClientHelloInfo)</span> <span class="params">(*tls.Certificate, error)</span></span> &#123;</span><br><span class="line">				<span class="keyword">return</span> &amp;srvCert, <span class="literal">nil</span></span><br><span class="line">			&#125;,</span><br><span class="line">			ClientAuth:         tls.RequireAndVerifyClientCert,</span><br><span class="line">			ClientCAs:          caCertPool,</span><br><span class="line">			InsecureSkipVerify: <span class="literal">true</span>,</span><br><span class="line">			<span class="comment">//VerifyPeerCertificate: getClientValidator(hi),</span></span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">return</span> serverConf, <span class="literal">nil</span></span><br><span class="line">	&#125;,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>服务端通过<code>GetConfigForClient</code>从<code>ClientHelloInfo</code>中获取客户端请求中的<code>ServerName</code>，根据其加载不同的服务端证书即可。</p>
+<p>在客户端，则需要不同的客户端加载各自的证书即可，需要注意的就是在<code>tls.Config</code>中的<code>ServerName</code>属性配置自己向CA认证中心时申请证书时所标注的<code>CommonName</code>，服务端就是根据<code>ServerName</code>加载对应的服务端证书的(同样生成服务端证书时CommonName需与ServerName一致)。</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">config := &amp;tls.Config&#123;</span><br><span class="line">	Certificates: []tls.Certificate&#123;cliCert&#125;, </span><br><span class="line">	RootCAs:            caCertPool,  </span><br><span class="line">	InsecureSkipVerify: <span class="literal">false</span>,       </span><br><span class="line">	ServerName:         <span class="string">&quot;localhost&quot;</span>, </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这样服务端就可以认证不同的客户端证书了。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">混绅士</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://yuanba.tech/golang-ca-demo.html">http://yuanba.tech/golang-ca-demo.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://yuanba.tech" target="_blank">big data decode club</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Golang/">Golang</a><a class="post-meta__tags" href="/tags/CA/">CA</a><a class="post-meta__tags" href="/tags/Https/">Https</a></div><div class="post_share"></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/path/to/wechat-reward-image/wechatpay.png" target="_blank"><img class="post-qr-code-img" src="/path/to/wechat-reward-image/wechatpay.png" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/rxgo-examples.html"><img class="next-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">RxGo常用算子手册</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/golang-wasm.html" title="Golang开发wasm程序"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-11-25</div><div class="title">Golang开发wasm程序</div></div></a></div><div><a href="/rxgo-examples.html" title="RxGo常用算子手册"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2022-12-02</div><div class="title">RxGo常用算子手册</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/uploads/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">混绅士</div><div class="author-info__description">Any answers you can find in source code.</div></div><div class="card-info-data is-center"><div class="card-info-data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">121</div></a></div><div class="card-info-data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">202</div></a></div><div class="card-info-data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">22</div></a></div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#CA%E8%AF%81%E4%B9%A6%E7%94%9F%E6%88%90"><span class="toc-number">1.</span> <span class="toc-text">CA证书生成</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%94%9F%E6%88%90CA%E6%A0%B9%E8%AF%81%E4%B9%A6"><span class="toc-number">1.1.</span> <span class="toc-text">生成CA根证书</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%94%9F%E6%88%90%E6%9C%8D%E5%8A%A1%E7%AB%AF%E8%AF%81%E4%B9%A6"><span class="toc-number">1.2.</span> <span class="toc-text">生成服务端证书</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%94%9F%E6%88%90%E5%AE%A2%E6%88%B7%E7%AB%AF%E8%AF%81%E4%B9%A6"><span class="toc-number">1.3.</span> <span class="toc-text">生成客户端证书</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#CA%E8%AE%A4%E8%AF%81Demo"><span class="toc-number">2.</span> <span class="toc-text">CA认证Demo</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8D%95%E5%90%91%E8%AE%A4%E8%AF%81"><span class="toc-number">2.1.</span> <span class="toc-text">单向认证</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8F%8C%E5%90%91%E8%AE%A4%E8%AF%81"><span class="toc-number">2.2.</span> <span class="toc-text">双向认证</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8A%A8%E6%80%81%E5%8A%A0%E8%BD%BD%E8%AF%81%E4%B9%A6"><span class="toc-number">3.</span> <span class="toc-text">动态加载证书</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/golang-ca-demo.html" title="说浅不浅的谈下CA认证"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="说浅不浅的谈下CA认证"/></a><div class="content"><a class="title" href="/golang-ca-demo.html" title="说浅不浅的谈下CA认证">说浅不浅的谈下CA认证</a><time datetime="2023-01-04T14:53:12.000Z" title="发表于 2023-01-04 22:53:12">2023-01-04</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/rxgo-examples.html" title="RxGo常用算子手册"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="RxGo常用算子手册"/></a><div class="content"><a class="title" href="/rxgo-examples.html" title="RxGo常用算子手册">RxGo常用算子手册</a><time datetime="2022-12-02T13:32:12.000Z" title="发表于 2022-12-02 21:32:12">2022-12-02</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/golang-wasm.html" title="Golang开发wasm程序"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Golang开发wasm程序"/></a><div class="content"><a class="title" href="/golang-wasm.html" title="Golang开发wasm程序">Golang开发wasm程序</a><time datetime="2022-11-25T13:32:12.000Z" title="发表于 2022-11-25 21:32:12">2022-11-25</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/wasm-realtime.html" title="基于Wasm的轻量实时计算"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="基于Wasm的轻量实时计算"/></a><div class="content"><a class="title" href="/wasm-realtime.html" title="基于Wasm的轻量实时计算">基于Wasm的轻量实时计算</a><time datetime="2022-11-05T05:35:12.000Z" title="发表于 2022-11-05 13:35:12">2022-11-05</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/scratch-extensions-demo.html" title="scratch自定义扩展"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="scratch自定义扩展"/></a><div class="content"><a class="title" href="/scratch-extensions-demo.html" title="scratch自定义扩展">scratch自定义扩展</a><time datetime="2021-12-14T14:30:20.000Z" title="发表于 2021-12-14 22:30:20">2021-12-14</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2023 By 混绅士</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
