@@ -1,0 +1,163 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>IoTeX本地standalone模式及合约部署 | big data decode club</title><meta name="keywords" content="BlockChain,IoTeX,Remix,Contract"><meta name="author" content="混绅士"><meta name="copyright" content="混绅士"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="BlockChain众所周知信奉的是天下没有免费的午餐，任何操作都是要收费的。此时如果你想进行些测试相关的内容或者只是想了解学习下，就不太方便进行操作。所以这里记录下IoTeX如何本地部署standalone模式，并且使用Remix进行合约部署。  其实现在docker技术已比较普及，IoTeX也提供了很多docker容器，也可以直接使用，这里由于个人原因采用从源码的方式进行部署  本地部署sta">
+<meta property="og:type" content="article">
+<meta property="og:title" content="IoTeX本地standalone模式及合约部署">
+<meta property="og:url" content="http://yuanba.tech/iotex-standalone.html">
+<meta property="og:site_name" content="big data decode club">
+<meta property="og:description" content="BlockChain众所周知信奉的是天下没有免费的午餐，任何操作都是要收费的。此时如果你想进行些测试相关的内容或者只是想了解学习下，就不太方便进行操作。所以这里记录下IoTeX如何本地部署standalone模式，并且使用Remix进行合约部署。  其实现在docker技术已比较普及，IoTeX也提供了很多docker容器，也可以直接使用，这里由于个人原因采用从源码的方式进行部署  本地部署sta">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+<meta property="article:published_time" content="2023-08-05T19:58:12.000Z">
+<meta property="article:modified_time" content="2023-08-05T19:58:12.000Z">
+<meta property="article:author" content="混绅士">
+<meta property="article:tag" content="BlockChain">
+<meta property="article:tag" content="IoTeX">
+<meta property="article:tag" content="Remix">
+<meta property="article:tag" content="Contract">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"><link rel="shortcut icon" href="/favicon.ico"><link rel="canonical" href="http://yuanba.tech/iotex-standalone"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="baidu-site-verification" content="code-rsYjx8At7g"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'IoTeX本地standalone模式及合约部署',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2023-08-06 03:58:12'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><meta name="generator" content="Hexo 5.4.0"><link rel="alternate" href="/atom.xml" title="big data decode club" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="/uploads/avatar.png" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><div class="data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">122</div></a></div><div class="data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">205</div></a></div><div class="data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">22</div></a></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">big data decode club</a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Timeline</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">IoTeX本地standalone模式及合约部署</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2023-08-05T19:58:12.000Z" title="发表于 2023-08-06 03:58:12">2023-08-06</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2023-08-05T19:58:12.000Z" title="更新于 2023-08-06 03:58:12">2023-08-06</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/BlockChain/">BlockChain</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">541</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>1分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="IoTeX本地standalone模式及合约部署"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>BlockChain众所周知信奉的是<code>天下没有免费的午餐</code>，任何操作都是要收费的。此时如果你想进行些测试相关的内容或者只是想了解学习下，就不太方便进行操作。<br>所以这里记录下IoTeX如何本地部署standalone模式，并且使用Remix进行合约部署。</p>
+<blockquote>
+<p>其实现在docker技术已比较普及，IoTeX也提供了很多docker容器，也可以直接使用，这里由于个人原因采用从源码的方式进行部署</p>
+</blockquote>
+<h2 id="本地部署standalone"><a href="#本地部署standalone" class="headerlink" title="本地部署standalone"></a>本地部署standalone</h2><p>从github上clone源码 <code>git clone git@github.com:iotexproject/iotex-core.git</code>，进入repo目录，执行<code>make run</code>。<br>这里大概率会报错，内容是缺少某个文件，报错内容如下：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">2023-08-03T18:14:33.725+0800	ERROR	factory/statedb.go:99	Failed to execute state factory creation option 0x49a7520: failed to open kvstore patch, /var/data/trie.db.patch: open /var/data/trie.db.patch: no such file or directory	&#123;&quot;ioAddr&quot;: &quot;io1ppjspvypu7e3y93vg9tc3csauf097ht5zl69tq&quot;&#125;</span><br></pre></td></tr></table></figure>
+<p>该文件需要从另一个repo中获取，将其仓库clone到本地<code>git@github.com:iotexproject/iotex-bootstrap.git</code>，将 <code>trie.db.patch</code> 复制到 <code>/var/data</code> 目录中，再次执行 <code>make run</code> 即可。</p>
+<p>如果没有报什么错，就代表启动成功了，启动成功之后会自动挖块，块的高度会发生变化。</p>
+<h2 id="Remix链接本地IoTeX私链进行合约部署"><a href="#Remix链接本地IoTeX私链进行合约部署" class="headerlink" title="Remix链接本地IoTeX私链进行合约部署"></a>Remix链接本地IoTeX私链进行合约部署</h2><p>Remix可以使用在线模式也可以进行本地模式，这里直接使用在线模式，在<code>deploy</code>中选择<code>metamask</code>模式。<br><img src="/blogimgs/iotex-standalone/remix-contract.png" alt="Remix链接MetaMask" title="Remix链接MetaMask"></p>
+<p>然后会跳转到<code>MetaMask</code>页面，添加一个本地standalone网络即可<br><img src="/blogimgs/iotex-standalone/standalone-network.png" alt="Standalone网络" title="Standalone网络"></p>
+<blockquote>
+<p>添加standalone网络时，要先将standalone节点运行起来</p>
+</blockquote>
+<p>此时细心的你会发现Remix虽然连上了本地私链，但是账号余额显示是0，依然不能进行合约部署，接下来就是给账户增加余额，一种简单粗暴的方式就是将其<code>MetaMask</code>中的账户地址设置为<code>genesis</code>地址，<strong>不过这里有一点需要注意，设置genesis地址之后，需要删除原先运行的数据，默认是在<code>/var/data</code>目录下。</strong> 删除之后再次启动standalone就会发现已有余额了，可用随便造了。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">混绅士</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://yuanba.tech/iotex-standalone.html">http://yuanba.tech/iotex-standalone.html</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://yuanba.tech" target="_blank">big data decode club</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/BlockChain/">BlockChain</a><a class="post-meta__tags" href="/tags/IoTeX/">IoTeX</a><a class="post-meta__tags" href="/tags/Remix/">Remix</a><a class="post-meta__tags" href="/tags/Contract/">Contract</a></div><div class="post_share"></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/path/to/wechat-reward-image/wechatpay.png" target="_blank"><img class="post-qr-code-img" src="/path/to/wechat-reward-image/wechatpay.png" alt="wechat"/></a><div class="post-qr-code-desc">wechat</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/golang-ca-demo.html"><img class="next-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">说浅不浅的谈下CA认证</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/Consistency-in-Distributed.html" title="分布式一致性协议"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2019-04-07</div><div class="title">分布式一致性协议</div></div></a></div><div><a href="/Ethereum-deploy.html" title="以太坊环境部署"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2018-08-08</div><div class="title">以太坊环境部署</div></div></a></div><div><a href="/Ethereum-private-chain.html" title="以太坊测试环境部署"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2018-08-21</div><div class="title">以太坊测试环境部署</div></div></a></div><div><a href="/Merkle-Patricia-Tree.html" title="Merkle Patricia Tree(MPT)"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2019-01-13</div><div class="title">Merkle Patricia Tree(MPT)</div></div></a></div><div><a href="/Solidity_Voting%E8%A7%A3%E6%9E%90.html" title="Solidity Voting解析"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2018-10-31</div><div class="title">Solidity Voting解析</div></div></a></div><div><a href="/Voting-Dapp-Demo.html" title="全栈Voting Dapp Demo"><img class="cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2018-11-28</div><div class="title">全栈Voting Dapp Demo</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="/uploads/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">混绅士</div><div class="author-info__description">Any answers you can find in source code.</div></div><div class="card-info-data is-center"><div class="card-info-data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">122</div></a></div><div class="card-info-data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">205</div></a></div><div class="card-info-data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">22</div></a></div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9C%AC%E5%9C%B0%E9%83%A8%E7%BD%B2standalone"><span class="toc-number">1.</span> <span class="toc-text">本地部署standalone</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Remix%E9%93%BE%E6%8E%A5%E6%9C%AC%E5%9C%B0IoTeX%E7%A7%81%E9%93%BE%E8%BF%9B%E8%A1%8C%E5%90%88%E7%BA%A6%E9%83%A8%E7%BD%B2"><span class="toc-number">2.</span> <span class="toc-text">Remix链接本地IoTeX私链进行合约部署</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/iotex-standalone.html" title="IoTeX本地standalone模式及合约部署"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="IoTeX本地standalone模式及合约部署"/></a><div class="content"><a class="title" href="/iotex-standalone.html" title="IoTeX本地standalone模式及合约部署">IoTeX本地standalone模式及合约部署</a><time datetime="2023-08-05T19:58:12.000Z" title="发表于 2023-08-06 03:58:12">2023-08-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/golang-ca-demo.html" title="说浅不浅的谈下CA认证"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="说浅不浅的谈下CA认证"/></a><div class="content"><a class="title" href="/golang-ca-demo.html" title="说浅不浅的谈下CA认证">说浅不浅的谈下CA认证</a><time datetime="2023-01-04T14:53:12.000Z" title="发表于 2023-01-04 22:53:12">2023-01-04</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/rxgo-examples.html" title="RxGo常用算子手册"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="RxGo常用算子手册"/></a><div class="content"><a class="title" href="/rxgo-examples.html" title="RxGo常用算子手册">RxGo常用算子手册</a><time datetime="2022-12-02T13:32:12.000Z" title="发表于 2022-12-02 21:32:12">2022-12-02</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/golang-wasm.html" title="Golang开发wasm程序"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Golang开发wasm程序"/></a><div class="content"><a class="title" href="/golang-wasm.html" title="Golang开发wasm程序">Golang开发wasm程序</a><time datetime="2022-11-25T13:32:12.000Z" title="发表于 2022-11-25 21:32:12">2022-11-25</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/wasm-realtime.html" title="基于Wasm的轻量实时计算"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="基于Wasm的轻量实时计算"/></a><div class="content"><a class="title" href="/wasm-realtime.html" title="基于Wasm的轻量实时计算">基于Wasm的轻量实时计算</a><time datetime="2022-11-05T05:35:12.000Z" title="发表于 2022-11-05 13:35:12">2022-11-05</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2016 - 2023 By 混绅士</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

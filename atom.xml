@@ -6,7 +6,7 @@
   <link href="http://yuanba.tech/atom.xml" rel="self"/>
   
   <link href="http://yuanba.tech/"/>
-  <updated>2023-01-09T14:26:33.000Z</updated>
+  <updated>2023-08-05T19:58:12.000Z</updated>
   <id>http://yuanba.tech/</id>
   
   <author>
@@ -15,6 +15,36 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>IoTeX本地standalone模式及合约部署</title>
+    <link href="http://yuanba.tech/iotex-standalone.html"/>
+    <id>http://yuanba.tech/iotex-standalone.html</id>
+    <published>2023-08-05T19:58:12.000Z</published>
+    <updated>2023-08-05T19:58:12.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>BlockChain众所周知信奉的是<code>天下没有免费的午餐</code>，任何操作都是要收费的。此时如果你想进行些测试相关的内容或者只是想了解学习下，就不太方便进行操作。<br>所以这里记录下IoTeX如何本地部署standalone模式，并且使用Remix进行合约部署。</p><blockquote><p>其实现在docker技术已比较普及，IoTeX也提供了很多docker容器，也可以直接使用，这里由于个人原因采用从源码的方式进行部署</p></blockquote><h2 id="本地部署standalone"><a href="#本地部署standalone" class="headerlink" title="本地部署standalone"></a>本地部署standalone</h2><p>从github上clone源码 <code>git clone git@github.com:iotexproject/iotex-core.git</code>，进入repo目录，执行<code>make run</code>。<br>这里大概率会报错，内容是缺少某个文件，报错内容如下：</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">2023-08-03T18:14:33.725+0800ERRORfactory/statedb.go:99Failed to execute state factory creation option 0x49a7520: failed to open kvstore patch, /var/data/trie.db.patch: open /var/data/trie.db.patch: no such file or directory&#123;&quot;ioAddr&quot;: &quot;io1ppjspvypu7e3y93vg9tc3csauf097ht5zl69tq&quot;&#125;</span><br></pre></td></tr></table></figure><p>该文件需要从另一个repo中获取，将其仓库clone到本地<code>git@github.com:iotexproject/iotex-bootstrap.git</code>，将 <code>trie.db.patch</code> 复制到 <code>/var/data</code> 目录中，再次执行 <code>make run</code> 即可。</p><p>如果没有报什么错，就代表启动成功了，启动成功之后会自动挖块，块的高度会发生变化。</p><h2 id="Remix链接本地IoTeX私链进行合约部署"><a href="#Remix链接本地IoTeX私链进行合约部署" class="headerlink" title="Remix链接本地IoTeX私链进行合约部署"></a>Remix链接本地IoTeX私链进行合约部署</h2><p>Remix可以使用在线模式也可以进行本地模式，这里直接使用在线模式，在<code>deploy</code>中选择<code>metamask</code>模式。<br><img src="/blogimgs/iotex-standalone/remix-contract.png" alt="Remix链接MetaMask" title="Remix链接MetaMask"></p><p>然后会跳转到<code>MetaMask</code>页面，添加一个本地standalone网络即可<br><img src="/blogimgs/iotex-standalone/standalone-network.png" alt="Standalone网络" title="Standalone网络"></p><blockquote><p>添加standalone网络时，要先将standalone节点运行起来</p></blockquote><p>此时细心的你会发现Remix虽然连上了本地私链，但是账号余额显示是0，依然不能进行合约部署，接下来就是给账户增加余额，一种简单粗暴的方式就是将其<code>MetaMask</code>中的账户地址设置为<code>genesis</code>地址，<strong>不过这里有一点需要注意，设置genesis地址之后，需要删除原先运行的数据，默认是在<code>/var/data</code>目录下。</strong> 删除之后再次启动standalone就会发现已有余额了，可用随便造了。</p>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;p&gt;BlockChain众所周知信奉的是&lt;code&gt;天下没有免费的午餐&lt;/code&gt;，任何操作都是要收费的。此时如果你想进行些测试相关的内容或者只是想了解学习下，就不太方便进行操作。&lt;br&gt;所以这里记录下IoTeX如何本地部署standalone模式，并且使用Remix进行合约</summary>
+      
+    
+    
+    
+    <category term="BlockChain" scheme="http://yuanba.tech/categories/BlockChain/"/>
+    
+    
+    <category term="BlockChain" scheme="http://yuanba.tech/tags/BlockChain/"/>
+    
+    <category term="IoTeX" scheme="http://yuanba.tech/tags/IoTeX/"/>
+    
+    <category term="Remix" scheme="http://yuanba.tech/tags/Remix/"/>
+    
+    <category term="Contract" scheme="http://yuanba.tech/tags/Contract/"/>
+    
+  </entry>
   
   <entry>
     <title>说浅不浅的谈下CA认证</title>
@@ -544,33 +574,6 @@
     <category term="YARN" scheme="http://yuanba.tech/tags/YARN/"/>
     
     <category term="Localization" scheme="http://yuanba.tech/tags/Localization/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>Use protobuf to FSImage</title>
-    <link href="http://yuanba.tech/[%E8%AF%91]FSImage-protocol.html"/>
-    <id>http://yuanba.tech/[%E8%AF%91]FSImage-protocol.html</id>
-    <published>2019-05-10T15:12:31.000Z</published>
-    <updated>2019-05-10T17:10:16.000Z</updated>
-    
-    <content type="html"><![CDATA[<p>本篇是一篇译文，主要介绍下FSImage改进为protobuf的设计原理，<a href="https://issues.apache.org/jira/secure/attachment/12626179/HDFS-5698-design.pdf">原文地址</a>。</p><span id="more"></span><h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>为了能从故障中快速恢复，HDFS会周期性的将内存中的namespace在磁盘上的文件系统中进行持久化。FSImage的性能和扩展性在保证数据的耐用性和可用性上至关重要。随着越来越多的高级功能被引入HDFS中，FSImage已经从一个简单的blob演变为了一个需要存储在磁盘的复杂的数据结构。FSImage有3个方面需要改进：</p><ul><li>效率<br>在生成环境中，我们观察到持久化到磁盘的FSImage大小能达到二三十GB。因为加载和停机时保存FSImage是NameNode的关键环节，其效率对确保NameNode操作的可用性非常重要。</li><li>兼容性<br>FSImage将随着HDFS的各种功能的不断发展和演变。FSImage的实现将能够被各种不同的版本所使用，这在某些功能下非常重要，比如滚动升级。</li><li>互通性<br>FSImage能被第三方工具访问的需求越来越强烈了。例如某个工具可以通过扫描FSImage收集一些统计信息。因此FSImage应该提供一个使第三方工具能与其进行交互的清晰规范。</li></ul><p>当前FSImage模块有大约2500行代码，但是现在的设计与实现并不能解决上面的需求。首先，对于兼容性而言，当前代码中的一些实现并不理想。例如有些属性比如inode IDs和block IDs被编码为了固定长度的整数而不是变长整数。</p><p>其次，代码依赖与分支上的不同布局版本以保持向后兼容。在代码更新时在修改和测试上需要耗费很大的精力。然而，还不支持向前兼容，这使NameNode降级变的很困难</p><p>再次，FSImage的格式仅由代码的具体实现而决定。如果没有正式的FSImage规范，开发人员构建第三方工具时，只能通过offline image viewer来构建，这种方式时低效的而且还容易出错。</p><p>为了解决上面的挑战，我们提议使用Google的Protocol Buffers协议来定义一种新的FSImage格式。Protocol Buffers是可扩展的，与语言无关的，用于序列化结构数据。Protobuf能解决上面的挑战。首先，Protocol使用一个编译器为序列化和反序列化生成高效的代码。其次，它还支持向前和向后兼容。序列化后的每个属性都包含一个唯一的标签，因此反序列化的代码可以同时处理新加的字段和缺失的字段。最后，Protocol Buffers的源码直接定义了FSImage的格式。第三方工具仅根据protocol文件就能知道FSImage的格式。</p><p><a href="https://issues.apache.org/jira/browse/HDFS-5698">HDFS-5698</a>是关于FSImage新格式的issues。下面的内容介绍了设计的细节，新格式的一些实验参数，未来的方向和结论。</p><h2 id="设计"><a href="#设计" class="headerlink" title="设计"></a>设计</h2><p>下图是新FSImage格式的EBNF语法描述。整个FSImage包括4部分，分别为MAGIC、SECTION、FileSummary和FileSummaryLength，其中SECTION包含N个。<br><img src="/blogimgs/fsimage-proto/EBNF.png" alt="FSImage格式" title="FSImage格式"></p><p>FSImage将数据分成不同的部分。每部分在数据中都是相互独立的。开发人员可以添加新的部分来扩展FSImage。</p><p>FileSummary模块包含4个属性，分别为ondiskVersion、layoutVersion、codec和sections，其中sections中记录了每个section的名字、长度和偏移量。所有的section可以使用指定的codec对其进行压缩。每个section都是单独压缩的，而且section中记录的长度和偏移量都是压缩之后的，因此当读取的时候可以直接通过响应的偏移量而直接定位到某个section。</p><p>当解析FSImage时，先从文件的末尾读取4bytes，读取的4bytes数据记录了FileSummary模块的长度，通过解析FileSummary模块能得到所有section的位置信息，这样设计允许写入时按顺序保留FSImage。</p><h3 id="序列化inode"><a href="#序列化inode" class="headerlink" title="序列化inode"></a>序列化inode</h3><p>FSImage将inode序列化为两种section。<code>INodeSection</code>记录了每个inode(<strong>包括INodeFile和INodeDirectory</strong>)的信息，<code>INodeDirectorySection</code>记录了每个目录的子inodes。这种将inodes当作图而不是树的设计模式有两个优点，第一与实际的图更加匹配，因此当快照存在时，inode不用再形成树。不同的目录能通过<code>INodeReference</code>对象指向同一个inode。第二它将结构扁平化，从而为并行性提供了机会。每个inode都独立的存储在FSImage中，因此可以并行的解析和构建不同的inodes。</p><p>在protobuf的规范中，<code>INodeSection</code>并不包含inode列表，而是在INodeSection随后的protobuf消息中隐式的指定了inode列表。这样做的原因时Protocol Buffers在生成代码的时候需要将所有的属性加载到内存，然而inodes列表可能太大而不能加载到内存。文中的这种设计允许FSImage以递增的方式解析。</p><p>令人惊讶的是，我们的初始分析结果表明序列化权限是代码中的瓶颈。权限是一个元组，包含用户名，组名和表示权限位的16位整数。简单的解决方案是直接序列化两个名称和16位整数。 但是，我们发现FSImage中的名称是高度冗余的，反序列化为Java的String对象需要大量的CPU时间。为了优化此用例，FSImage将名称映射为24位ID，以便可以使用64位整数表示权限。</p><h2 id="实验"><a href="#实验" class="headerlink" title="实验"></a>实验</h2><p>为了评估新FSImage的性能，我们比较了新旧格式的FSImage文件的大小，和持久化和加载FSImage所需要的时间。我们将生产中使用的FSImage缩放到五种不同的尺寸，以评估具有各种尺度集群的性能。所有的测试都运行在相同的机器上。</p><p>图2比较了新旧FSImage的大小。FSImage都是未压缩的。由图中所知新格式的FSImage能够节省6-13%的磁盘空间。<br><img src="/blogimgs/fsimage-proto/fig2.png" alt="图2" title="图2"></p><p>图3展示了新旧FSImage加载和持久化的处理时间，也都是未压缩的。新FSImage有着较好的写性能。<br><img src="/blogimgs/fsimage-proto/fig3.png" alt="图3" title="图3"></p><p>新FSImage读比旧FSImage所耗的时间长，大约为1.5x-2.3x。分析结果表明，解析字节和构造为protocol buffers生成的对象占用大部分时间。 旧格式的代码读取数据并直接构造HDFS中使用的对象，这不会受到这种类型的开销的影响。</p><h2 id="未来工作"><a href="#未来工作" class="headerlink" title="未来工作"></a>未来工作</h2><h3 id="并行化"><a href="#并行化" class="headerlink" title="并行化"></a>并行化</h3><p>新FSImage的设计格式为并行加载提供了机会。新的FSImage单独存储每个inode，因此可以并行的解析数据和重构inode。同样，新FSImage也可以并行的填充不同目录的子节点。</p><p>重建BlockMap占用CPU时间的大约为20％。在新的FSImage格式下，可以将BlockMap的工作负载转移到单独的线程中，从而隐藏延迟。</p><h3 id="直接构建对象"><a href="#直接构建对象" class="headerlink" title="直接构建对象"></a>直接构建对象</h3><p>新的FSImage需要首先通过Protocol Buffers生成的对象，然后根据生成的对象构造HDFS中使用的对象。实验结果显示构造生成的对象需要大量时间。 可以手动解析Protocol Buffers并直接构造对象，从而消除了开销。</p><h2 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h2><p>FSImage的性能和可靠性对于提供HDFS的耐用性和可用性非常重要。本文描述了一种基于Protocol Buffers的新FSImage格式。新格式满足了FSImage的效率，兼容性和互操作性要求。 我们希望新格式可以促进HDFS的创新。</p>]]></content>
-    
-    
-    <summary type="html">&lt;p&gt;本篇是一篇译文，主要介绍下FSImage改进为protobuf的设计原理，&lt;a href=&quot;https://issues.apache.org/jira/secure/attachment/12626179/HDFS-5698-design.pdf&quot;&gt;原文地址&lt;/a&gt;。&lt;/p&gt;</summary>
-    
-    
-    
-    <category term="Hadoop" scheme="http://yuanba.tech/categories/Hadoop/"/>
-    
-    
-    <category term="Hadoop" scheme="http://yuanba.tech/tags/Hadoop/"/>
-    
-    <category term="BigData" scheme="http://yuanba.tech/tags/BigData/"/>
-    
-    <category term="FSImage" scheme="http://yuanba.tech/tags/FSImage/"/>
-    
-    <category term="protobuf" scheme="http://yuanba.tech/tags/protobuf/"/>
     
   </entry>
   
