@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>http://yuanba.tech/zkp.html</loc>
+    <lastmod>2023-08-08</lastmod>
+  </url>
+  <url>
     <loc>http://yuanba.tech/iotex-standalone.html</loc>
     <lastmod>2023-08-05</lastmod>
   </url>
